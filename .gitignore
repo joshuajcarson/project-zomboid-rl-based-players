@@ -19,3 +19,7 @@ venv/
 runs/
 checkpoints/
 wandb/
+
+# Local server data and run logs
+.pzdata/
+logs/
