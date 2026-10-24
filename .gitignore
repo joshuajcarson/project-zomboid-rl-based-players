@@ -1,0 +1,21 @@
+# Game files and anything derived from them must never be committed
+*.jar
+*.class
+decompiled/
+game/
+
+# Local server/world data
+Zomboid/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Training output
+runs/
+checkpoints/
+wandb/
