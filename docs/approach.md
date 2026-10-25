@@ -53,3 +53,19 @@ One normal client per agent at minimum settings, with a Lua mod exposing state a
 - A normal client joining `127.0.0.1` sees "Client1" in the online players list, so the server treats it as a real player.
 - Scenario gotcha: `config.movement` sits beside `config.player`, not inside it. The loader swallows JSON errors and only logs "Scenarios file load failed"; `java -Xlog:exceptions=info` reveals the real exception.
 - Not yet measured: zombie behaviour around the client, server tick rate with 1 and 4 clients, and whether multiple fake clients collide on local UDP port 17500.
+
+## Measurements and extensibility (Build 42.21, 2026-10-25)
+
+Setup: one local `-nosteam` server (4 GB heap, ZGC), then 1 and 4 fake clients (`scenarios/multi-4.json`, one behaviour each, all spawning near 10650,9800). Single runs on Joshua's PC, so treat the numbers as rough.
+
+- **Multi-client works.** All four clients reached `RUN` (about 10s apart as I started them). Each client process picks its own local UDP port automatically (17501 to 17504), so the 17500 collision worry is moot.
+- **Server cost is small.** CPU (percent of one core): about 3 idle, 17 with 1 client, 29 with 4 clients, server working set around 4.6 GB. Per-agent cost looks cheap; world streaming dominates. Real tick rate was not measured (no obvious counter in the log).
+- **Zombies exist and fight back.** The fake client "owns" zombies near it (14 at connect, 25 owned of 63 known later), and the count falls steadily for the `AIAttackZombies` agent, so its hits kill zombies.
+- **Not extensible as-is.** `FakeClientManager$Player`, `$Network` and `$Movement` are package-private classes with private methods and fields (`run`, `hit`, `x`, `y`, `weaponId`). Only `Movement.moveTo(x,y)` and the connect/disconnect calls are public. A bridge would need reflection or our own launcher class, and it cannot do inventory, crafting or timed actions: it is a protocol puppet.
+- **Option B hint.** `zombie.characters.IsoPlayer` has a `setNpc(boolean)` and a constructor taking a `SurvivorDesc`, so server-side NPC players are at least representable. Not tried.
+
+### Where this leaves the options
+
+- A (fake clients): feasible now for position, movement and melee only. Good enough for a first navigation or combat policy, not for survival play.
+- B (server-side NPCs): highest fidelity and no client processes; unproven and needs reverse engineering.
+- C (rendered clients + Lua bridge): safest for full game actions; about 3 GB heap per client, so 4 at once is heavy.
