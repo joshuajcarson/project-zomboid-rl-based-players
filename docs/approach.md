@@ -176,3 +176,18 @@ With the NPC in `GameServer.Players` and teleported (`setX/setY`) to 3 tiles fro
 ### New candidate: E. Fake clients + server-side Lua/Java bridge
 
 The fake clients are genuine `IsoPlayer`s on the server (they appear in `GameServer.Players`, the world loads and zombies run around them, owned by the client). That means server Lua (with our agent as a transport) can **observe** everything about them (stats, inventory, nearby squares and zombies) and perform **actions that do not need locomotion** (give/remove items, eat, set stats, spawn things), while the fake client supplies movement and melee. A socket in the agent gives Python a low-latency bridge instead of file polling.
+
+## Option E: fake clients + server-side Lua bridge (run, 2026-10-25)
+
+`mods/RLBridge` (server Lua) runs every 60 ticks over `getOnlinePlayers()`; the fake client is an ordinary player there. One line per player (sample from a run with the attack-zombies behaviour):
+
+```
+RLOBS {"user":"Client1","x":6046.8,"y":5275.1,"z":0,"health":100.0,"hunger":0.155,"thirst":0.142,"fatigue":0.000,"items":3,"zombiesNear":4,"nearestZombie":2.1,"kills":5}
+RLACT give Apple to Client1 ok=true items 2 -> 3
+```
+
+- **Observation works** for position, health, hunger/thirst/fatigue (Build 42 stats API: `getStats():get(CharacterStat.HUNGER)`), inventory, kill count and zombies from the server cell list (the cell zombie list works on the server once a client owns the area).
+- **Actions work without locomotion:** `getInventory():AddItem("Base.Apple")` took effect on the server (items 2 to 3). Not yet checked: whether the item is visible to the fake client (it has no inventory UI), eating it, or consuming via timed actions.
+- Server Lua tick: roughly 10 `OnTick` per second on this server (150 ticks per 15 s).
+- The fake client's health stayed at 100 while it killed zombies and had 4 zombies within 15 tiles, so it appears to take no (or little) damage; to be confirmed in a dedicated test since survival tasks depend on it.
+- **Spawn:** the scenario's `spawn` (10650,9800) did not decide where the player ended up; the client was at about (6082,5254) (Riverside) soon after login, so the server's spawn handling placed it. Needs checking if we want fixed start locations.

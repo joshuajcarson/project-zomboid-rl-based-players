@@ -1,0 +1,4 @@
+name=RL Bridge
+id=RLBridge
+description=Server-side observation/action bridge for fake-client RL agents. Research only.
+versionMin=42.0.0
