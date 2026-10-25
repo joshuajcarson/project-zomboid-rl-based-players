@@ -165,3 +165,14 @@ Open question: are those zombies simulated (they have no owning `UdpConnection`)
 ### B4: zombies near a connectionless NPC are inert (run, 2026-10-25)
 
 With the NPC in `GameServer.Players` and teleported (`setX/setY`) to 3 tiles from the nearest zombie, that zombie stayed put for several 15 second reports: no target, state `GenericDefaultState`, position unchanged, and `isRemoteZombie()` true. `NetworkZombieManager.getUnauthorizedZombieCount()` was 15 of 15. So the world and zombies **load** around a server-side NPC, but no zombie AI runs: in this server, zombie simulation is delegated to the owning client and an unowned zombie is treated as remote.
+
+### B5: server-side NPC cannot walk, and zombie ownership follows connections (run, 2026-10-25)
+
+- With a fake client connected near the NPC, 89 zombies were loaded and 48 remained unauthorized (unowned, inert); the rest were owned by the client's connection. Zombie simulation is therefore delegated per `UdpConnection`, and a connectionless NPC (or any zombie nearer to it than to a client) gets no AI.
+- `getPathFindBehavior2().pathToLocation(...)` on the server-side NPC returned without error but the NPC stayed in `IdleState` at the same position for several reports. Its movement/state machine is not driven by the dedicated server loop.
+
+**Option B verdict so far:** the world will load around a server-side NPC (cheap, no client), but both zombie AI and NPC locomotion would have to be added by patching engine classes (override `isRemote`/ownership for the server, drive `IsoPlayer.update` for NPCs). That is a large, fragile reverse-engineering project, and unlike the fake client the result is not a supported code path. Not pursued further for now.
+
+### New candidate: E. Fake clients + server-side Lua/Java bridge
+
+The fake clients are genuine `IsoPlayer`s on the server (they appear in `GameServer.Players`, the world loads and zombies run around them, owned by the client). That means server Lua (with our agent as a transport) can **observe** everything about them (stats, inventory, nearby squares and zombies) and perform **actions that do not need locomotion** (give/remove items, eat, set stats, spawn things), while the fake client supplies movement and melee. A socket in the agent gives Python a low-latency bridge instead of file polling.
