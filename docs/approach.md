@@ -270,3 +270,29 @@ First run, 4 agents, clock factor K=4, 60 steps per episode (`scripts/env_tasks_
 
 - The environment delivers the clock factor: 3.8 to 4.0 game seconds per real second at K=4 with 4 agents.
 - Rendezvous and fight discriminate between random and a simple policy (36x and 3.7x return). Survive does not yet: nobody dies or loses health in 60 steps because the fake client melee kills any zombie in reach at once, so the task has no pressure. See the tuning below.
+
+### Making survival real: explicit melee and bite damage (run, 2026-10-25)
+
+Findings that shaped the final environment (4 agents, K=4, 120 steps, bat equipped, 14 zombies 6-12 tiles away, zombie behaviour `Attack`):
+
+1. **The built-in melee is too strong to leave automatic.** The fake client hits any zombie within 2 tiles once per `attackPeriod`. Standing still, an agent killed 8 to 75 zombies in 2 minutes and lost almost nothing. Lowering `config.player.damage` (6x) and removing the weapon did not help: kills are decided by the server from the hit packets, and the config value only changes the client's own bookkeeping. So melee is now **explicit**: `autoattack off` turns the built-in swing off (cooldown set to a huge period) and an `attack` action performs the same 2-tile hit on demand (`RLClientControl`, `PZParallelEnv` action 9).
+2. **Zombies reach the agent but do no damage.** An idle agent surrounded by four zombies at 0.1 tiles lost about 0.1 health per second, and the sandbox option `ZombieLore.Strength = Superhuman` made no difference (0 loss over 10+ seconds). The fake client's simplified zombie model walks them up to the player but its attacks effectively do not hurt. So `RLBridge.lua` has an explicit **bite rule**: every publish, each zombie within `biteRange` (1.2 tiles) removes `biteDamage` (1.5 hp per zombie per game second) from the player. This is a synthetic stand-in for real zombie attacks, not a measurement of them, and it is tunable (`cfg|biteDamage|x`).
+
+Result with both changes (`scripts/env_tasks_demo.py 4 4 120 survive,fight idle,random,scripted 1.0 6 12 Attack Base.BaseballBat 14`):
+
+| task | policy | game s per real s | mean return | kills | mean final hp | deaths (of 4) |
+|---|---|---|---|---|---|---|
+| survive | idle | 4.00 | -2.57 | 0 | 49.7 | 2 |
+| survive | random | 3.94 | 0.49 | 1 | 94.4 | 0 |
+| survive | flee nearest zombie | 3.98 | 0.30 | 0 | 85.0 | 0 |
+| fight | idle | 4.00 | -3.24 | 0 | 51.3 | 2 |
+| fight | random | 4.00 | -1.20 | 2 | 75.5 | 1 |
+| fight | walk to zombie and swing | 4.00 | 10.44 | 42 | 78.9 | 0 |
+
+Survival now punishes standing still (a learnable signal), and fight has a large gap between random and a simple scripted policy. The simple "flee" policy is not better than random walking, so survival still has headroom for a learned policy. Rendezvous earlier (K=4): random 0.88, move toward the nearest teammate 24.8 with final pair distance 2.9 tiles.
+
+### What is and is not established for the curriculum
+
+- Working: spawn, reset (heal, teleport, zombie clear and respawn), explicit move/attack actions, per-agent rewards for survive, rendezvous and fight, starter kit plus bat, and a clock factor of 4 delivering 3.9 to 4.0 game seconds per real second with 4 agents (the server kept up to about 8x in the earlier load test).
+- **Not** equivalent to the real game: zombie damage is the synthetic bite rule above; the melee model is the fake client's (2 tile reach, fixed hit period, server-decided kills); zombies are driven by the fake client's simplified simulator. Conclusions from policies trained here should be checked against a rendered client before being trusted.
+- Not done: any learning algorithm (only scripted baselines were run), a held-out check that a trained policy transfers to the rendered game, and long-run stability (all runs were minutes long).

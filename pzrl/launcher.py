@@ -87,7 +87,7 @@ class Launcher:
         raise TimeoutError(f"server not ready, see {self.server_log}")
 
     # ---- clients ------------------------------------------------------------------------------------------------
-    def write_scenario(self, ids, spawns, name="env"):
+    def write_scenario(self, ids, spawns, name="env", damage=1.0, zombie_behaviour="Normal"):
         """Scenario with one 'Line' mover per id (we steer it through the control socket)."""
         GENERATED.mkdir(parents=True, exist_ok=True)
         base = json.loads((ROOT / "scenarios" / "multi-4.json").read_text())
@@ -95,6 +95,8 @@ class Launcher:
         # a client connects after (connection.interval x its id) ms, so keep the interval small for larger ids
         base["config"]["client"]["connection"]["interval"] = 200
         base["config"]["movement"]["motion"]["run"] = RUN_SPEED_UNITS
+        base["config"]["zombies"]["behaviour"] = zombie_behaviour   # Stay | Normal | Attack
+        base["config"]["player"]["damage"] = damage   # damage the fake player deals per automatic melee hit (zombie health is 1.0)
         base["movements"] = [
             {"id": i, "description": f"env agent {i}", "motion": "Run", "type": "Line",
              "spawn": {"x": int(sx), "y": int(sy)}}

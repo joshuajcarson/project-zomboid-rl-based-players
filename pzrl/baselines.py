@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from .env import MOVES, ZOMBIE_SLOTS
+from .env import ATTACK, MOVES, ZOMBIE_SLOTS
 
 
 def _dir_to_action(dx, dy):
@@ -46,8 +46,15 @@ def seek_mate(obs):
 
 
 def charge(obs):
+    """Walk to the nearest zombie and swing once it is within reach (about 2 tiles; offsets are scaled by 30)."""
     v = nearest_zombie_vec(obs)
-    return 0 if v is None else _dir_to_action(*v)
+    if v is None:
+        return 0
+    return ATTACK if math.hypot(v[0], v[1]) * 30 < 1.8 else _dir_to_action(*v)
+
+
+def idle(obs):
+    return 0
 
 
 BASELINES = {"survive": flee, "rendezvous": seek_mate, "fight": charge}

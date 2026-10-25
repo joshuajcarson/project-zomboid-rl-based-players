@@ -19,6 +19,7 @@ class Task:
     name = "base"
     zombies_per_agent = 0   # extra zombies spawned around each agent at reset
     min_separation = 0.0    # agents are spawned at least this far apart (tiles)
+    bite_damage = 1.5       # hit points per adjacent zombie per game second (server-side rule, see RLBridge.lua)
 
     def reward(self, prev, cur, everyone):
         raise NotImplementedError
@@ -35,7 +36,7 @@ class Task:
 class Survive(Task):
     """Stage 1: do not die. Zombies are placed near the agent; run away and keep health up."""
     name = "survive"
-    zombies_per_agent = 6
+    zombies_per_agent = 14
 
     def reward(self, prev, cur, everyone):
         return self.survive_terms(prev, cur)

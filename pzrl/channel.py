@@ -134,7 +134,7 @@ class ClientControl:
         """Send a command; the control socket answers 'err not-ready' until the player exists, so retry that."""
         for _ in range(retries):
             r = self.request(line)
-            if r == "ok" or r.startswith("info"):
+            if r in ("ok", "miss") or r.startswith(("info", "hit")):
                 return r
             if r != "err not-ready":
                 raise RuntimeError(f"{line!r} -> {r}")
@@ -152,6 +152,13 @@ class ClientControl:
 
     def tp(self, x, y, z=0):
         return self.ok(f"tp {x:.2f} {y:.2f} {z}")
+
+    def autoattack(self, on):
+        return self.ok("autoattack " + ("on" if on else "off"))
+
+    def attack(self):
+        """Explicit melee: returns True when a zombie within 2 tiles was hit."""
+        return self.ok("attack", retries=1).startswith("hit")
 
     def weapon(self, item_id):
         return self.ok(f"weapon {int(item_id)}")

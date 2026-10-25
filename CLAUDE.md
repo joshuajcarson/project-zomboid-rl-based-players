@@ -18,34 +18,20 @@ RL-driven survivors in Project Zomboid: start with 1 agent, grow to 4 agents coo
 - Inspect game classes locally with `javap -p -c` (needs a JDK; the game's bundled JRE has no `javap`). Notes describing behaviour in our own words are fine.
 - Bandits and other Workshop mods are dependencies to study, not code to copy (no license found).
 
-## Current step: smoke-test the built-in fake client
+## Current state (2026-10-25)
 
-`zombie.network.FakeClientManager` (in `projectzomboid.jar`) is a headless test client with its own `main`. Args: `-scenarios=<json> -id=<movement id> [-loglevel=<n>]`. It loads `RakNet64` and `ZNetNoSteam64`, so it needs a `-nosteam` server. Default server port 16261; the client binds UDP 17500 locally (check whether multiple processes collide).
+The smoke test passed and the Python bridge works end to end. Read `docs/approach.md` (the sections after "Option B findings") for evidence; this is the short version.
 
-1. `.\scripts\start-server.ps1` and wait until the server reports it's ready.
-2. In a second terminal: `.\scripts\run-fake-client.ps1 -Scenario scenarios\smoke-1.json -Id 1`.
-3. Success = the log reaches the `RUN` state. Client state machine: `CONNECT → LOGIN → CHECKSUM → LOAD_PROFILE → CREATE_PLAYER → PLAYER_CONNECT → RUN`.
-4. Ask the user to join `127.0.0.1` with the normal game (the client may also need `-nosteam`) and confirm the fake player is visible.
+- **Architecture in use (option E):** fake clients provide the players (movement, melee), a Java agent (`agent/`, built with `scripts/build-agent.ps1`) adds a localhost control socket per fake client and an observation/command channel on the server, server Lua (`mods/RLBridge`) publishes observations and runs commands, and `pzrl/` is the Python environment (PettingZoo-style parallel env, 3 tasks: survive, rendezvous, fight). Option B (server-side NPCs) is parked: the world loads around them but zombie AI and NPC walking do not run.
+- **Run it:** `python scripts/env_tasks_demo.py 4 4 120 survive,rendezvous,fight idle,random,scripted 1.0 6 12 Attack Base.BaseballBat 14` starts its own server and 4 fake clients at clock factor 4 and prints a table. `scripts/env_demo.py` is a random rollout against a running server. `pzrl.PZParallelEnv(...)` is the entry point; `env.close()` stops everything.
+- **Time scaling:** `-TimeScale K` on `start-server.ps1` and `run-fake-client.ps1` (the env passes it). Verified up to 8x at the server level, 4x with the full env. Needs the agent jar; the jar is locked while any JVM uses it, so stop all java processes before rebuilding it.
+- **Gotchas:** a fake client connects after `connection.interval x id` ms (the generated scenarios use 200 ms); a duplicate login kicks the new client; a leftover server holds port 16261 (`Connection Startup Failed. Code: 5`); a server boot takes about 5 minutes (iterate with a long-lived server: `Launcher.start_server(reuse=True)`, and `start-server.ps1 -Dev` plus `scripts/dev_eval.py` to run Lua or reflection live, never expose a dev server beyond localhost); fake clients need the admin role for teleports (`admin|Name`, done by the env); PowerShell array literals must not contain `+` expressions; keep `.ps1` paths free of backslash-r.
+- **Not real-game behaviour:** zombie damage is the synthetic bite rule in `RLBridge.lua` (the fake client's zombies do not hurt players), melee is the fake client's with an explicit attack action, and the hit damage config is cosmetic. Treat results as a training sandbox, not a measurement of the game.
+- **Server data** in `.pzdata/` has `StarterKit = true` in its sandbox file (gives each new character a bag, bat and hammer in the bag, water and chips); characters and their kill counters persist across runs.
+- Need `gymnasium`/`pettingzoo`/`stable-baselines3` for standard training libraries; they are not installed (ask before installing). A portable JDK 21 is at `C:ench	ools\jdk` (not on PATH; reminder to set up environment variables is still open).
 
-Likely problems:
-- **Checksum rejection.** The scenario supports `config.client.checksum` with `lua`, `script` and optional `anim` strings. If the server rejects the client at `CHECKSUM`, find what the server expects (server log, or how `GameServer` validates checksums) and add it.
-- **Spawn.** `movements[].spawn` is optional (random within a small range otherwise). The coordinates in `smoke-1.json` are a guess near Muldraugh.
-- **Library path / FMOD init** errors: the client initialises FMOD and voice; run from the game directory (the scripts do).
+## Next steps
 
-### Scenario format (traced from the parser in 42.21)
-
-Top level: `version` (string), `config`, `movements` (array).
-
-- `config.client.connection`: `serverHost`?, `serverPort`?, `interval`, `timeout`, `delay` (ms)
-- `config.client.statistics`: `period`, `id`
-- `config.client.checksum`?: `lua`, `script`, `anim`?
-- `config.zombies`?: `behaviour` (`Stay` | `Normal` | `Attack`), `maxZombiesPerUpdate`, `deleteZombieDistance`, `forgotZombieDistance`, `canSeeZombieDistance`, `seeZombieDistance`, `canChangeTarget`
-- `config.player`: `fps`, `predict`, `damage`?, `voip`?
-- `config.movement` (sibling of `player`, not nested in it): `radius`, `motion.{aim,sneak,sneakrun,walk,run,sprint}`, `motion.pedestrian.{min,max}`, `motion.vehicle.{min,max}`
-- `movements[]`: `id`, `description`?, `spawn.{x,y}`?, `motion`? (`Aim` | `Sneak` | `Walk` | `SneakRun` | `Run` | `Sprint` | `Pedestrian` | `Vehicle`), `speed`?, `type`? (`Stay` | `Line` | `Circle` | `AIAttackZombies` | `AIRunAwayFromZombies` | `AIRunToAnotherPlayers` | `AINormal`), `radius`?, `direction`?, `ghost`?, `connect`?, `disconnect`?, `reconnect`?, `teleport`? (ms), `destination.{x,y}`?, `createHorde.{count,radius,interval}`?, `makeSound.{interval,radius,message}`?
-
-`?` = optional. The fake client's weapon is hard-coded to `Base.Axe`.
-
-## After the smoke test
-
-Record in `docs/approach.md`: what the fake client can do, how zombies behave around it, server tick rate with 1 and 4 clients. Then design the observation/action bridge (likely: our own Java launcher that reuses the fake client's networking but replaces its movement logic with a socket to Python; multi-agent env via PettingZoo).
+1. Train a first policy (PPO with a shared policy across agents) on survive, then rendezvous, then fight, using the scripted baselines as reference scores.
+2. Equivalence check against a rendered client for combat and zombie approach behaviour, then replace the synthetic bite rule if a better source of zombie damage is found.
+3. Longer-run stability (hours), crash recovery in the launcher, and parallel servers for more throughput.

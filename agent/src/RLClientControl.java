@@ -16,6 +16,8 @@ import java.util.Collection;
  *   speed V         set the movement speed value (same units as the scenario "run" speed)
  *   say TEXT        send a chat/admin command as this player, e.g.  say /additem "Client5" Base.BaseballBat
  *   tp X Y Z        move the player instantly and tell the server
+ *   autoattack on|off  built-in melee (2 tile reach); off hands melee over to the explicit attack command
+ *   attack          hit the nearest owned zombie within 2 tiles (replies 'hit <dist>' or 'miss')
  *   weapon ID       wield the inventory item with this id (see RLBridge give)
  *   info            reply "info x y z weaponId"
  * Replies are one line: "ok", "info ...", or "err ...". Everything goes through reflection on the game's private classes.
@@ -23,7 +25,12 @@ import java.util.Collection;
 public final class RLClientControl {
     private static Object player, movement, client, destination;
     private static Field fx, fy, fz, fWeapon, fSpeed;
-    private static Method vSet, sendCommand, sendTeleport, sendEquip;
+    private static Method vSet, sendCommand, sendTeleport, sendEquip, sendHitZombie, setUpdatePeriod;
+    private static Object simulator, attackLimiter;
+    private static java.util.Map<?, ?> zombieMap;
+    private static java.util.Collection<Object> zombieDelete;
+    private static Field fDamage, zx, zy, zhealth;
+    private static long attackPeriod = 1000;
 
     public static void start(int port) {
         Thread t = new Thread(() -> serve(port), "rl-client-control");
@@ -52,6 +59,17 @@ public final class RLClientControl {
             sendCommand = method(client.getClass(), "sendCommand", String.class);
             sendTeleport = method(client.getClass(), "sendTeleport", float.class, float.class, float.class);
             sendEquip = method(client.getClass(), "sendEquip");
+            simulator = field(pc, "simulator").get(player);
+            Class<?> sc = simulator.getClass();
+            attackLimiter = field(sc, "attackLimiter").get(simulator);
+            setUpdatePeriod = method(attackLimiter.getClass(), "setUpdatePeriod", long.class);
+            zombieMap = (java.util.Map<?, ?>) field(sc, "zombies").get(simulator);
+            zombieDelete = (java.util.Collection<Object>) field(sc, "zombies4Delete").get(simulator);
+            attackPeriod = field(sc, "attackPeriod").getInt(null);
+            Class<?> zc = Class.forName("zombie.network.FakeClientManager$Zombie");
+            zx = field(zc, "x"); zy = field(zc, "y"); zhealth = field(zc, "health");
+            fDamage = field(pc, "damage");
+            sendHitZombie = method(client.getClass(), "sendHitZombie", zc, float.class);
             return true;
         } catch (Throwable e) {
             return false;
@@ -104,6 +122,24 @@ public final class RLClientControl {
                     fWeapon.setInt(player, Integer.parseInt(arg));
                     sendEquip.invoke(client);
                     return "ok";
+                case "autoattack": // autoattack on|off : the game's built-in melee (2 tile reach, fixed period)
+                    setUpdatePeriod.invoke(attackLimiter, arg.equals("on") ? attackPeriod : Long.MAX_VALUE / 4);
+                    return "ok";
+                case "attack": { // hit the nearest owned zombie within 2 tiles, exactly like the built-in melee does
+                    Object best = null; double bd = 2.0;
+                    float px = fx.getFloat(player), py = fy.getFloat(player);
+                    for (Object z : new java.util.ArrayList<>(zombieMap.values())) {
+                        double d = Math.hypot(zx.getFloat(z) - px, zy.getFloat(z) - py);
+                        if (d < bd) { bd = d; best = z; }
+                    }
+                    if (best == null) return "miss";
+                    float dmg = fDamage.getFloat(null);
+                    sendHitZombie.invoke(client, best, dmg);
+                    float h = zhealth.getFloat(best) - dmg;
+                    zhealth.setFloat(best, h);
+                    if (h <= 0) zombieDelete.add(best);
+                    return "hit " + String.format("%.2f", bd);
+                }
                 case "info":
                     return "info " + fx.getFloat(player) + " " + fy.getFloat(player) + " " + fz.getFloat(player) + " " + fWeapon.getInt(player);
                 default:

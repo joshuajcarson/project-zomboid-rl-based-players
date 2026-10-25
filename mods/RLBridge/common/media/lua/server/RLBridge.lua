@@ -2,7 +2,9 @@
 --  * every OBS_EVERY server ticks, publishes one JSON line with all online players (and the zombies near each) via rlPublish
 --  * every tick, drains commands received through rlPoll ("name|arg|arg", see handlers below)
 -- rlPublish / rlPoll are registered by agent/rl-agent.jar (-ChannelPort); without it this mod only logs.
-local cfg = { obsEvery = 5, zRadius = 30, zMax = 8 }
+-- biteDamage: hit points removed per adjacent zombie per game second (0 = off). The fake client's zombie model does
+-- essentially no damage to players, so this is how the environment makes zombies dangerous.
+local cfg = { obsEvery = 5, zRadius = 30, zMax = 8, biteDamage = 0, biteRange = 1.2 }
 local ticks = 0
 local failed = {}
 
@@ -48,10 +50,38 @@ local function playerJson(p, zl)
         jstr(weapon), tostring(bag), #near, table.concat(zs, ","))
 end
 
+-- reduce a player's health; tries the Build 42 body damage API variants
+local function hurt(p, amount)
+    local bd = p:getBodyDamage()
+    local ok = pcall(function() bd:ReduceGeneralHealth(amount) end)
+    if ok then return true end
+    return pcall(function() bd:setOverallBodyHealth(bd:getOverallBodyHealth() - amount) end)
+end
+
+local function applyBites(players, zl)
+    if cfg.biteDamage <= 0 then return end
+    local r2 = cfg.biteRange * cfg.biteRange
+    local dt = cfg.obsEvery / 10   -- one publish = obsEvery ticks = obsEvery/10 game seconds
+    for i = 0, players:size() - 1 do
+        local p = players:get(i)
+        local near = 0
+        for j = 0, zl:size() - 1 do
+            local z = zl:get(j)
+            local dx, dy = z:getX() - p:getX(), z:getY() - p:getY()
+            if dx * dx + dy * dy <= r2 then near = near + 1 end
+        end
+        if near > 0 then
+            local ok = hurt(p, near * cfg.biteDamage * dt)
+            if not ok and not failed["hurt"] then failed["hurt"] = true; log("failed: hurt") end
+        end
+    end
+end
+
 local function publishObs()
     local players = getOnlinePlayers()
     if not players then return end
     local zl = getCell():getZombieList()
+    applyBites(players, zl)
     local parts = {}
     for i = 0, players:size() - 1 do
         local ok, res = pcall(playerJson, players:get(i), zl)

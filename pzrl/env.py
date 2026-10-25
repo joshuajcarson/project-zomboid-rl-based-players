@@ -18,6 +18,7 @@ from .tasks import DEATH_HP, TASKS, dist, nearest_other, sample_spawns
 
 # stay + 8 compass moves (world x grows east, y grows south)
 MOVES = [(0, 0), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
+ATTACK = len(MOVES)            # extra action id: explicit melee at the nearest zombie within 2 tiles
 TICKS_PER_GAME_SECOND = 10
 OBS_EVERY_TICKS = 5      # must match cfg.obsEvery in mods/RLBridge
 ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
@@ -29,7 +30,8 @@ class PZParallelEnv:
 
     def __init__(self, n_agents=2, task="survive", time_scale=1.0, step_seconds=1.0, max_steps=300,
                  base_id=40, seed=None, spawn_box=(10450, 9350, 10900, 10300), launcher=None,
-                 give_weapon="Base.BaseballBat"):
+                 give_weapon="Base.BaseballBat", player_damage=1.0, zombie_ring=(12, 22), zombie_behaviour="Normal",
+                 explicit_melee=True):
         self.task = TASKS[task]
         self.n_agents = n_agents
         self.step_seconds = step_seconds
@@ -42,6 +44,10 @@ class PZParallelEnv:
         self.launcher = launcher or Launcher(time_scale=time_scale)
         self.time_scale = time_scale
         self.give_weapon = give_weapon
+        self.player_damage = player_damage
+        self.explicit_melee = explicit_melee
+        self.zombie_behaviour = zombie_behaviour
+        self.zombie_ring = zombie_ring
         self.channel = None
         self.control = {}
         self.state = {}      # username -> latest published player dict
@@ -55,14 +61,15 @@ class PZParallelEnv:
         return Box(-1.0, 1.0, (OBS_DIM,), np.float32)
 
     def action_space(self, agent):
-        return Discrete(len(MOVES))
+        return Discrete(len(MOVES) + 1)
 
     # ---- process / connection management ------------------------------------------------------------------------------
     def _start(self):
         L = self.launcher
         L.start_server()
         spawns = sample_spawns(self.n_agents, self.task, self.rng, self.spawn_box)
-        scen = L.write_scenario(self.ids, spawns, name=f"env-{self.n_agents}")
+        scen = L.write_scenario(self.ids, spawns, name=f"env-{self.n_agents}", damage=self.player_damage,
+                                zombie_behaviour=self.zombie_behaviour)
         for i in self.ids:
             port = L.start_client(i, scen)
             self.control[f"Client{i}"] = ClientControl(port)
@@ -74,6 +81,7 @@ class PZParallelEnv:
                 break
         else:
             raise TimeoutError("agents did not all connect")
+        self.channel.command(f"cfg|biteDamage|{self.task.bite_damage}")
         for name, ctl in self.control.items():
             info = ctl.info()
             ctl.goto(info["x"], info["y"])
@@ -83,6 +91,8 @@ class PZParallelEnv:
                 raise RuntimeError(f"could not promote {name}: {ack['msg']}")
             if self.give_weapon:
                 self._equip(name, self.give_weapon)
+            if self.explicit_melee:
+                ctl.autoattack(False)
         self._started = True
 
     def close(self):
@@ -144,12 +154,13 @@ class PZParallelEnv:
         if not self._started:
             self._start()
         spawns = sample_spawns(self.n_agents, self.task, self.rng, self.spawn_box)
+        self.channel.command(f"cfg|biteDamage|{self.task.bite_damage}")   # the task may have changed since startup
         for name, (sx, sy) in zip(self.possible_agents, spawns):
             self.channel.command(f"heal|{name}")
             self.control[name].tp(sx, sy, 0)
             self.channel.command(f"zclear|{sx:.0f}|{sy:.0f}|25")
             if self.task.zombies_per_agent:
-                ring = self.rng.uniform(12, 22)
+                ring = self.rng.uniform(*self.zombie_ring)
                 self.channel.command(f"zspawn|{sx + ring:.0f}|{sy:.0f}|{self.task.zombies_per_agent}")
         self._read(self._game_seconds(4))          # let chunks and ownership settle
         self.agents = [a for a in self.possible_agents if a in self.state]
@@ -163,7 +174,11 @@ class PZParallelEnv:
             if name not in self.agents:
                 continue
             me = self.state[name]
-            dx, dy = MOVES[int(a)]
+            a = int(a)
+            if a == ATTACK:
+                self.control[name].attack()
+                a = 0                                 # attacking means standing still this step
+            dx, dy = MOVES[a]
             n = math.hypot(dx, dy) or 1.0
             self.control[name].goto(me["x"] + dx / n * move_len, me["y"] + dy / n * move_len)
         self._read(self._game_seconds(self.step_seconds))
