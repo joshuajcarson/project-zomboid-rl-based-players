@@ -189,5 +189,27 @@ RLACT give Apple to Client1 ok=true items 2 -> 3
 - **Observation works** for position, health, hunger/thirst/fatigue (Build 42 stats API: `getStats():get(CharacterStat.HUNGER)`), inventory, kill count and zombies from the server cell list (the cell zombie list works on the server once a client owns the area).
 - **Actions work without locomotion:** `getInventory():AddItem("Base.Apple")` took effect on the server (items 2 to 3). Not yet checked: whether the item is visible to the fake client (it has no inventory UI), eating it, or consuming via timed actions.
 - Server Lua tick: roughly 10 `OnTick` per second on this server (150 ticks per 15 s).
-- The fake client's health stayed at 100 while it killed zombies and had 4 zombies within 15 tiles, so it appears to take no (or little) damage; to be confirmed in a dedicated test since survival tasks depend on it.
+- Correction: the fake client does take damage. Over a 29 minute run Client1's health fell from 100 to 25 (and stayed there across relogins; player state persists per account) while it killed about 310 zombies.
 - **Spawn:** the scenario's `spawn` (10650,9800) did not decide where the player ended up; the client was at about (6082,5254) (Riverside) soon after login, so the server's spawn handling placed it. Needs checking if we want fixed start locations.
+
+## Validation against a rendered client (option C), first pass (run, 2026-10-25)
+
+Setup: same server, same `RLBridge` observer applied to both a fake client (`Client1`, `AIAttackZombies`) and a human-driven rendered client (`admin`, joined with `scripts\start-client.ps1`, which uses an isolated `.pzclient` data folder holding the repo mods; the server's required mods must exist on the client). `scripts/analyze_obs.py` summarises the server log. Observations are about every 6 s.
+
+| Measure | Fake client | Rendered client (human) | Verdict |
+|---|---|---|---|
+| Steady movement speed | 1.40 tiles/s (`run`=5) | about 2.1-2.3 sustained, 1.6-1.9 slower, bursts 2.8-5.7 | Different at defaults, **calibratable**: `config.movement.motion.run`=8 gives a steady 2.33 tiles/s (about 0.29 tiles/s per config unit, linear in the one point tested) |
+| Kills | about 11 per minute, 315 total | 2 in about 90 s | **Not comparable**: one cautious human fight, unknown weapon, different local zombie density |
+| Damage taken | 100 to 25 over 29 min | none in that 90 s | Not comparable |
+| Server sees it as a player | yes | yes | Equivalent for observation and server-side actions (same Lua API) |
+| RAM | 134 MB | 2951 MB | about 22x cheaper |
+| CPU (one core = 100%) | 2.8% | 181% (plus GPU, window open, human playing) | about 65x cheaper |
+
+Caveats: one sample each for cost; a single 90 s human trial; the rendered client was visible and being played.
+
+**What is and is not established**
+- Established: a fake client is a first-class server player (Lua sees the same object type), it can fight zombies, and its speed can be tuned to match a real player. Per-agent cost is one to two orders of magnitude lower, so many more agents fit on one PC.
+- **Not established:** that combat and zombie behaviour are equivalent to the real game. Zombies near a fake client are driven by the fake client's own simplified simulator, whose hit/kill and damage model I have not compared to the real one; the kill-rate gap hints they may differ.
+- **Not established:** that training can run faster than real time. The server loop and fake client both run on wall-clock time. Today the speedup is only parallelism (more cheap agents), not a faster clock.
+
+**What a proper equivalence test needs:** a scripted rendered-client agent (client-side Lua mod, or computer-use) doing the same task as a fake client in the same place, with the same weapon, over repeated trials, comparing time-to-kill, damage per zombie contact, zombie aggro/approach distances and speeds.

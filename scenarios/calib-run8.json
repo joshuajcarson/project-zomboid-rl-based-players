@@ -1,0 +1,66 @@
+{
+  "version": "42.21.0",
+  "config": {
+    "client": {
+      "connection": {
+        "serverHost": "127.0.0.1",
+        "serverPort": 16261,
+        "interval": 5000,
+        "timeout": 60000,
+        "delay": 1000
+      },
+      "statistics": {
+        "id": 1,
+        "period": 10000
+      }
+    },
+    "zombies": {
+      "behaviour": "Normal",
+      "maxZombiesPerUpdate": 50,
+      "deleteZombieDistance": 100,
+      "forgotZombieDistance": 50,
+      "canSeeZombieDistance": 20,
+      "seeZombieDistance": 10,
+      "canChangeTarget": true
+    },
+    "player": {
+      "fps": 60,
+      "predict": 1000,
+      "damage": 1.0,
+      "voip": false
+    },
+    "movement": {
+      "radius": 20,
+      "motion": {
+        "aim": 2,
+        "sneak": 2,
+        "sneakrun": 4,
+        "walk": 3,
+        "run": 8,
+        "sprint": 7,
+        "pedestrian": {
+          "min": 2,
+          "max": 5
+        },
+        "vehicle": {
+          "min": 10,
+          "max": 30
+        }
+      }
+    }
+  },
+  "movements": [
+    {
+      "id": 1,
+      "description": "multi-4 agent 1 (AIAttackZombies)",
+      "spawn": {
+        "x": 10650,
+        "y": 9800
+      },
+      "motion": "Run",
+      "type": "Line",
+      "radius": 30,
+      "direction": "E"
+    }
+  ]
+}
