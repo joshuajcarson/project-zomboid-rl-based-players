@@ -130,3 +130,13 @@ A from-scratch client that speaks the RakNet protocol, borrowing the fake client
 - For getting a first multi-agent loop running: A, because it already connects four agents cheaply.
 - For survival gameplay beyond fighting: C is the only option known to expose everything, but throughput is its limit; B could beat it if the zombie-authority and chunk-loading problems are solvable.
 - Suggested next experiments, in order: (1) a reflection bridge on A that reads observations and sets `moveTo` targets; (2) a minimal C mod that dumps state to a file and reads one command per tick, to measure real latency and per-client cost; (3) a time-boxed B probe: can a server-side `IsoPlayer.setNpc(true)` keep chunks loaded and zombies simulated?
+
+## Option B findings
+
+### B1: Lua-spawned NPC player (run, 2026-10-25)
+
+Probe mod `mods/RLProbe` (install with `scripts/install-mods.ps1 -Enable RLProbe`; the probe also needs `PauseEmpty=false` in the server ini so the server ticks with nobody connected).
+
+- `IsoPlayer.new(getCell(), SurvivorFactory.CreateSurvivor(), x, y, z)` works from **server** Lua, and `npc:setNpc(true)` is accepted. The NPC gets an ID and a position.
+- It does **not** make the world load. 600 ticks after spawning at 10650,9800 the square under it was still unloaded, `zombiesInCell` stayed 0, and `onlinePlayers` stayed 0. Chunk loading and zombie population on the server follow connected players' positions (`ServerMap.characterIn`, called from `GameServer`), not `IsoPlayer` objects that merely exist.
+- `ServerMap` (the class with `characterIn`, `loadOrKeepRelevent`, `importantAreaIn`) is not exposed to Lua, so the chunk loading hook needs Java: a `-javaagent` or a patched class.

@@ -1,0 +1,4 @@
+name=RL Probe
+id=RLProbe
+description=Server-side probe: can an NPC IsoPlayer keep chunks loaded and zombies simulated? Research only.
+versionMin=42.0.0
