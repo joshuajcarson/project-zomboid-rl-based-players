@@ -28,7 +28,7 @@ The smoke test passed and the Python bridge works end to end. Read `docs/approac
 - **Gotchas:** a fake client connects after `connection.interval x id` ms (the generated scenarios use 200 ms); a duplicate login kicks the new client; a leftover server holds port 16261 (`Connection Startup Failed. Code: 5`); a server boot takes about 5 minutes (iterate with a long-lived server: `Launcher.start_server(reuse=True)`, and `start-server.ps1 -Dev` plus `scripts/dev_eval.py` to run Lua or reflection live, never expose a dev server beyond localhost); fake clients need the admin role for teleports (`admin|Name`, done by the env); PowerShell array literals must not contain `+` expressions; keep `.ps1` paths free of backslash-r.
 - **Not real-game behaviour:** zombie damage is the synthetic bite rule in `RLBridge.lua` (the fake client's zombies do not hurt players), melee is the fake client's with an explicit attack action, and the hit damage config is cosmetic. Treat results as a training sandbox, not a measurement of the game.
 - **Server data** in `.pzdata/` has `StarterKit = true` in its sandbox file (gives each new character a bag, bat and hammer in the bag, water and chips); characters and their kill counters persist across runs.
-- Need `gymnasium`/`pettingzoo`/`stable-baselines3` for standard training libraries; they are not installed (ask before installing). A portable JDK 21 is at `C:ench	ools\jdk` (not on PATH; reminder to set up environment variables is still open).
+- Need `gymnasium`/`pettingzoo`/`stable-baselines3` for standard training libraries; they are not installed (ask before installing). A portable JDK 21 is at C:\bench\tools\jdk (not on PATH; reminder to set up environment variables is still open).
 
 ## Next steps
 
