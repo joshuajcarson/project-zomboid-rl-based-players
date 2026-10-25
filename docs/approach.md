@@ -69,3 +69,64 @@ Setup: one local `-nosteam` server (4 GB heap, ZGC), then 1 and 4 fake clients (
 - A (fake clients): feasible now for position, movement and melee only. Good enough for a first navigation or combat policy, not for survival play.
 - B (server-side NPCs): highest fidelity and no client processes; unproven and needs reverse engineering.
 - C (rendered clients + Lua bridge): safest for full game actions; about 3 GB heap per client, so 4 at once is heavy.
+
+## Options compared (static analysis of 42.21 plus smoke/measurement runs, 2026-10-25)
+
+Evidence level: **[run]** observed on this PC, **[javap]** read from class signatures/strings (behaviour not exercised), **[unverified]** inferred or from web search only.
+
+### A. Fake clients (`FakeClientManager`) driven by a policy
+
+What it can observe: its own position, remote players' positions (`RemotePlayer.x/y/z`, `PlayerPacket`), zombie positions/health/walk type (`Zombie`), chunk object state responses, and player stat packets (health, stats, effects, xp) [javap]. No inventory or rendered view.
+What it can do: move to a target (`Movement.moveTo`), `Stay/Line/Circle`, built-in AI modes, melee hits on zombies with a hard-coded `Base.Axe`, create hordes, make sounds, teleport, disconnect/reconnect [javap, partly run].
+
+Pros
+- Works today: connects, spawns, and fights on the unmodified 42.21 server [run].
+- Cheap: 4 clients cost the server about 29% of one core, and each client process is a small JVM (-Xmx1g in our script) [run].
+- Natively multi-agent, server-authoritative, real `IsoPlayer`s on the server (shows in the player list) [run].
+- No rendering or GPU, so many agents and fast resets are plausible.
+Cons
+- Protocol puppet: no inventory, crafting, eating, looting, building, doors/containers, or timed actions [javap].
+- Zombie behaviour comes from the client's simplified `ZombieSimulator` (it takes authority for nearby zombies), so fidelity differs from vanilla [run/javap].
+- Fake client internals are package-private/private, so a bridge needs reflection or classes injected into the `zombie.network` package; fragile across builds [javap].
+- Observations are packet-level (no tile map or visibility), so we would need to rebuild world state ourselves.
+- Anything beyond move/melee means implementing more of the client protocol ourselves.
+
+### B. Server-side NPCs (Java agent or class patch + Lua)
+
+Facts: `IsoPlayer.setNpc(boolean)` exists and `GameServer.Players` / `IDToPlayerMap` are public static, so injecting an extra `IsoPlayer` is mechanically possible [javap]. But zombie ownership (`popman.NetworkZombieManager`) is keyed by `UdpConnection`, and chunk loading / `ServerMap.characterIn` follow players [javap]. A connectionless NPC may not own zombies or keep chunks loaded [unverified].
+
+Pros
+- Highest ceiling for fidelity: real server-side player objects and the real zombie AI, no client processes at all.
+- Could use server Lua with the full game API for actions on those characters [unverified].
+- Cheapest per agent if it works.
+Cons
+- Unproven; likely the most reverse-engineering. Authority/chunk-loading assumptions (above) may need patching core classes.
+- Needs a `-javaagent` or replacing classes ahead of `projectzomboid.jar` on the classpath (classpath is `.;projectzomboid.jar`, so replaced classes load first). Fragile across builds, and we must never commit game code [javap].
+- Existing NPC mods (e.g. Bandits) are Lua mods and, as far as the web search showed, work in-engine with zombie-based characters; their exact design was not confirmed, and they carry no license we can reuse [unverified].
+- Players spawned this way may not sync correctly to clients, which matters for human spectators.
+
+### C. Rendered clients + Lua bridge
+
+Facts: the stock client launches from our script with `-nosteam`, and the jar's argument parser accepts `+connect <host>`, `+password <pw>`, `-nosound`, `-novoip`, `-cachedir=`, `-modfolders` [javap]. Lua has file I/O (`getFileReader`, `getFileWriter`/`getModFileWriter`, `fileExists`, directory listing) limited to the user Lua/cache folders [javap], and a mod can read and drive its own `IsoPlayer`.
+
+Pros
+- Full game: inventory, crafting, timed actions, real zombie AI, real map; ground truth and easy to watch.
+- Observations and actions use the same Lua API human players use; the least engine surgery.
+- Pure Lua mod, no class patching; files as the bridge need no networking code.
+- Auto-connect args mean runs can be scripted [javap].
+Cons
+- Heavy: one JVM and GPU window per agent (stock heap 3 GB); four at once is a lot for one PC [javap/estimate, not measured].
+- Real-time only: no obvious way to run faster than 1x, and no frame-skip/headless mode found yet [unverified].
+- File polling latency adds delay each tick; Lua is sandboxed (no sockets), so Python must poll files [javap].
+- Focus/rendering quirks with several windows; a character-creation/login flow must be automated.
+- Training throughput is the key weakness.
+
+### D. (Extra) Own protocol client in Python/Java
+
+A from-scratch client that speaks the RakNet protocol, borrowing the fake client's flow (`CONNECT, LOGIN, CHECKSUM, LOAD_PROFILE, CREATE_PLAYER, PLAYER_CONNECT, RUN`). Pros: no subclassing hacks, full control, light. Cons: large effort to reimplement serialization and packet set; no tile or inventory state unless we add it; same fidelity limits as A.
+
+### Preliminary read
+
+- For getting a first multi-agent loop running: A, because it already connects four agents cheaply.
+- For survival gameplay beyond fighting: C is the only option known to expose everything, but throughput is its limit; B could beat it if the zombie-authority and chunk-loading problems are solvable.
+- Suggested next experiments, in order: (1) a reflection bridge on A that reads observations and sets `moveTo` targets; (2) a minimal C mod that dumps state to a file and reads one command per tick, to measure real latency and per-client cost; (3) a time-boxed B probe: can a server-side `IsoPlayer.setNpc(true)` keep chunks loaded and zombies simulated?
