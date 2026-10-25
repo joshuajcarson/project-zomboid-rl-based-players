@@ -1,0 +1,4 @@
+name=RL Client
+id=RLClient
+description=Client-side helper for rendered RL agents: logs in automatically from the main menu. Research only.
+versionMin=42.0.0
