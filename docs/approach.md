@@ -161,3 +161,7 @@ Findings:
 Adding the Lua-spawned NPC to that list (agent function `rlAddPlayer`, `Players.add(npc)`) made the server load the world around it with **zero connected clients**: `loadedCells` 1, `ServerMap.zombieMap` 15 zombies, and the square under the NPC loaded. `ImportantAreaManager.updateOrAdd(x,y)` registers an area but did not load a cell by itself.
 
 Open question: are those zombies simulated (they have no owning `UdpConnection`)? Checked next.
+
+### B4: zombies near a connectionless NPC are inert (run, 2026-10-25)
+
+With the NPC in `GameServer.Players` and teleported (`setX/setY`) to 3 tiles from the nearest zombie, that zombie stayed put for several 15 second reports: no target, state `GenericDefaultState`, position unchanged, and `isRemoteZombie()` true. `NetworkZombieManager.getUnauthorizedZombieCount()` was 15 of 15. So the world and zombies **load** around a server-side NPC, but no zombie AI runs: in this server, zombie simulation is delegated to the owning client and an unowned zombie is treated as remote.
