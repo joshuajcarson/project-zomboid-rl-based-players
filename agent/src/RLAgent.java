@@ -13,12 +13,21 @@ public class RLAgent {
     private static void log(String s) { System.out.println("RLAGENT " + s); }
 
     public static void premain(String args, Instrumentation inst) {
-        // agent args: timescale=<K>;classes=<prefix>,<prefix>   (the clock itself reads -Drl.timescale)
-        if (args != null && args.contains("classes=")) {
-            String list = args.substring(args.indexOf("classes=") + 8).split(";")[0];
-            inst.addTransformer(new RLTimeTransformer(list.split(",")));
-            log("time scaling x" + RLClock.SCALE + " for " + list);
-            if (args.contains("client")) return; // fake-client JVM: clock scaling only, no server Lua hooks
+        // agent args, ';' separated: client | classes=<prefix>,<prefix> | control=<port> | channel=<port>
+        // (the clock itself reads -Drl.timescale)
+        java.util.Map<String, String> a = new java.util.HashMap<>();
+        if (args != null) for (String kv : args.split(";")) {
+            int i = kv.indexOf('=');
+            a.put(i < 0 ? kv : kv.substring(0, i), i < 0 ? "" : kv.substring(i + 1));
+        }
+        if (a.containsKey("classes")) {
+            inst.addTransformer(new RLTimeTransformer(a.get("classes").split(",")));
+            log("time scaling x" + RLClock.SCALE + " for " + a.get("classes"));
+        }
+        if (a.containsKey("channel")) RLServerChannel.start(Integer.parseInt(a.get("channel")));
+        if (a.containsKey("client")) { // fake-client JVM: optional control socket, no server Lua hooks
+            if (a.containsKey("control")) RLClientControl.start(Integer.parseInt(a.get("control")));
+            return;
         }
         Thread t = new Thread(RLAgent::installWhenReady, "rl-agent-install");
         t.setDaemon(true);
@@ -140,6 +149,21 @@ public class RLAgent {
             };
             rawset.invoke(env, "rlAddPlayer", Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, h3));
             rawset.invoke(env, "rlGet", Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, h2));
+            InvocationHandler hPub = (proxy, m, a) -> {
+                if (!m.getName().equals("call")) return null;
+                Object v = frameGet.invoke(a[0], 0);
+                if (v != null) RLServerChannel.publish(v.toString());
+                return 0;
+            };
+            InvocationHandler hPoll = (proxy, m, a) -> {
+                if (!m.getName().equals("call")) return null;
+                String line = RLServerChannel.poll();
+                if (line == null) return 0;
+                framePush.invoke(a[0], line);
+                return 1;
+            };
+            rawset.invoke(env, "rlPublish", Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, hPub));
+            rawset.invoke(env, "rlPoll", Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, hPoll));
 
             log("installed rlLoadArea");
         } catch (Throwable e) {

@@ -1,57 +1,164 @@
--- Observes every online player (fake clients are real IsoPlayers on the server) and prints "RLOBS" lines.
--- Also runs a one-shot action test: gives each new player an axe and reports the inventory change.
-local OBS_EVERY, RADIUS = 60, 15
-local ticks, given = 0, {}
+-- Server-side bridge for the Python RL environment. Research only.
+--  * every OBS_EVERY server ticks, publishes one JSON line with all online players (and the zombies near each) via rlPublish
+--  * every tick, drains commands received through rlPoll ("name|arg|arg", see handlers below)
+-- rlPublish / rlPoll are registered by agent/rl-agent.jar (-ChannelPort); without it this mod only logs.
+local cfg = { obsEvery = 5, zRadius = 30, zMax = 8 }
+local ticks = 0
+local failed = {}
 
 local function log(msg) print("RLBRIDGE " .. msg) end
 
-local failed = {}
-local function try(name, f)
+local function try(name, f, default)
     local ok, v = pcall(f)
     if ok and v ~= nil then return v end
-    if not failed[name] then failed[name] = true; log("getter failed: " .. name .. " (" .. tostring(v) .. ")") end
-    return -1
+    if not failed[name] then failed[name] = true; log("failed: " .. name .. " (" .. tostring(v) .. ")") end
+    return default
 end
 
-local function observe(p)
-    local cell = getCell()
-    local near, nearest = 0, 9999
-    local zl = cell:getZombieList()
+local function jstr(s) return '"' .. tostring(s):gsub('[%c"\\]', '') .. '"' end
+local function num(v, fmt) return string.format(fmt or "%.2f", tonumber(v) or 0) end
+
+local function stat(p, name)
+    return try("stat." .. name, function() return p:getStats():get(CharacterStat[name]) end, 0)
+end
+
+local function playerJson(p, zl)
+    local px, py = p:getX(), p:getY()
+    local r2 = cfg.zRadius * cfg.zRadius
+    local near = {}
     for i = 0, zl:size() - 1 do
         local z = zl:get(i)
-        local d = math.sqrt((z:getX() - p:getX()) ^ 2 + (z:getY() - p:getY()) ^ 2)
-        if d <= RADIUS then near = near + 1 end
-        if d < nearest then nearest = d end
+        local dx, dy = z:getX() - px, z:getY() - py
+        local d2 = dx * dx + dy * dy
+        if d2 <= r2 then near[#near + 1] = { d2, z:getX(), z:getY() } end
     end
-    local function stat(statName) return try("stat." .. statName, function() return p:getStats():get(CharacterStat[statName]) end) end
+    table.sort(near, function(a, b) return a[1] < b[1] end)
+    local zs = {}
+    for i = 1, math.min(#near, cfg.zMax) do zs[i] = "[" .. num(near[i][2], "%.1f") .. "," .. num(near[i][3], "%.1f") .. "]" end
+    local weapon = try("weapon", function() local it = p:getPrimaryHandItem(); return it and it:getFullType() or "" end, "")
+    local bag = try("bag", function() return p:getClothingItem_Back() ~= nil end, false)
     return string.format(
-        '{"user":"%s","x":%.1f,"y":%.1f,"z":%d,"health":%.1f,"hunger":%.3f,"thirst":%.3f,"fatigue":%.3f,"items":%d,"zombiesNear":%d,"nearestZombie":%.1f,"kills":%d,"ageH":%.4f,"mpd":%.1f}',
-        try("username", function() return p:getUsername() end), p:getX(), p:getY(), p:getZ(),
-        try("health", function() return p:getBodyDamage():getHealth() end),
-        stat("HUNGER"), stat("THIRST"), stat("FATIGUE"),
-        try("items", function() return p:getInventory():getItems():size() end),
-        near, nearest, try("kills", function() return p:getZombieKills() end),
-        try("ageH", function() return getGameTime():getWorldAgeHours() end),
-        try("mpd", function() return getGameTime():getMinutesPerDay() end))
+        '{"u":%s,"x":%.2f,"y":%.2f,"z":%d,"hp":%.1f,"dead":%s,"hunger":%.3f,"thirst":%.3f,"fatigue":%.3f,"items":%d,"kills":%d,"weapon":%s,"bag":%s,"zn":%d,"z":[%s]}',
+        jstr(try("username", function() return p:getUsername() end, "?")), px, py, p:getZ(),
+        try("health", function() return p:getBodyDamage():getHealth() end, 0),
+        tostring(try("dead", function() return p:isDead() end, false)),
+        stat(p, "HUNGER"), stat(p, "THIRST"), stat(p, "FATIGUE"),
+        try("items", function() return p:getInventory():getItems():size() end, 0),
+        try("kills", function() return p:getZombieKills() end, 0),
+        jstr(weapon), tostring(bag), #near, table.concat(zs, ","))
+end
+
+local function publishObs()
+    local players = getOnlinePlayers()
+    if not players then return end
+    local zl = getCell():getZombieList()
+    local parts = {}
+    for i = 0, players:size() - 1 do
+        local ok, res = pcall(playerJson, players:get(i), zl)
+        if ok then parts[#parts + 1] = res else log("obs error " .. tostring(res)) end
+    end
+    local age = try("ageH", function() return getGameTime():getWorldAgeHours() end, 0)
+    local line = string.format('{"tick":%d,"ageH":%.4f,"nz":%d,"p":[%s]}', ticks, age, zl:size(), table.concat(parts, ","))
+    if rlPublish then rlPublish(line) end
+end
+
+local function findPlayer(user)
+    local players = getOnlinePlayers()
+    for i = 0, players:size() - 1 do
+        local p = players:get(i)
+        if try("username", function() return p:getUsername() end, "") == user then return p end
+    end
+end
+
+local function ack(cmd, ok, msg)
+    if rlPublish then rlPublish(string.format('{"ack":%s,"ok":%s,"msg":%s}', jstr(cmd), tostring(ok), jstr(msg or ""))) end
+end
+
+-- command handlers: handlers[name](args...) returns ok, message
+local handlers = {}
+
+function handlers.cfg(key, value)
+    if cfg[key] == nil then return false, "unknown key" end
+    cfg[key] = tonumber(value) or cfg[key]
+    return true, key .. "=" .. tostring(cfg[key])
+end
+
+function handlers.heal(user)
+    local p = findPlayer(user); if not p then return false, "no such player" end
+    local ok, err = pcall(function()
+        p:getBodyDamage():RestoreToFullHealth()
+        for _, name in ipairs({ "HUNGER", "THIRST", "FATIGUE" }) do
+            pcall(function() p:getStats():set(CharacterStat[name], 0) end)
+        end
+    end)
+    return ok, tostring(err or "healed")
+end
+
+-- give|user|Base.Item : the ack message is the new item's id (the fake client needs it to wield a weapon)
+function handlers.give(user, itemType)
+    local p = findPlayer(user); if not p then return false, "no such player" end
+    local ok, res = pcall(function() return p:getInventory():AddItem(itemType) end)
+    if ok and res ~= nil then
+        local okId, id = pcall(function() return res:getID() end)
+        return true, "id=" .. tostring(okId and id or "?")
+    end
+    return false, tostring(res)
+end
+
+-- tp|user|x|y|z : server-side teleport; tries several APIs and reports which one worked
+function handlers.tp(user, x, y, z)
+    local p = findPlayer(user); if not p then return false, "no such player" end
+    x, y, z = tonumber(x), tonumber(y), tonumber(z) or 0
+    local ok1, e1 = pcall(function() p:teleportTo(x, y, z) end)
+    if ok1 then return true, "teleportTo" end
+    local ok2, e2 = pcall(function() p:setX(x); p:setY(y); p:setZ(z); p:setLastX(x); p:setLastY(y) end)
+    return ok2, "teleportTo failed (" .. tostring(e1) .. "); setX/Y " .. tostring(ok2 and "ok" or e2)
+end
+
+-- spawn n zombies around (x, y): zspawn|x|y|n
+function handlers.zspawn(x, y, n)
+    local ok, res = pcall(function() return addZombiesInOutfit(tonumber(x), tonumber(y), 0, tonumber(n), nil, 50) end)
+    return ok, tostring(res)
+end
+
+-- remove every zombie within r of (x, y): zclear|x|y|r
+function handlers.zclear(x, y, r)
+    x, y, r = tonumber(x), tonumber(y), tonumber(r)
+    local zl, removed, errs = getCell():getZombieList(), 0, ""
+    local victims = {}
+    for i = 0, zl:size() - 1 do
+        local z = zl:get(i)
+        if (z:getX() - x) ^ 2 + (z:getY() - y) ^ 2 <= r * r then victims[#victims + 1] = z end
+    end
+    for _, z in ipairs(victims) do
+        local ok, err = pcall(function() z:removeFromWorld(); z:removeFromSquare() end)
+        if ok then removed = removed + 1 else errs = tostring(err) end
+    end
+    return true, "removed " .. removed .. " " .. errs
+end
+
+local function drain()
+    for _ = 1, 50 do
+        local line = rlPoll and rlPoll()
+        if not line then return end
+        local parts = {}
+        for piece in string.gmatch(line, "[^|]+") do parts[#parts + 1] = piece end
+        local h = handlers[parts[1] or ""]
+        if h then
+            local ok, a, b = pcall(h, unpack(parts, 2))
+            if ok then ack(line, a, b) else ack(line, false, tostring(a)) end
+        else
+            ack(line, false, "unknown command")
+        end
+    end
 end
 
 Events.OnTick.Add(function()
     ticks = ticks + 1
-    if ticks % OBS_EVERY ~= 0 then return end
-    local players = getOnlinePlayers()
-    if not players then return end
-    for i = 0, players:size() - 1 do
-        local p = players:get(i)
-        local ok, res = pcall(observe, p)
-        log("RLOBS " .. (ok and res or ("error " .. tostring(res))))
-        local name = p:getUsername()
-        if not given[name] then
-            given[name] = true
-            local before = p:getInventory():getItems():size()
-            local ok2, err = pcall(function() p:getInventory():AddItem("Base.Apple") end)
-            log("RLACT give Apple to " .. name .. " ok=" .. tostring(ok2) .. " " .. tostring(err or "") ..
-                " items " .. before .. " -> " .. p:getInventory():getItems():size())
-        end
+    drain()
+    if ticks % cfg.obsEvery == 0 then
+        local ok, err = pcall(publishObs)
+        if not ok then log("publish error " .. tostring(err)) end
     end
 end)
-log("RLBridge loaded")
+log("RLBridge loaded (channel " .. tostring(rlPublish ~= nil) .. ")")

@@ -1,0 +1,165 @@
+"""PettingZoo-style parallel environment: several fake-client survivors in one Project Zomboid server.
+
+Interface follows pettingzoo.ParallelEnv (reset/step/agents/possible_agents/observation_space/action_space) without
+requiring pettingzoo to be installed. One step is `step_seconds` of GAME time regardless of the clock factor
+`time_scale`, so a larger time_scale means more training steps per real second.
+"""
+import math
+import random
+import time
+
+import numpy as np
+
+from .channel import ClientControl, ServerChannel
+from .launcher import TILES_PER_GAME_SECOND, Launcher
+from .spaces import Box, Discrete
+from .tasks import DEATH_HP, TASKS, dist, nearest_other, sample_spawns
+
+# stay + 8 compass moves (world x grows east, y grows south)
+MOVES = [(0, 0), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
+TICKS_PER_GAME_SECOND = 10
+OBS_EVERY_TICKS = 5      # must match cfg.obsEvery in mods/RLBridge
+ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
+OBS_DIM = 6 + 3 * ZOMBIE_SLOTS + 3 * MATE_SLOTS + 1
+
+
+class PZParallelEnv:
+    metadata = {"name": "pz_rl_v0"}
+
+    def __init__(self, n_agents=2, task="survive", time_scale=1.0, step_seconds=1.0, max_steps=300,
+                 base_id=40, seed=None, spawn_box=(10450, 9350, 10900, 10300), launcher=None):
+        self.task = TASKS[task]
+        self.n_agents = n_agents
+        self.step_seconds = step_seconds
+        self.max_steps = max_steps
+        self.rng = random.Random(seed)
+        self.spawn_box = spawn_box
+        self.ids = [base_id + i for i in range(n_agents)]
+        self.possible_agents = [f"Client{i}" for i in self.ids]
+        self.agents = []
+        self.launcher = launcher or Launcher(time_scale=time_scale)
+        self.time_scale = time_scale
+        self.channel = None
+        self.control = {}
+        self.state = {}      # username -> latest published player dict
+        self.prev = {}
+        self.steps = 0
+        self.last_message = None
+        self._started = False
+
+    # ---- spaces -----------------------------------------------------------------------------------------------------
+    def observation_space(self, agent):
+        return Box(-1.0, 1.0, (OBS_DIM,), np.float32)
+
+    def action_space(self, agent):
+        return Discrete(len(MOVES))
+
+    # ---- process / connection management ------------------------------------------------------------------------------
+    def _start(self):
+        L = self.launcher
+        L.start_server()
+        spawns = sample_spawns(self.n_agents, self.task, self.rng, self.spawn_box)
+        scen = L.write_scenario(self.ids, spawns, name=f"env-{self.n_agents}")
+        for i in self.ids:
+            port = L.start_client(i, scen)
+            self.control[f"Client{i}"] = ClientControl(port)
+        self.channel = ServerChannel(L.channel_port)
+        deadline = time.time() + 180
+        while time.time() < deadline:
+            msg = self.channel.wait_obs(1)
+            if set(self.possible_agents) <= {p["u"] for p in msg["p"]}:
+                break
+        else:
+            raise TimeoutError("agents did not all connect")
+        for name, ctl in self.control.items():
+            info = ctl.info()
+            ctl.goto(info["x"], info["y"])
+        self._started = True
+
+    def close(self):
+        for c in self.control.values():
+            c.close()
+        if self.channel:
+            self.channel.close()
+        self.launcher.stop_all()
+        self._started = False
+
+    # ---- helpers ----------------------------------------------------------------------------------------------------
+    def _read(self, n_messages):
+        msg = self.channel.wait_obs(n_messages)
+        self.last_message = msg
+        for p in msg["p"]:
+            if p["u"] in self.possible_agents:
+                self.state[p["u"]] = p
+        return msg
+
+    def _game_seconds(self, seconds):
+        return max(1, round(seconds * TICKS_PER_GAME_SECOND / OBS_EVERY_TICKS))
+
+    def _obs(self, name):
+        me = self.state[name]
+        v = np.zeros(OBS_DIM, np.float32)
+        v[0] = np.clip(me["hp"] / 100.0, 0, 1)
+        v[1], v[2], v[3] = np.clip([me["hunger"], me["thirst"], me["fatigue"]], 0, 1)
+        v[4] = 1.0 if me["weapon"] else 0.0
+        v[5] = 1.0 if me["bag"] else 0.0
+        o = 6
+        zs = sorted(me["z"], key=lambda z: (z[0] - me["x"]) ** 2 + (z[1] - me["y"]) ** 2)[:ZOMBIE_SLOTS]
+        for z in zs:
+            v[o:o + 3] = [np.clip((z[0] - me["x"]) / 30, -1, 1), np.clip((z[1] - me["y"]) / 30, -1, 1), 1.0]
+            o += 3
+        o = 6 + 3 * ZOMBIE_SLOTS
+        mates = sorted((p for u, p in self.state.items() if u != name), key=lambda p: dist(me, p))[:MATE_SLOTS]
+        for m in mates:
+            v[o:o + 3] = [np.clip((m["x"] - me["x"]) / 100, -1, 1), np.clip((m["y"] - me["y"]) / 100, -1, 1), 1.0]
+            o += 3
+        v[-1] = min(me["zn"], 10) / 10.0
+        return v
+
+    def _info(self, name):
+        p = self.state[name]
+        return {"x": p["x"], "y": p["y"], "hp": p["hp"], "kills": p["kills"], "weapon": p["weapon"], "bag": p["bag"]}
+
+    # ---- API --------------------------------------------------------------------------------------------------------
+    def reset(self, seed=None, options=None):
+        if seed is not None:
+            self.rng = random.Random(seed)
+        if not self._started:
+            self._start()
+        spawns = sample_spawns(self.n_agents, self.task, self.rng, self.spawn_box)
+        for name, (sx, sy) in zip(self.possible_agents, spawns):
+            self.channel.command(f"heal|{name}")
+            self.control[name].tp(sx, sy, 0)
+            self.channel.command(f"zclear|{sx:.0f}|{sy:.0f}|25")
+            if self.task.zombies_per_agent:
+                ring = self.rng.uniform(12, 22)
+                self.channel.command(f"zspawn|{sx + ring:.0f}|{sy:.0f}|{self.task.zombies_per_agent}")
+        self._read(self._game_seconds(4))          # let chunks and ownership settle
+        self.agents = [a for a in self.possible_agents if a in self.state]
+        self.prev = {a: dict(self.state[a]) for a in self.agents}
+        self.steps = 0
+        return {a: self._obs(a) for a in self.agents}, {a: self._info(a) for a in self.agents}
+
+    def step(self, actions):
+        move_len = TILES_PER_GAME_SECOND * self.step_seconds * 1.5
+        for name, a in actions.items():
+            if name not in self.agents:
+                continue
+            me = self.state[name]
+            dx, dy = MOVES[int(a)]
+            n = math.hypot(dx, dy) or 1.0
+            self.control[name].goto(me["x"] + dx / n * move_len, me["y"] + dy / n * move_len)
+        self._read(self._game_seconds(self.step_seconds))
+        self.steps += 1
+        obs, rewards, terms, truncs, infos = {}, {}, {}, {}, {}
+        for name in list(self.agents):
+            cur = self.state[name]
+            rewards[name] = self.task.reward(self.prev[name], cur, self.state)
+            dead = cur["dead"] or cur["hp"] <= DEATH_HP
+            terms[name] = dead
+            truncs[name] = (not dead) and self.steps >= self.max_steps
+            obs[name] = self._obs(name)
+            infos[name] = self._info(name)
+            self.prev[name] = dict(cur)
+        self.agents = [a for a in self.agents if not (terms[a] or truncs[a])]
+        return obs, rewards, terms, truncs, infos

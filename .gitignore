@@ -26,3 +26,4 @@ logs/
 agent/build/
 agent/*.jar
 .pzclient/
+scenarios/generated/

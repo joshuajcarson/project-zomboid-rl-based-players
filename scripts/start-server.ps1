@@ -5,7 +5,8 @@ param(
     [string]$AdminPassword = 'rl-admin',
     [string]$MaxHeap = '4096m',
     [string]$JavaAgent = '',
-    [double]$TimeScale = 1
+    [double]$TimeScale = 1,
+    [int]$ChannelPort = 0
 )
 . "$PSScriptRoot\pz-env.ps1"
 
@@ -13,8 +14,12 @@ $logDir = Join-Path $RepoRoot 'logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $log = Join-Path $logDir ("server-{0:yyyyMMdd-HHmmss}.log" -f (Get-Date))
 
-# -TimeScale K speeds up the server's own clock (all zombie.* classes) via the agent; needs -JavaAgent
-$agentOpt = if ($TimeScale -ne 1) { "=classes=zombie/" } else { '' }
+# -TimeScale K speeds up the server's own clock (all zombie.* classes) via the agent; needs -JavaAgent.
+# -ChannelPort opens the localhost observation/command channel used by the Python env (needs -JavaAgent).
+$agentParts = @()
+if ($ChannelPort -gt 0) { $agentParts += "channel=$ChannelPort" }
+if ($TimeScale -ne 1) { $agentParts += 'classes=zombie/' }
+$agentOpt = if ($agentParts.Count) { '=' + ($agentParts -join ';') } else { '' }
 $agentArg = if ($JavaAgent) { @("-javaagent:$JavaAgent$agentOpt", "-Drl.timescale=$TimeScale") } else { @() }
 $args = $CommonJvm + $agentArg + @(
     "-Xmx$MaxHeap", '-XX:+UseZGC',
