@@ -6,6 +6,7 @@ requiring pettingzoo to be installed. One step is `step_seconds` of GAME time re
 """
 import math
 import random
+import re
 import time
 
 import numpy as np
@@ -27,7 +28,8 @@ class PZParallelEnv:
     metadata = {"name": "pz_rl_v0"}
 
     def __init__(self, n_agents=2, task="survive", time_scale=1.0, step_seconds=1.0, max_steps=300,
-                 base_id=40, seed=None, spawn_box=(10450, 9350, 10900, 10300), launcher=None):
+                 base_id=40, seed=None, spawn_box=(10450, 9350, 10900, 10300), launcher=None,
+                 give_weapon="Base.BaseballBat"):
         self.task = TASKS[task]
         self.n_agents = n_agents
         self.step_seconds = step_seconds
@@ -39,6 +41,7 @@ class PZParallelEnv:
         self.agents = []
         self.launcher = launcher or Launcher(time_scale=time_scale)
         self.time_scale = time_scale
+        self.give_weapon = give_weapon
         self.channel = None
         self.control = {}
         self.state = {}      # username -> latest published player dict
@@ -74,6 +77,12 @@ class PZParallelEnv:
         for name, ctl in self.control.items():
             info = ctl.info()
             ctl.goto(info["x"], info["y"])
+            # admin role: the server only honours a fake client's teleport requests if it is an admin
+            ack = self.channel.command(f"admin|{name}")
+            if not ack["ok"]:
+                raise RuntimeError(f"could not promote {name}: {ack['msg']}")
+            if self.give_weapon:
+                self._equip(name, self.give_weapon)
         self._started = True
 
     def close(self):
@@ -85,6 +94,14 @@ class PZParallelEnv:
         self._started = False
 
     # ---- helpers ----------------------------------------------------------------------------------------------------
+    def _equip(self, name, item_type):
+        """Give the item on the server and make the fake client wield it (it sends an Equip packet)."""
+        ack = self.channel.command(f"give|{name}|{item_type}")
+        m = re.search(r"id=(\d+)", ack["msg"])
+        if not (ack["ok"] and m):
+            raise RuntimeError(f"give {item_type} to {name} failed: {ack['msg']}")
+        self.control[name].weapon(int(m.group(1)))
+
     def _read(self, n_messages):
         msg = self.channel.wait_obs(n_messages)
         self.last_message = msg

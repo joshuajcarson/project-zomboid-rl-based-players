@@ -250,3 +250,23 @@ Layout: `agent/` (Java), `mods/RLBridge` (server Lua), `pzrl/` (Python), `script
 - **Client control** (`-ControlPort`, agent argument `control=`): a localhost socket inside each fake client JVM that steers it by reflection: `goto x y`, `speed`, `say`, `tp`, `weapon id`, `info`. A scenario mover of type `Line` walks to the last `goto` target and stops, which is how the Python env moves agents.
 - **Tested:** 2 fake clients connect, observations stream, `goto` moves a client about 2.3 tiles per game second, `heal`, `give` and `zspawn` work, and the `StarterKit` sandbox option (set `StarterKit = true` in the server's `*_SandboxVars.lua`) gives every new fake-client character a bag plus four items, so the server-side part of that option does run for fake clients. The bat sits in the bag, not in the hands.
 - **Gotchas found:** a fake client connects after `connection.interval x id` ms (5 s per id by default, so id 30 waits 150 s); the generated scenarios set the interval to 200 ms. Starting a client with an id that is already logged in gets it kicked as a duplicate. `run-fake-client.ps1` array building needs the agent argument in its own variable (a `+` inside an array literal glued two arguments together).
+
+## Python environment, first results (run, 2026-10-25)
+
+`pzrl/env.py` is a PettingZoo-style parallel environment (reset/step, per-agent dicts, no hard dependency on pettingzoo or gymnasium; neither is installed here). 9 discrete actions (stay plus 8 compass moves), 25-dim observation (own health/hunger/thirst/fatigue/has-weapon/has-bag, the 4 nearest zombies and 2 nearest teammates as relative offsets, nearby-zombie count). One step is 1 game second regardless of the clock factor. Reset heals, teleports (the fake clients are promoted to admin through `rlPromote`, otherwise the server reverts client teleports), clears and respawns zombies. At startup each agent gets the starter kit (server option) plus a bat wielded through the control socket (`give` returns the item id, `weapon <id>` makes the fake client wield it).
+
+Task rewards (`pzrl/tasks.py`): survive (alive bonus, health loss and death penalties), rendezvous (change in distance to nearest teammate plus a meeting bonus), fight (kills plus the survival terms). `pzrl/baselines.py` has scripted policies used as sanity checks.
+
+First run, 4 agents, clock factor K=4, 60 steps per episode (`scripts/env_tasks_demo.py`):
+
+| task | policy | game s per real s | mean return | notes |
+|---|---|---|---|---|
+| survive | random | 3.78 | 0.60 | 8 kills, no deaths |
+| survive | flee nearest zombie | 4.00 | 0.58 | 1 kill, no deaths |
+| rendezvous | random | 3.86 | 0.42 | final min pair distance 218 tiles |
+| rendezvous | move toward nearest teammate | 4.00 | 15.35 | final min pair distance 1.1 tiles |
+| fight | random | 4.00 | 3.10 | 10 kills |
+| fight | move toward nearest zombie | 3.87 | 11.34 | 43 kills |
+
+- The environment delivers the clock factor: 3.8 to 4.0 game seconds per real second at K=4 with 4 agents.
+- Rendezvous and fight discriminate between random and a simple policy (36x and 3.7x return). Survive does not yet: nobody dies or loses health in 60 steps because the fake client melee kills any zombie in reach at once, so the task has no pressure. See the tuning below.

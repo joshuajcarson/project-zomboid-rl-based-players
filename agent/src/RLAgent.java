@@ -37,7 +37,7 @@ public class RLAgent {
 
     /** Evaluate "pkg.Class.staticField.method(1,2).field" style paths by reflection. */
     static Object eval(String expr) throws Exception {
-        String[] parts = expr.split("\\.(?![^(]*\\))");
+        String[] parts = splitDots(expr).toArray(new String[0]);
         // find the longest prefix that is a class name
         Class<?> cls = null; int idx = 0; StringBuilder name = new StringBuilder();
         for (; idx < parts.length; idx++) {
@@ -57,16 +57,18 @@ public class RLAgent {
             } else {
                 String mname = tok.substring(0, p);
                 String argStr = tok.substring(p + 1, tok.length() - 1).trim();
-                String[] as = argStr.isEmpty() ? new String[0] : argStr.split(",");
-                Object[] args = new Object[as.length];
-                for (int i = 0; i < as.length; i++) args[i] = Integer.valueOf(as[i].trim());
+                java.util.List<String> as = splitTop(argStr);
+                Object[] args = new Object[as.size()];
+                for (int i = 0; i < args.length; i++) {
+                    String a = as.get(i).trim();
+                    args[i] = a.startsWith("@") ? eval(a.substring(1)) : Integer.valueOf(a);   // "@expr" = nested expression
+                }
                 Method m = null;
                 for (Method c : curCls.getMethods()) {
-                    if (!c.getName().equals(mname) || c.getParameterCount() != args.length) continue;
-                    m = c; break;
+                    if (c.getName().equals(mname) && fits(c, args)) { m = c; break; }
                 }
                 if (m == null) for (Method c : curCls.getDeclaredMethods()) {
-                    if (c.getName().equals(mname) && c.getParameterCount() == args.length) { m = c; break; }
+                    if (c.getName().equals(mname) && fits(c, args)) { m = c; break; }
                 }
                 if (m == null) throw new NoSuchMethodException(tok + " on " + curCls.getName());
                 m.setAccessible(true);
@@ -76,6 +78,50 @@ public class RLAgent {
             curCls = cur.getClass();
         }
         return cur;
+    }
+
+
+    /** Split on dots that are not inside parentheses. */
+    static java.util.List<String> splitDots(String s) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        int depth = 0, start = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '(') depth++;
+            else if (c == ')') depth--;
+            else if (c == '.' && depth == 0) { out.add(s.substring(start, i)); start = i + 1; }
+        }
+        out.add(s.substring(start));
+        return out;
+    }
+
+    /** Split on commas that are not inside parentheses. */
+    static java.util.List<String> splitTop(String s) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (s.isEmpty()) return out;
+        int depth = 0, start = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '(') depth++;
+            else if (c == ')') depth--;
+            else if (c == ',' && depth == 0) { out.add(s.substring(start, i)); start = i + 1; }
+        }
+        out.add(s.substring(start));
+        return out;
+    }
+
+    static boolean fits(Method m, Object[] args) {
+        Class<?>[] ps = m.getParameterTypes();
+        if (ps.length != args.length) return false;
+        for (int i = 0; i < ps.length; i++) {
+            Class<?> p = ps[i];
+            if (args[i] == null) { if (p.isPrimitive()) return false; continue; }
+            Class<?> a = args[i].getClass();
+            if (p.isPrimitive()) {
+                if (p == boolean.class ? a != Boolean.class : !(Number.class.isAssignableFrom(a))) return false;
+            } else if (!p.isAssignableFrom(a)) return false;
+        }
+        return true;
     }
 
     static java.lang.reflect.Field findField(Class<?> c, String n) throws NoSuchFieldException {
@@ -162,6 +208,31 @@ public class RLAgent {
                 framePush.invoke(a[0], line);
                 return 1;
             };
+            InvocationHandler hPromote = (proxy, m, a) -> {
+                if (!m.getName().equals("call")) return null;
+                String r;
+                try {
+                    String user = String.valueOf(frameGet.invoke(a[0], 0));
+                    Object admin = Class.forName("zombie.characters.Roles").getMethod("getDefaultForAdmin").invoke(null);
+                    Class<?> gs = Class.forName("zombie.network.GameServer");
+                    Object engine = gs.getField("udpEngine").get(null);
+                    java.util.List<?> conns = (java.util.List<?>) engine.getClass().getField("connections").get(engine);
+                    int n = 0;
+                    for (Object c : new java.util.ArrayList<>(conns)) {
+                        if (!user.equals(String.valueOf(c.getClass().getMethod("getUserName").invoke(c)))) continue;
+                        Class<?> roleClass = admin.getClass();
+                        c.getClass().getMethod("setRole", roleClass).invoke(c, admin);
+                        Object[] players = (Object[]) c.getClass().getField("players").get(c);
+                        for (Object pl : players) if (pl != null) pl.getClass().getMethod("setRole", roleClass).invoke(pl, admin);
+                        n++;
+                    }
+                    r = n > 0 ? "promoted " + n : "no such connection";
+                } catch (Throwable e) { Throwable c = e; while (c.getCause() != null) c = c.getCause(); r = "ERR " + c; }
+                framePush.invoke(a[0], r);
+                return 1;
+            };
+            rawset.invoke(env, "rlPromote", Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, hPromote));
+            if ("true".equals(System.getProperty("rl.dev"))) rawset.invoke(env, "rlDev", Boolean.TRUE);
             rawset.invoke(env, "rlPublish", Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, hPub));
             rawset.invoke(env, "rlPoll", Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, hPoll));
 

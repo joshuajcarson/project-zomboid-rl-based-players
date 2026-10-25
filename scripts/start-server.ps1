@@ -6,7 +6,8 @@ param(
     [string]$MaxHeap = '4096m',
     [string]$JavaAgent = '',
     [double]$TimeScale = 1,
-    [int]$ChannelPort = 0
+    [int]$ChannelPort = 0,
+    [switch]$Dev
 )
 . "$PSScriptRoot\pz-env.ps1"
 
@@ -21,7 +22,9 @@ if ($ChannelPort -gt 0) { $agentParts += "channel=$ChannelPort" }
 if ($TimeScale -ne 1) { $agentParts += 'classes=zombie/' }
 $agentOpt = if ($agentParts.Count) { '=' + ($agentParts -join ';') } else { '' }
 $agentArg = if ($JavaAgent) { @("-javaagent:$JavaAgent$agentOpt", "-Drl.timescale=$TimeScale") } else { @() }
-$args = $CommonJvm + $agentArg + @(
+# -Dev enables the 'get' and 'lua' bridge commands (arbitrary reflection / Lua from the localhost channel); research use only.
+$devArg = if ($Dev) { @('-Drl.dev=true') } else { @() }
+$args = $CommonJvm + $agentArg + $devArg + @(
     "-Xmx$MaxHeap", '-XX:+UseZGC',
     '-cp', $ClassPath, 'zombie.network.GameServer',
     '-nosteam',

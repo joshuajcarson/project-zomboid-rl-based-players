@@ -105,6 +105,13 @@ function handlers.give(user, itemType)
     return false, tostring(res)
 end
 
+-- admin|user : give a fake client the admin role so the server accepts its teleports and chat commands
+function handlers.admin(user)
+    if not rlPromote then return false, "agent function rlPromote missing" end
+    local res = rlPromote(user)
+    return string.sub(res, 1, 8) == "promoted", res
+end
+
 -- tp|user|x|y|z : server-side teleport; tries several APIs and reports which one worked
 function handlers.tp(user, x, y, z)
     local p = findPlayer(user); if not p then return false, "no such player" end
@@ -137,6 +144,20 @@ function handlers.zclear(x, y, r)
     return true, "removed " .. removed .. " " .. errs
 end
 
+-- development-only commands, present only when the server was started with -Dev (rl.dev=true)
+if rlDev then
+    -- get|<reflection path>  : see agent rlGet, e.g. get|zombie.network.GameServer.Players.size()
+    function handlers.get(expr) return true, tostring(rlGet(expr)) end
+    -- lua|<code> : run a chunk of Lua on the server and return its result
+    function handlers.lua(code)
+        local f, err = loadstring("return " .. code)
+        if not f then f, err = loadstring(code) end
+        if not f then return false, tostring(err) end
+        local ok, res = pcall(f)
+        return ok, tostring(res)
+    end
+end
+
 local function drain()
     for _ = 1, 50 do
         local line = rlPoll and rlPoll()
@@ -145,7 +166,9 @@ local function drain()
         for piece in string.gmatch(line, "[^|]+") do parts[#parts + 1] = piece end
         local h = handlers[parts[1] or ""]
         if h then
-            local ok, a, b = pcall(h, unpack(parts, 2))
+            local args = { unpack(parts, 2) }
+            if parts[1] == "lua" or parts[1] == "get" then args = { string.sub(line, #parts[1] + 2) } end
+            local ok, a, b = pcall(h, unpack(args))
             if ok then ack(line, a, b) else ack(line, false, tostring(a)) end
         else
             ack(line, false, "unknown command")
