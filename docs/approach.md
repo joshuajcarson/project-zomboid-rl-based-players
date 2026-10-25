@@ -153,3 +153,11 @@ Findings:
 - Calling `ServerMap.loadOrKeepRelevent(166,153)` does register and load the cell (`releventNow` 1, `loadedCells` 1), but `releventNow` is cleared every frame. Calling it only every 30 ticks left `loadedCells` at 0. So a player-less area needs to be marked relevant **every tick**.
 - The probe's "square loaded" check (`getCell():getGridSquare`) is always false on a dedicated server, even with a real player present. Ignore it; use `zombiesInCell` and the `ServerMap` expressions instead. With a fake client connected at the same spot the probe saw 53 to 86 zombies.
 - Lesson on tooling: `tail -f | grep | cut` buffers and hides monitor output; read the log file directly.
+
+### B3: NPC in `GameServer.Players` loads the world with no clients (run, 2026-10-25)
+
+`GameServer.main` loops over the public static `GameServer.Players` list every frame, adds each alive `IsoPlayer` to the cell object list and calls `ServerMap.characterIn(player)`; the relevance list is rebuilt every frame in that window, which is why external per-tick `characterIn` calls from Lua never stuck.
+
+Adding the Lua-spawned NPC to that list (agent function `rlAddPlayer`, `Players.add(npc)`) made the server load the world around it with **zero connected clients**: `loadedCells` 1, `ServerMap.zombieMap` 15 zombies, and the square under the NPC loaded. `ImportantAreaManager.updateOrAdd(x,y)` registers an area but did not load a cell by itself.
+
+Open question: are those zombies simulated (they have no owning `UdpConnection`)? Checked next.

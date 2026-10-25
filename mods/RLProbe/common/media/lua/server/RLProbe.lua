@@ -20,6 +20,7 @@ local function spawnNpc()
     local ok2, err2 = pcall(function() npc:setNpc(true) end)
     log("setNpc ok=" .. tostring(ok2) .. " " .. tostring(err2 or ""))
     pcall(function() npc:setSceneCulled(false) end)
+    if rlAddPlayer then log("rlAddPlayer -> " .. tostring(rlAddPlayer(npc))) end
 end
 
 local function report()

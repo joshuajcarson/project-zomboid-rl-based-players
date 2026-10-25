@@ -117,6 +117,21 @@ public class RLAgent {
                 framePush.invoke(cf, r);
                 return 1;
             };
+            InvocationHandler h3 = (proxy, m, a) -> {
+                if (!m.getName().equals("call")) return null;
+                Object cf = a[0];
+                String r;
+                try {
+                    Object pl = frameGet.invoke(cf, 0);
+                    Class<?> gs = Class.forName("zombie.network.GameServer");
+                    java.util.List<Object> players = (java.util.List<Object>) gs.getField("Players").get(null);
+                    if (!players.contains(pl)) players.add(pl);
+                    r = "players=" + players.size();
+                } catch (Throwable e) { Throwable c = e; while (c.getCause() != null) c = c.getCause(); r = "ERR " + c; }
+                framePush.invoke(cf, r);
+                return 1;
+            };
+            rawset.invoke(env, "rlAddPlayer", Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, h3));
             rawset.invoke(env, "rlGet", Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, h2));
 
             log("installed rlLoadArea");
