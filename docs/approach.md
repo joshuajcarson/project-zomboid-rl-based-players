@@ -140,3 +140,16 @@ Probe mod `mods/RLProbe` (install with `scripts/install-mods.ps1 -Enable RLProbe
 - `IsoPlayer.new(getCell(), SurvivorFactory.CreateSurvivor(), x, y, z)` works from **server** Lua, and `npc:setNpc(true)` is accepted. The NPC gets an ID and a position.
 - It does **not** make the world load. 600 ticks after spawning at 10650,9800 the square under it was still unloaded, `zombiesInCell` stayed 0, and `onlinePlayers` stayed 0. Chunk loading and zombie population on the server follow connected players' positions (`ServerMap.characterIn`, called from `GameServer`), not `IsoPlayer` objects that merely exist.
 - `ServerMap` (the class with `characterIn`, `loadOrKeepRelevent`, `importantAreaIn`) is not exposed to Lua, so the chunk loading hook needs Java: a `-javaagent` or a patched class.
+
+### B2: Java agent as a reflection inspector (run, 2026-10-25)
+
+`agent/` holds a Java agent (`scripts/build-agent.ps1`, started with `start-server.ps1 -JavaAgent`) compiled without any game classes. It registers two Lua globals on the server's main Lua environment, so server Lua (running on the game's own thread) can reach Java-only APIs:
+
+- `rlGet("pkg.Class.staticField.method(1,2).field")` evaluates a reflection path and returns its string value. Combined with a text file the probe re-reads (`<cache>/Lua/rlprobe_exprs.txt`), this lets us inspect and call server internals **without restarting** (a boot takes about 4 minutes).
+- `rlLoadArea(x, y, z)` calls `ServerMap.characterIn` / `importantAreaIn`.
+
+Findings:
+- Server cells are 64x64 squares (`ServerMap.CellSize` 64, 8 chunks per cell). World square 10650,9800 is server cell 166,153.
+- Calling `ServerMap.loadOrKeepRelevent(166,153)` does register and load the cell (`releventNow` 1, `loadedCells` 1), but `releventNow` is cleared every frame. Calling it only every 30 ticks left `loadedCells` at 0. So a player-less area needs to be marked relevant **every tick**.
+- The probe's "square loaded" check (`getCell():getGridSquare`) is always false on a dedicated server, even with a real player present. Ignore it; use `zombiesInCell` and the `ServerMap` expressions instead. With a fake client connected at the same spot the probe saw 53 to 86 zombies.
+- Lesson on tooling: `tail -f | grep | cut` buffers and hides monitor output; read the log file directly.

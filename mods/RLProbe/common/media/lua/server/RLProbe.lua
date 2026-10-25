@@ -1,6 +1,6 @@
 -- Research probe for option B (server-side NPC players). Prints "RLPROBE" lines to the server log.
 local NPC_X, NPC_Y, NPC_Z = 10650, 9800, 0
-local SPAWN_AT_TICK, REPORT_EVERY = 600, 300
+local SPAWN_AT_TICK, REPORT_EVERY = 600, 150
 local ticks, npc, prevZ = 0, nil, {}
 
 local function log(msg) print("RLPROBE " .. tostring(msg)) end
@@ -42,11 +42,28 @@ local function report()
         if prevZ[id] and (math.abs(prevZ[id][1] - cur[id][1]) + math.abs(prevZ[id][2] - cur[id][2])) > 0.05 then moved = moved + 1 end
     end
     prevZ = cur
+    -- optional live expressions: put one rlGet expression per line in <cache>/Lua/rlprobe_exprs.txt
+    if rlGet then
+        local okr, rd = pcall(getFileReader, "rlprobe_exprs.txt", false)
+        if okr and rd then
+            local ln = rd:readLine()
+            while ln do
+                if ln ~= "" then log("EXPR " .. ln .. " = " .. tostring(rlGet(ln))) end
+                ln = rd:readLine()
+            end
+            rd:close()
+        end
+    end
     log(line .. " zombiesMovedSinceLast=" .. moved)
 end
 
 Events.OnTick.Add(function()
     ticks = ticks + 1
+    -- rlLoadArea is installed by the Java agent (agent/rl-agent.jar); keeps the NPC's area loaded
+    if npc and rlLoadArea and true then
+        local ok, res = pcall(rlLoadArea, math.floor(npc:getX()), math.floor(npc:getY()), math.floor(npc:getZ()))
+        if ticks % REPORT_EVERY == 0 then log("rlLoadArea -> " .. tostring(ok) .. " " .. tostring(res)) end
+    end
     if ticks == SPAWN_AT_TICK then spawnNpc() end
     if ticks % REPORT_EVERY == 0 then local ok, e = pcall(report); if not ok then log("report error " .. tostring(e)) end end
 end)

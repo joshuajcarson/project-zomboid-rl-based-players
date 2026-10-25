@@ -23,3 +23,5 @@ wandb/
 # Local server data and run logs
 .pzdata/
 logs/
+agent/build/
+agent/*.jar
