@@ -40,7 +40,8 @@ Top level: `version` (string), `config`, `movements` (array).
 - `config.client.statistics`: `period`, `id`
 - `config.client.checksum`?: `lua`, `script`, `anim`?
 - `config.zombies`?: `behaviour` (`Stay` | `Normal` | `Attack`), `maxZombiesPerUpdate`, `deleteZombieDistance`, `forgotZombieDistance`, `canSeeZombieDistance`, `seeZombieDistance`, `canChangeTarget`
-- `config.player`: `fps`, `predict`, `damage`?, `voip`?, `movement.radius`, `movement.motion.{aim,sneak,sneakrun,walk,run,sprint}`, `movement.motion.pedestrian.{min,max}`, `movement.motion.vehicle.{min,max}`
+- `config.player`: `fps`, `predict`, `damage`?, `voip`?
+- `config.movement` (sibling of `player`, not nested in it): `radius`, `motion.{aim,sneak,sneakrun,walk,run,sprint}`, `motion.pedestrian.{min,max}`, `motion.vehicle.{min,max}`
 - `movements[]`: `id`, `description`?, `spawn.{x,y}`?, `motion`? (`Aim` | `Sneak` | `Walk` | `SneakRun` | `Run` | `Sprint` | `Pedestrian` | `Vehicle`), `speed`?, `type`? (`Stay` | `Line` | `Circle` | `AIAttackZombies` | `AIRunAwayFromZombies` | `AIRunToAnotherPlayers` | `AINormal`), `radius`?, `direction`?, `ghost`?, `connect`?, `disconnect`?, `reconnect`?, `teleport`? (ms), `destination.{x,y}`?, `createHorde.{count,radius,interval}`?, `makeSound.{interval,radius,message}`?
 
 `?` = optional. The fake client's weapon is hard-coded to `Base.Axe`.

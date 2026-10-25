@@ -27,18 +27,24 @@
       "fps": 60,
       "predict": 1000,
       "damage": 1.0,
-      "voip": false,
-      "movement": {
-        "radius": 20,
-        "motion": {
-          "aim": 2,
-          "sneak": 2,
-          "sneakrun": 4,
-          "walk": 3,
-          "run": 5,
-          "sprint": 7,
-          "pedestrian": { "min": 2, "max": 5 },
-          "vehicle": { "min": 10, "max": 30 }
+      "voip": false
+    },
+    "movement": {
+      "radius": 20,
+      "motion": {
+        "aim": 2,
+        "sneak": 2,
+        "sneakrun": 4,
+        "walk": 3,
+        "run": 5,
+        "sprint": 7,
+        "pedestrian": {
+          "min": 2,
+          "max": 5
+        },
+        "vehicle": {
+          "min": 10,
+          "max": 30
         }
       }
     }
@@ -47,7 +53,10 @@
     {
       "id": 1,
       "description": "Smoke test: stand still near Muldraugh",
-      "spawn": { "x": 10650, "y": 9800 },
+      "spawn": {
+        "x": 10650,
+        "y": 9800
+      },
       "motion": "Walk",
       "type": "Stay"
     }

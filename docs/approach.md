@@ -46,3 +46,10 @@ One normal client per agent at minimum settings, with a Lua mod exposing state a
 2. **Measure.** Check what the fake client can and cannot do, how zombies behave around it, and the server tick rate with 1 and 4 fake clients.
 3. **Bridge.** Build an observation/action bridge (Java side next to the fake client, Python side as a Gymnasium / PettingZoo environment for multi-agent).
 4. **Decide** whether A's fidelity is enough, or whether to invest in B (or use C for evaluation runs).
+
+## Smoke test result (Build 42.21, 2026-10-24)
+
+- A stock fake client logged into a local `-nosteam` server and reached `RUN` in under a second (about 0.9s). No checksum rejection with the `checksum` block omitted.
+- A normal client joining `127.0.0.1` sees "Client1" in the online players list, so the server treats it as a real player.
+- Scenario gotcha: `config.movement` sits beside `config.player`, not inside it. The loader swallows JSON errors and only logs "Scenarios file load failed"; `java -Xlog:exceptions=info` reveals the real exception.
+- Not yet measured: zombie behaviour around the client, server tick rate with 1 and 4 clients, and whether multiple fake clients collide on local UDP port 17500.
