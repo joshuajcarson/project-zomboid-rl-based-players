@@ -1,0 +1,82 @@
+{
+  "version": "42.21.0",
+  "config": {
+    "client": {
+      "connection": {
+        "serverHost": "127.0.0.1",
+        "serverPort": 16261,
+        "interval": 5000,
+        "timeout": 60000,
+        "delay": 1000
+      },
+      "statistics": {
+        "id": 0,
+        "period": 0
+      }
+    },
+    "zombies": {
+      "behaviour": "Normal",
+      "maxZombiesPerUpdate": 50,
+      "deleteZombieDistance": 100,
+      "forgotZombieDistance": 50,
+      "canSeeZombieDistance": 20,
+      "seeZombieDistance": 10,
+      "canChangeTarget": true
+    },
+    "player": {
+      "fps": 60,
+      "predict": 1000,
+      "damage": 1.0,
+      "voip": false
+    },
+    "movement": {
+      "radius": 20,
+      "motion": {
+        "aim": 2,
+        "sneak": 2,
+        "sneakrun": 4,
+        "walk": 3,
+        "run": 8,
+        "sprint": 7,
+        "pedestrian": {
+          "min": 2,
+          "max": 5
+        },
+        "vehicle": {
+          "min": 10,
+          "max": 30
+        }
+      }
+    }
+  },
+  "movements": [
+    {
+      "id": 5,
+      "description": "ts agent 5",
+      "motion": "Run",
+      "type": "AIAttackZombies",
+      "radius": 30
+    },
+    {
+      "id": 6,
+      "description": "ts agent 6",
+      "motion": "Run",
+      "type": "AINormal",
+      "radius": 30
+    },
+    {
+      "id": 7,
+      "description": "ts agent 7",
+      "motion": "Run",
+      "type": "AIRunToAnotherPlayers",
+      "radius": 30
+    },
+    {
+      "id": 8,
+      "description": "ts agent 8",
+      "motion": "Run",
+      "type": "AIRunAwayFromZombies",
+      "radius": 30
+    }
+  ]
+}

@@ -225,3 +225,19 @@ Question: can training run faster than wall-clock, and by how much?
 **Clock scaling in the fake client JVM (agent, `-TimeScale`).** `agent/` can rewrite `System.nanoTime`, `System.currentTimeMillis` and `Thread.sleep(long)` call sites in chosen classes to a scaled clock (`RLClock`, `-Drl.timescale=K`). It does this by re-pointing the constant-pool method reference to a new class entry, so no bytecode library is needed, and only the fake client classes plus `UpdateLimit` are touched. Result (Client5, server unscaled): speed 2.35 / 4.58 / 9.15 / 18.25 tiles per real second at K = 1 / 2 / 4 / 8, i.e. linear. The fake client stays at about 150-170 MB and 6 percent of a core even at K=8, and the server kept accepting it. Unmodified state (hunger, thirst) is server-side and was unchanged across client scales, as expected.
 
 **Clock scaling in the server JVM.** Same agent with `classes=zombie/` (`start-server.ps1 -TimeScale 2`). The server booted and ran with about 110 `zombie.*` classes rewritten; the Lua `OnTick` rate doubled from 10 to 19.9 per real second, the log timestamps stay real time. Gotcha: a leftover server process holds port 16261 and the agent jar, so the next server fails with `Connection Startup Failed. Code: 5`.
+
+### Full-stack time scaling results (run, 2026-10-25)
+
+Server and fake clients both started with the clock agent at the same factor K (`start-server.ps1 -JavaAgent ... -TimeScale K`, `run-fake-client.ps1 -TimeScale K`). Server tick, world clock and client speed measured against the wall clock (snapshots of the `RLBridge` output, `analyze_obs.py --snap`).
+
+| K | clients | Lua ticks per real s (ideal 10K) | world clock, game hours per real hour (ideal 16K) | client speed, tiles per real s | server CPU (percent of a core) |
+|---|---|---|---|---|---|
+| 1 | 1 | 10.0 | 16.0 (expected) | 2.35 | about 6 |
+| 2 | 1 | 19.9 to 20.0 | 31.4 (1.96x) | 4.58 | 31 |
+| 8 | 4 | 71.8 (median 80, dips to 52) | 107.2 (6.7x) | 18.2 (single client run) | 84 |
+
+- Everything that the agent rewrites runs K times faster, and **per game second the dynamics are unchanged** for what I measured: movement is 2.3 tiles per game second at every K.
+- At K=8 the server falls behind a little (90 percent of target ticks, 84 percent of the ideal world clock). The practical ceiling on this PC for 4 clients is therefore somewhere around 8x; K=16 would likely saturate the server (it is already at 0.84 of a core and its cost per real second rises faster than K: 6, 31, 84 percent at K=1, 2, 8). Not tested.
+- The fake client is cheap at every K (about 150-170 MB, 6 percent of a core), so the server is the bottleneck for fast-forwarding, not the agents.
+- Net: 4 agents at 8x is roughly 27 to 32 agent-seconds of play per real second, from one server plus 4 small JVMs and no GPU, versus 1 agent-second per real second per rendered client (which costs about 3 GB and 2 cores).
+- Caveats: only classes whose names start with `zombie/` are time-scaled on the server, and native code (RakNet, the native zombie population thread) uses its own clocks, so some timers may not scale; the two-sample hunger/thirst values are too coarse (3 decimals) to say whether stat decay scales, which is why world clock was used instead; the kill counts at K=8 (225 per minute across 4 clients) are not a validated measure of equivalence.
