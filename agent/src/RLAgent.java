@@ -13,6 +13,13 @@ public class RLAgent {
     private static void log(String s) { System.out.println("RLAGENT " + s); }
 
     public static void premain(String args, Instrumentation inst) {
+        // agent args: timescale=<K>;classes=<prefix>,<prefix>   (the clock itself reads -Drl.timescale)
+        if (args != null && args.contains("classes=")) {
+            String list = args.substring(args.indexOf("classes=") + 8).split(";")[0];
+            inst.addTransformer(new RLTimeTransformer(list.split(",")));
+            log("time scaling x" + RLClock.SCALE + " for " + list);
+            if (args.contains("client")) return; // fake-client JVM: clock scaling only, no server Lua hooks
+        }
         Thread t = new Thread(RLAgent::installWhenReady, "rl-agent-install");
         t.setDaemon(true);
         t.start();

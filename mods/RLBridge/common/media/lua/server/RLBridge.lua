@@ -25,12 +25,14 @@ local function observe(p)
     end
     local function stat(statName) return try("stat." .. statName, function() return p:getStats():get(CharacterStat[statName]) end) end
     return string.format(
-        '{"user":"%s","x":%.1f,"y":%.1f,"z":%d,"health":%.1f,"hunger":%.3f,"thirst":%.3f,"fatigue":%.3f,"items":%d,"zombiesNear":%d,"nearestZombie":%.1f,"kills":%d}',
+        '{"user":"%s","x":%.1f,"y":%.1f,"z":%d,"health":%.1f,"hunger":%.3f,"thirst":%.3f,"fatigue":%.3f,"items":%d,"zombiesNear":%d,"nearestZombie":%.1f,"kills":%d,"ageH":%.4f,"mpd":%.1f}',
         try("username", function() return p:getUsername() end), p:getX(), p:getY(), p:getZ(),
         try("health", function() return p:getBodyDamage():getHealth() end),
         stat("HUNGER"), stat("THIRST"), stat("FATIGUE"),
         try("items", function() return p:getInventory():getItems():size() end),
-        near, nearest, try("kills", function() return p:getZombieKills() end))
+        near, nearest, try("kills", function() return p:getZombieKills() end),
+        try("ageH", function() return getGameTime():getWorldAgeHours() end),
+        try("mpd", function() return getGameTime():getMinutesPerDay() end))
 end
 
 Events.OnTick.Add(function()

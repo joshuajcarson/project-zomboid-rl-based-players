@@ -4,7 +4,8 @@
 param(
     [string]$Scenario = 'scenarios\smoke-1.json',
     [int]$Id = 1,
-    [int]$LogLevel = 2
+    [int]$LogLevel = 2,
+    [double]$TimeScale = 1
 )
 . "$PSScriptRoot\pz-env.ps1"
 
@@ -13,7 +14,12 @@ $logDir = Join-Path $RepoRoot 'logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $log = Join-Path $logDir ("fakeclient-{0}-{1:yyyyMMdd-HHmmss}.log" -f $Id, (Get-Date))
 
-$args = $CommonJvm + @(
+$timeArgs = @()
+if ($TimeScale -ne 1) {
+    $agentJar = Join-Path $RepoRoot 'agent\rl-agent.jar'
+    $timeArgs = @("-javaagent:$agentJar=client;classes=zombie/network/FakeClientManager,zombie/core/utils/UpdateLimit", "-Drl.timescale=$TimeScale")
+}
+$args = $CommonJvm + $timeArgs + @(
     '-Xmx1024m',
     "-Dzomboid.steam=0",
     '-cp', $ClassPath, 'zombie.network.FakeClientManager',

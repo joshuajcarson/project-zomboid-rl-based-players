@@ -4,7 +4,8 @@ param(
     [string]$ServerName = 'rl',
     [string]$AdminPassword = 'rl-admin',
     [string]$MaxHeap = '4096m',
-    [string]$JavaAgent = ''
+    [string]$JavaAgent = '',
+    [double]$TimeScale = 1
 )
 . "$PSScriptRoot\pz-env.ps1"
 
@@ -12,7 +13,9 @@ $logDir = Join-Path $RepoRoot 'logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $log = Join-Path $logDir ("server-{0:yyyyMMdd-HHmmss}.log" -f (Get-Date))
 
-$agentArg = if ($JavaAgent) { @("-javaagent:$JavaAgent") } else { @() }
+# -TimeScale K speeds up the server's own clock (all zombie.* classes) via the agent; needs -JavaAgent
+$agentOpt = if ($TimeScale -ne 1) { "=classes=zombie/" } else { '' }
+$agentArg = if ($JavaAgent) { @("-javaagent:$JavaAgent$agentOpt", "-Drl.timescale=$TimeScale") } else { @() }
 $args = $CommonJvm + $agentArg + @(
     "-Xmx$MaxHeap", '-XX:+UseZGC',
     '-cp', $ClassPath, 'zombie.network.GameServer',

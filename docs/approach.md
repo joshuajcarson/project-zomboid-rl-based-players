@@ -213,3 +213,15 @@ Caveats: one sample each for cost; a single 90 s human trial; the rendered clien
 - **Not established:** that training can run faster than real time. The server loop and fake client both run on wall-clock time. Today the speedup is only parallelism (more cheap agents), not a faster clock.
 
 **What a proper equivalence test needs:** a scripted rendered-client agent (client-side Lua mod, or computer-use) doing the same task as a fake client in the same place, with the same weapon, over repeated trials, comparing time-to-kill, damage per zombie contact, zombie aggro/approach distances and speeds.
+
+## Faster than real time (run, 2026-10-25)
+
+Question: can training run faster than wall-clock, and by how much?
+
+**Parallelism (scale test, `scripts/scale-test.ps1`, one server, 1 to 16 fake clients, `scenarios/scale-16.json`).** Server CPU 6, 18, 47 and 108 percent of a core at 1, 4, 8 and 16 clients, roughly 5 to 7 percent of a core per client, about 4.1 to 4.6 GB server RAM. The server's Lua tick stayed at 10 Hz with 16 clients (14 of the 16 were reporting observations; two had not started reporting, cause not checked). Fake client processes use about 130 MB each (2 GB for 16). On this PC that is plenty of headroom, but a 16-client run already costs about one core, and part of it is the observer itself (it loops over every zombie per player each 6 s). Kill counts were too noisy to use as a work metric.
+
+**Movement only, no clock change.** The scenario `run` speed can simply be raised: 3x (`run`=24) gave a steady 6.93 tiles/s, and the server accepted it (default anti-cheat settings, `AntiCheatSpeed=2`; no kicks logged). But this speeds up only the player, not zombies or timers, so it changes the game rather than fast-forwarding it.
+
+**Clock scaling in the fake client JVM (agent, `-TimeScale`).** `agent/` can rewrite `System.nanoTime`, `System.currentTimeMillis` and `Thread.sleep(long)` call sites in chosen classes to a scaled clock (`RLClock`, `-Drl.timescale=K`). It does this by re-pointing the constant-pool method reference to a new class entry, so no bytecode library is needed, and only the fake client classes plus `UpdateLimit` are touched. Result (Client5, server unscaled): speed 2.35 / 4.58 / 9.15 / 18.25 tiles per real second at K = 1 / 2 / 4 / 8, i.e. linear. The fake client stays at about 150-170 MB and 6 percent of a core even at K=8, and the server kept accepting it. Unmodified state (hunger, thirst) is server-side and was unchanged across client scales, as expected.
+
+**Clock scaling in the server JVM.** Same agent with `classes=zombie/` (`start-server.ps1 -TimeScale 2`). The server booted and ran with about 110 `zombie.*` classes rewritten; the Lua `OnTick` rate doubled from 10 to 19.9 per real second, the log timestamps stay real time. Gotcha: a leftover server process holds port 16261 and the agent jar, so the next server fails with `Connection Startup Failed. Code: 5`.
