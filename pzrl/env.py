@@ -170,6 +170,7 @@ class PZParallelEnv:
         self._missing[name] = 0
         self._reviving.discard(name)
         if name in self.rendered:
+            time.sleep(20)
             self._prepare_rendered(name)
         else:
             self._prepare_fake(name)
@@ -194,6 +195,7 @@ class PZParallelEnv:
                 break
         else:
             raise TimeoutError("rendered clients did not all enter the world")
+        time.sleep(20)          # a teleport in the first seconds after entering the world leaves the player unable to walk
         for name in self.rendered:
             self._prepare_rendered(name)
 
