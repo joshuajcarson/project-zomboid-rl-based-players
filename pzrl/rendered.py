@@ -25,7 +25,7 @@ class RenderedControl:
     def stop(self):
         return self._bot("stop")
 
-    def attack(self, damage=None):      # the real game decides what a swing does
+    def attack(self, damage=None, zombie_id=None):      # the real game decides what a swing does
         return self._bot("attack")
 
     def equip(self, item_type="Base.BaseballBat"):

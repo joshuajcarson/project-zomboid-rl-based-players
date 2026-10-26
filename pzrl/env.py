@@ -57,6 +57,7 @@ class PZParallelEnv:
         self.calibrated_combat = calibrated_combat   # fake swings use pzrl.combat (fitted to the real client) instead of one lethal hit
         self.combat_rng = random.Random(0 if seed is None else seed + 1)
         self.combat_stats = {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}   # what the calibrated swing model delivered (for fitting)
+        self._target = {}                            # per agent: server id of the zombie its swings go to
         self._stagger = {}                           # per agent: steps left in which a landed hit still keeps the zombies' bites weak
         self._loss = {}                              # per agent: health lost in each of the last few steps (a hurt character hits less)
         self.walk_speed = walk_speed      # target walking speed of fake clients in tiles per 100 server ticks (a real runner: about 16); None = leave as is
@@ -306,16 +307,21 @@ class PZParallelEnv:
     def _swing_damage(self, name):
         """Damage of this swing from the calibrated model (fake clients only); None = leave it to the client."""
         if not self.calibrated_combat or name in self.rendered:
-            return None
+            return None, None
         me = self.state[name]
-        dists = [math.hypot(z[0] - me["x"], z[1] - me["y"]) for z in me["z"]]
+        zs = sorted(me["z"], key=lambda z: math.hypot(z[0] - me["x"], z[1] - me["y"]))
+        dists = [math.hypot(z[0] - me["x"], z[1] - me["y"]) for z in zs]
         if not dists:
-            return None
+            return None, None
+        target = self._target.get(name)
+        if target is None or target not in {z[2] for z in zs if len(z) > 2}:
+            target = zs[0][2] if len(zs[0]) > 2 else None        # keep hitting one zombie until it is gone, like a player facing it
+        self._target[name] = target
         hurt = sum(self._loss.get(name, ())) >= 10.0        # lost 10+ health in the last 10 steps: pain and panic
-        d = sample_swing(min(dists), hurt, self.combat_rng)
+        d = sample_swing(dists[0], hurt, self.combat_rng)
         cs = self.combat_stats
         cs["swings"] += 1; cs["hits"] += 1 if d > 0 else 0; cs["damage"] += d; cs["dist_sum"] += min(dists)
-        return d
+        return d, target
 
     def _move_len(self, name):
         """How far ahead the target of a move action is. A fake client walks to its target and stops there, so this distance per
@@ -371,8 +377,12 @@ class PZParallelEnv:
             me = self.state[name]
             a = int(a)
             if a == ATTACK:
-                dmg = self._swing_damage(name)
-                self.control[name].attack(dmg)
+                dmg, zid = self._swing_damage(name)
+                if dmg is not None and zid is not None:
+                    if dmg > 0:
+                        self.channel.command(f"hit|{name}|{zid}|{dmg:.4f}")   # the bridge applies it to the zombie itself
+                else:
+                    self.control[name].attack(dmg, zid)
                 if dmg:                                    # a landed hit staggers the zombies around: they bite less for a moment
                     self._stagger[name] = STAGGER_STEPS
                     self.channel.command(f"bitescale|{name}|{STAGGER_BITE_SCALE}")

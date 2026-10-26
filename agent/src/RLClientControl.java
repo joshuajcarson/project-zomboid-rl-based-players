@@ -127,10 +127,19 @@ public final class RLClientControl {
                     setUpdatePeriod.invoke(attackLimiter, arg.equals("on") ? attackPeriod : Long.MAX_VALUE / 4);
                     return "ok";
                 case "attack": { // attack [dmg]: hit the nearest owned zombie within 2 tiles with the given damage (default: the scenario's), 0 = a swing that does nothing
-                    float dmgArg = arg.isEmpty() ? Float.NaN : Float.parseFloat(arg.trim());
+                    String[] aa = arg.trim().isEmpty() ? new String[0] : arg.trim().split("\s+");
+                    float dmgArg = aa.length > 0 ? Float.parseFloat(aa[0]) : Float.NaN;
                     Object best = null; double bd = 2.0;
+                    if (aa.length > 1) {   // attack <dmg> <zombie id>: hit exactly that zombie (the id the server reports); stale records of removed zombies sit on the player and must not absorb the hit
+                        int wanted = Integer.parseInt(aa[1]);
+                        for (java.util.Map.Entry<?, ?> en : new java.util.ArrayList<>(zombieMap.entrySet())) {
+                            if (((Number) en.getKey()).intValue() == wanted) { best = en.getValue(); break; }
+                        }
+                        if (best == null) return "miss";
+                        bd = Math.hypot(zx.getFloat(best) - fx.getFloat(player), zy.getFloat(best) - fy.getFloat(player));
+                    }
                     float px = fx.getFloat(player), py = fy.getFloat(player);
-                    if (lockedTarget != null && zombieMap.containsValue(lockedTarget)) {
+                    if (best == null && lockedTarget != null && zombieMap.containsValue(lockedTarget)) {
                         double dl = Math.hypot(zx.getFloat(lockedTarget) - px, zy.getFloat(lockedTarget) - py);
                         if (dl < 2.0) { best = lockedTarget; bd = dl; }
                     }
@@ -147,6 +156,17 @@ public final class RLClientControl {
                     zhealth.setFloat(best, h);
                     if (h <= 0) zombieDelete.add(best);
                     return "hit " + String.format("%.2f", bd);
+                }
+                case "zombies": { // the zombie records this client holds: count, then the 6 nearest as x,y,health,distance
+                    float px = fx.getFloat(player), py = fy.getFloat(player);
+                    java.util.List<double[]> zs = new java.util.ArrayList<>();
+                    for (Object z : new java.util.ArrayList<>(zombieMap.values()))
+                        zs.add(new double[] { zx.getFloat(z), zy.getFloat(z), zhealth.getFloat(z), Math.hypot(zx.getFloat(z) - px, zy.getFloat(z) - py) });
+                    zs.sort((a, b) -> Double.compare(a[3], b[3]));
+                    StringBuilder sb = new StringBuilder("info n=" + zs.size());
+                    for (int i = 0; i < Math.min(6, zs.size()); i++)
+                        sb.append(String.format(" [%.1f,%.1f h=%.2f d=%.2f]", zs.get(i)[0], zs.get(i)[1], zs.get(i)[2], zs.get(i)[3]));
+                    return sb.toString();
                 }
                 case "info":
                     return "info " + fx.getFloat(player) + " " + fy.getFloat(player) + " " + fz.getFloat(player) + " " + fWeapon.getInt(player);

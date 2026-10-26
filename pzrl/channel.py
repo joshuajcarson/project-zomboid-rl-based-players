@@ -156,13 +156,18 @@ class ClientControl:
     def autoattack(self, on):
         return self.ok("autoattack " + ("on" if on else "off"))
 
-    def attack(self, damage=None):
+    def attack(self, damage=None, zombie_id=None):
         """Explicit melee at the nearest zombie within 2 tiles. `damage` is what the swing does to the zombie's 1.0 health
         (0 = a swing that does nothing); None uses the scenario's fixed damage. Returns True when a zombie was hit."""
-        return self.ok("attack" if damage is None else f"attack {damage:.4f}", retries=1).startswith("hit")
+        line = "attack" if damage is None else f"attack {damage:.4f}" + ("" if zombie_id is None else f" {int(zombie_id)}")
+        return self.ok(line, retries=1).startswith("hit")
 
     def weapon(self, item_id):
         return self.ok(f"weapon {int(item_id)}")
+
+    def zombies(self):
+        """The zombie records this fake client holds (count and the six nearest with health and distance)."""
+        return self.ok("zombies")
 
     def info(self):
         parts = self.ok("info").split()

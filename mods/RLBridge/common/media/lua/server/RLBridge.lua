@@ -35,11 +35,11 @@ local function playerJson(p, zl)
         local z = zl:get(i)
         local dx, dy = z:getX() - px, z:getY() - py
         local d2 = dx * dx + dy * dy
-        if d2 <= r2 then near[#near + 1] = { d2, z:getX(), z:getY() } end
+        if d2 <= r2 then near[#near + 1] = { d2, z:getX(), z:getY(), z:getOnlineID() } end
     end
     table.sort(near, function(a, b) return a[1] < b[1] end)
     local zs = {}
-    for i = 1, math.min(#near, cfg.zMax) do zs[i] = "[" .. num(near[i][2], "%.1f") .. "," .. num(near[i][3], "%.1f") .. "]" end
+    for i = 1, math.min(#near, cfg.zMax) do zs[i] = "[" .. num(near[i][2], "%.1f") .. "," .. num(near[i][3], "%.1f") .. "," .. tostring(near[i][4]) .. "]" end
     local weapon = try("weapon", function() local it = p:getPrimaryHandItem(); return it and it:getFullType() or "" end, "")
     local bag = try("bag", function() return p:getClothingItem_Back() ~= nil end, false)
     return string.format(
@@ -139,6 +139,27 @@ function handlers.give(user, itemType)
         return true, "id=" .. tostring(okId and id or "?")
     end
     return false, tostring(res)
+end
+
+-- hit|user|zombieId|damage : apply damage to that zombie's own health (1.0 = a full normal zombie) and kill it, credited to the player,
+-- when the health runs out. The calibrated fake-client melee uses this instead of the fake client's own hit packets, whose partial
+-- damage the server did not turn into kills.
+function handlers.hit(user, zid, dmg)
+    local p = findPlayer(user); if not p then return false, "no such player" end
+    zid, dmg = tonumber(zid), tonumber(dmg) or 0
+    local zl = getCell():getZombieList()
+    for i = 0, zl:size() - 1 do
+        local z = zl:get(i)
+        if z:getOnlineID() == zid then
+            local ok, res = pcall(function()
+                local h = z:getHealth() - dmg
+                if h <= 0 then z:setHealth(0); z:Kill(p); return "dead" end
+                z:setHealth(h); return string.format("h=%.3f", h)
+            end)
+            return ok, tostring(res)
+        end
+    end
+    return true, "gone"
 end
 
 -- bitescale|user|f : multiply that player's synthetic bite damage by f (1 = normal)
