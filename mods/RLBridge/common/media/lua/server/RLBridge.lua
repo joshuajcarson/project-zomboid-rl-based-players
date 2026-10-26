@@ -193,7 +193,7 @@ end
 -- only wield items from there (a bat in the backpack leaves it hitting with bare hands); real clients equip from the bag themselves.
 function handlers.ensureroot(user, itemType)
     local p = findPlayer(user); if not p then return false, "no such player" end
-    local short = string.gsub(itemType, "^Base%\.", "")
+    local short = string.gsub(itemType, "^Base%.", "")
     local ok, res = pcall(function()
         local inv = p:getInventory()
         local keep
