@@ -1,5 +1,5 @@
 """Same task, same baselines, fake-client backend vs rendered backend: kills, damage taken, movement.
-Usage: python scripts/compare_backends.py [task] [steps] [episodes] [zombies]
+Usage: python scripts/compare_backends.py [task] [steps] [episodes] [zombies] [backends, default fake,rendered]
 Needs a running server (start-server.ps1 -JavaAgent agent\rl-agent.jar -ChannelPort 17600) or starts one. Both backends run at 1x."""
 import json, math, sys, time
 sys.path.insert(0, ".")
@@ -13,7 +13,8 @@ steps = int(sys.argv[2]) if len(sys.argv) > 2 else 60
 episodes = int(sys.argv[3]) if len(sys.argv) > 3 else 3
 TASKS[task].zombies_per_agent = int(sys.argv[4]) if len(sys.argv) > 4 else 2
 rows = []
-for backend in ("fake", "rendered"):
+backends = sys.argv[5].split(",") if len(sys.argv) > 5 else ["fake", "rendered"]
+for backend in backends:
     env = PZParallelEnv(n_agents=1, task=task, backend=backend, max_steps=steps, seed=1, zombie_ring=(5, 8), time_scale=1.0)
     try:
         for policy in ("idle", "scripted"):
@@ -35,7 +36,7 @@ for backend in ("fake", "rendered"):
                 print(json.dumps(row), flush=True); rows.append(row)
     finally:
         env.close()
-json.dump(rows, open("logs/compare_backends.json", "w"), indent=1)
+json.dump(rows, open("logs/compare_backends_" + "_".join(backends) + ".json", "w"), indent=1)
 print("\nmean per backend/policy")
 for b in ("fake", "rendered"):
     for pol in ("idle", "scripted"):

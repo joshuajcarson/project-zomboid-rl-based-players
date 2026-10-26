@@ -26,6 +26,10 @@ ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
 OBS_DIM = 6 + 3 * ZOMBIE_SLOTS + 3 * MATE_SLOTS + 1
 
 
+class AgentDisconnected(RuntimeError):
+    """An agent's client left the server (kick, crash, closed window)."""
+
+
 class PZParallelEnv:
     metadata = {"name": "pz_rl_v0"}
 
@@ -61,6 +65,7 @@ class PZParallelEnv:
         self.steps = 0
         self.last_message = None
         self._started = False
+        self._missing = {}
 
     # ---- spaces -----------------------------------------------------------------------------------------------------
     def observation_space(self, agent):
@@ -146,9 +151,15 @@ class PZParallelEnv:
     def _read(self, n_messages):
         msg = self.channel.wait_obs(n_messages)
         self.last_message = msg
+        here = {p["u"] for p in msg["p"]}
         for p in msg["p"]:
             if p["u"] in self.possible_agents:
                 self.state[p["u"]] = p
+        if self._started:                    # a kicked or crashed client would otherwise leave stale state that looks like an idle agent
+            for name in self.possible_agents:
+                self._missing[name] = 0 if name in here else self._missing.get(name, 0) + 1
+                if self._missing[name] >= 12:
+                    raise AgentDisconnected(f"{name} has been missing from the server for {self._missing[name]} observations")
         return msg
 
     def _game_seconds(self, seconds):
