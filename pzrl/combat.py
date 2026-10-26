@@ -9,6 +9,7 @@ Measured on the real client:
 The real game's per-swing effect of Strength, weapon skill, endurance (full in these tests) and strain is not modelled yet.
 """
 import math
+import os
 
 # (upper distance in tiles, chance that a calm swing hurts the zombie)
 HIT_CHANCE_BY_DISTANCE = [(0.7, 0.22), (1.3, 0.40), (2.0, 0.12)]
@@ -16,12 +17,13 @@ HURT_FACTOR = 0.5            # 0.18 / 0.36: a character in pain or panic hits ha
 DAMAGE_MEDIAN = 0.104        # lognormal fit to the damage of swings that hit: median 0.104, 90th percentile 0.39
 DAMAGE_SIGMA = 1.03
 MAX_DAMAGE = 1.0
+HIT_SCALE = float(os.environ.get("PZ_HIT_SCALE", "1.0"))     # global multiplier on the hit chance, for fitting aggregate fight outcomes
 
 
 def hit_chance(distance, hurt):
     for limit, p in HIT_CHANCE_BY_DISTANCE:
         if distance < limit:
-            return p * (HURT_FACTOR if hurt else 1.0)
+            return min(1.0, p * HIT_SCALE * (HURT_FACTOR if hurt else 1.0))
     return 0.0
 
 

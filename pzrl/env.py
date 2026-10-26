@@ -6,6 +6,7 @@ requiring pettingzoo to be installed. One step is `step_seconds` of GAME time re
 """
 import collections
 import math
+import os
 import random
 import re
 import time
@@ -28,8 +29,8 @@ ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
 OBS_DIM = 6 + 3 * ZOMBIE_SLOTS + 3 * MATE_SLOTS + 1
 
 
-STAGGER_STEPS = 3             # seconds a landed hit keeps the nearby zombies' bites weak (to be fitted against real fights)
-STAGGER_BITE_SCALE = 0.35
+STAGGER_STEPS = int(os.environ.get("PZ_STAGGER_STEPS", "3"))              # seconds a landed hit keeps the nearby zombies' bites weak (to be fitted against real fights)
+STAGGER_BITE_SCALE = float(os.environ.get("PZ_STAGGER_SCALE", "0.35"))
 REAL_STEP_LEN = 3.5      # target distance per step given to a real client: it walks at its own speed (about 16 tiles per 100 ticks)
 
 
@@ -55,6 +56,7 @@ class PZParallelEnv:
         self.backend = backend
         self.calibrated_combat = calibrated_combat   # fake swings use pzrl.combat (fitted to the real client) instead of one lethal hit
         self.combat_rng = random.Random(0 if seed is None else seed + 1)
+        self.combat_stats = {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}   # what the calibrated swing model delivered (for fitting)
         self._stagger = {}                           # per agent: steps left in which a landed hit still keeps the zombies' bites weak
         self._loss = {}                              # per agent: health lost in each of the last few steps (a hurt character hits less)
         self.walk_speed = walk_speed      # target walking speed of fake clients in tiles per 100 server ticks (a real runner: about 16); None = leave as is
@@ -310,7 +312,10 @@ class PZParallelEnv:
         if not dists:
             return None
         hurt = sum(self._loss.get(name, ())) >= 10.0        # lost 10+ health in the last 10 steps: pain and panic
-        return sample_swing(min(dists), hurt, self.combat_rng)
+        d = sample_swing(min(dists), hurt, self.combat_rng)
+        cs = self.combat_stats
+        cs["swings"] += 1; cs["hits"] += 1 if d > 0 else 0; cs["damage"] += d; cs["dist_sum"] += min(dists)
+        return d
 
     def _move_len(self, name):
         """How far ahead the target of a move action is. A fake client walks to its target and stops there, so this distance per

@@ -25,6 +25,7 @@ try:
             obs, rew, term, trunc, info = env.step(act)
             st = env.state[a0]; zmin = min(zmin, st["zn"]); hpmin = min(hpmin, st["hp"])
         print(json.dumps({"ep": ep, "steps": env.steps, "attack_actions": swings, "zombies_start": zn0, "zombies_min": zmin,
-                          "zombies_end": env.state[a0]["zn"], "damage_end": round(hp0 - env.state[a0]["hp"], 1), "min_hp": round(hpmin, 1)}), flush=True)
+                          "zombies_end": env.state[a0]["zn"], "damage_end": round(hp0 - env.state[a0]["hp"], 1), "min_hp": round(hpmin, 1),
+                          "combat": {k: round(v, 2) for k, v in getattr(env, "combat_stats", {}).items()}}), flush=True)
 finally:
     env.close()

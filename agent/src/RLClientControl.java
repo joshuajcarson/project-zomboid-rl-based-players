@@ -31,6 +31,7 @@ public final class RLClientControl {
     private static java.util.Collection<Object> zombieDelete;
     private static Field fDamage, zx, zy, zhealth;
     private static long attackPeriod = 1000;
+    private static Object lockedTarget;   // a swing keeps hitting the same zombie while it is alive and within reach (a real player faces one zombie at a time)
 
     public static void start(int port) {
         Thread t = new Thread(() -> serve(port), "rl-client-control");
@@ -129,10 +130,15 @@ public final class RLClientControl {
                     float dmgArg = arg.isEmpty() ? Float.NaN : Float.parseFloat(arg.trim());
                     Object best = null; double bd = 2.0;
                     float px = fx.getFloat(player), py = fy.getFloat(player);
-                    for (Object z : new java.util.ArrayList<>(zombieMap.values())) {
+                    if (lockedTarget != null && zombieMap.containsValue(lockedTarget)) {
+                        double dl = Math.hypot(zx.getFloat(lockedTarget) - px, zy.getFloat(lockedTarget) - py);
+                        if (dl < 2.0) { best = lockedTarget; bd = dl; }
+                    }
+                    if (best == null) for (Object z : new java.util.ArrayList<>(zombieMap.values())) {
                         double d = Math.hypot(zx.getFloat(z) - px, zy.getFloat(z) - py);
                         if (d < bd) { bd = d; best = z; }
                     }
+                    lockedTarget = best;
                     if (best == null) return "miss";
                     float dmg = Float.isNaN(dmgArg) ? fDamage.getFloat(null) : dmgArg;
                     if (dmg <= 0f) return "swing " + String.format("%.2f", bd);
