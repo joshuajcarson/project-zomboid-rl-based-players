@@ -12,3 +12,5 @@
 {"iter": 12, "samples": 472, "secs": 148.5, "return": -10.782, "kills": 0.0, "damage": 50.958, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 17.3}
 {"iter": 13, "samples": 478, "secs": 148.5, "return": -10.47, "kills": 0.0, "damage": 54.425, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 22.3}
 {"iter": 14, "samples": 478, "secs": 148.5, "return": -9.839, "kills": 0.0, "damage": 53.533, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 10.9}
+{"iter": 15, "samples": 478, "secs": 148.5, "return": -9.091, "kills": 0.0, "damage": 50.192, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 21.8}
+{"iter": 16, "samples": 479, "secs": 148.5, "return": -10.248, "kills": 0.0, "damage": 56.192, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 14.7}

@@ -4,7 +4,9 @@
 -- rlPublish / rlPoll are registered by agent/rl-agent.jar (-ChannelPort); without it this mod only logs.
 -- biteDamage: hit points removed per adjacent zombie per game second (0 = off). The fake client's zombie model does
 -- essentially no damage to players, so this is how the environment makes zombies dangerous.
-local cfg = { obsEvery = 5, zRadius = 30, zMax = 8, biteDamage = 0, biteRange = 1.2 }
+-- minHp: the synthetic bite never takes a player below this health, so a training episode that goes badly ends at the env's death
+-- threshold without the character truly dying (a dead character cannot be healed: it would have to be recreated, which costs minutes)
+local cfg = { obsEvery = 5, zRadius = 30, zMax = 8, biteDamage = 0, biteRange = 1.2, minHp = 3 }
 local ticks = 0
 local failed = {}
 
@@ -71,7 +73,9 @@ local function applyBites(players, zl)
             if dx * dx + dy * dy <= r2 then near = near + 1 end
         end
         if near > 0 then
-            local ok = hurt(p, near * cfg.biteDamage * dt)
+            local health = try("health", function() return p:getBodyDamage():getHealth() end, 100)
+            local amount = math.min(near * cfg.biteDamage * dt, math.max(0, health - cfg.minHp))
+            local ok = amount <= 0 or hurt(p, amount)
             if not ok and not failed["hurt"] then failed["hurt"] = true; log("failed: hurt") end
         end
     end
