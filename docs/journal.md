@@ -9,6 +9,13 @@ how to run things lives in `CLAUDE.md`. Rule from the user: commit and push afte
 3. Never stop java by memory size (server and client are both big). Match command lines: the server has `rl-agent.jar`, rendered clients have `rl-agent-client`.
 4. Client Lua edits (`mods/RLBridge/common/media/lua/client/*.lua`) need `scripts/install-mods.ps1 -Enable RLBridge` plus a server restart; `rl_bot_dev.lua` + `reload` is the no-restart iteration path.
 
+## Validation gates (avoid investing in dead ends; added 2026-10-26 on the user's request)
+A skill only counts as "learned" when all of these hold; otherwise spend the effort on fidelity, not on more training:
+1. Fake-backend evaluation beats the scripted baseline or a clear threshold (greedy policy, 4+ episodes, matched spawns).
+2. Transfer: the same checkpoint run with one REAL rendered client (backend="mixed", scripts/eval_transfer.py, 10+ episodes) reaches at least ~70% of the fake-only score on the same metric (final pair distance, damage taken). The real client must have the normal load (11 items, one bat, check `inv|user`) and the fake mover must be calibrated to the real runner's speed (scripts/measure_speed.py).
+3. If gate 2 fails on two skills in a row, stop training and close the gap (speed, damage model, zombie behaviour, combat) before anything else.
+Known fidelity gaps (2026-10-26): combat (real swings land weakly and staggered, fake kills for free: do not train fighting on the fake backend until fixed), zombie damage (synthetic bite rule vs real), zombie aggro/behaviour not compared, only one real client fits in RAM at a time (15.8 GB): a recording with 4 real clients needs a smaller client footprint or another machine.
+
 ## Task queue (top first)
 1. DONE: matched comparison (docs/approach.md): damage when idle matches, fighting does not (rendered bot gets 0 kills of 2 in 5 episodes, fake gets 2 of 2).
 2. Make rendered fighting work: do not restart a swing in progress (RLBot commands.attack), handle hit-reaction and knockdown states (wait, shove, step back), then re-measure with compare_backends.py rendered. Iterate through `.pzclient/Lua/rl_bot_dev.lua` (the env sends `reload` on rendered start), fold into RLBot.lua and restart the server only when done. Also remove the `shot` command (it crashes the client).

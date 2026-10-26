@@ -1,0 +1,14 @@
+{"iter": 1, "samples": 474, "secs": 207.0, "return": -5.586, "kills": 0.0, "damage": 51.542, "deaths": 0.333, "steps": 40.0, "final_pair_distance": 4.0}
+{"iter": 2, "samples": 473, "secs": 148.5, "return": -8.634, "kills": 0.0, "damage": 54.175, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 5.8}
+{"iter": 3, "samples": 479, "secs": 148.5, "return": -4.031, "kills": 0.0, "damage": 51.742, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 1.7}
+{"iter": 4, "samples": 471, "secs": 174.5, "return": -5.852, "kills": 0.0, "damage": 54.667, "deaths": 0.333, "steps": 40.0, "final_pair_distance": 2.9}
+{"iter": 5, "samples": 350, "secs": 265.0, "return": -6.024, "kills": 0.0, "damage": 43.242, "deaths": 0.333, "steps": 40.0, "final_pair_distance": 3.9}
+{"iter": 6, "samples": 321, "secs": 420.9, "return": -5.877, "kills": 0.0, "damage": 35.858, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 865.8}
+{"iter": 7, "samples": 480, "secs": 148.5, "return": -5.841, "kills": 0.0, "damage": 47.325, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 5.1}
+{"iter": 8, "samples": 479, "secs": 148.5, "return": -9.587, "kills": 0.0, "damage": 53.958, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 9.2}
+{"iter": 9, "samples": 475, "secs": 148.5, "return": -10.131, "kills": 0.0, "damage": 52.808, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 14.0}
+{"iter": 10, "samples": 480, "secs": 148.5, "return": -8.495, "kills": 0.0, "damage": 52.65, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 9.4}
+{"iter": 11, "samples": 472, "secs": 148.5, "return": -10.493, "kills": 0.0, "damage": 58.075, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 18.9}
+{"iter": 12, "samples": 472, "secs": 148.5, "return": -10.782, "kills": 0.0, "damage": 50.958, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 17.3}
+{"iter": 13, "samples": 478, "secs": 148.5, "return": -10.47, "kills": 0.0, "damage": 54.425, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 22.3}
+{"iter": 14, "samples": 478, "secs": 148.5, "return": -9.839, "kills": 0.0, "damage": 53.533, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 10.9}
