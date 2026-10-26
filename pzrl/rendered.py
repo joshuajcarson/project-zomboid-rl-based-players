@@ -1,0 +1,34 @@
+"""Control of a rendered (real graphical) client through the server channel.
+
+RenderedControl has the same goto/attack/equip surface the env uses on ClientControl, but the commands travel
+server channel -> RLBridge.lua ("bot|user|...") -> sendServerCommand -> RLBot.lua on the rendered client, which walks the
+local player with the game's own pathfinding and swings with the game's own attack input. Observations are unchanged
+(the server-side bridge sees the rendered player like any other).
+"""
+
+
+class RenderedControl:
+    def __init__(self, channel, user):
+        self.ch, self.user = channel, user
+
+    def _bot(self, cmd, a="", b=""):
+        parts = ["bot", self.user, cmd] + ([str(a)] if a != "" else []) + ([str(b)] if b != "" else [])
+        return self.ch.command("|".join(parts))
+
+    def goto(self, x, y):
+        return self._bot("goto", f"{x:.2f}", f"{y:.2f}")
+
+    def stop(self):
+        return self._bot("stop")
+
+    def attack(self):
+        return self._bot("attack")
+
+    def equip(self, item_type="Base.BaseballBat"):
+        return self._bot("equip", item_type)
+
+    def info(self):
+        return self._bot("info")
+
+    def give(self, item_type):
+        return self.ch.command(f"give|{self.user}|{item_type}")

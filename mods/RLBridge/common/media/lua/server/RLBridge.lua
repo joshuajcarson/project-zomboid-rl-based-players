@@ -152,6 +152,13 @@ function handlers.tp(user, x, y, z)
     return ok2, "teleportTo failed (" .. tostring(e1) .. "); setX/Y " .. tostring(ok2 and "ok" or e2)
 end
 
+-- bot|user|cmd|a|b : forward an action to that rendered client's RLBot.lua (goto x y, stop, equip Base.Item, attack, info)
+function handlers.bot(user, cmd, a, b)
+    local p = findPlayer(user); if not p then return false, "no such player" end
+    sendServerCommand(p, "RLBot", cmd, { a = a, b = b })
+    return true, "sent"
+end
+
 -- spawn n zombies around (x, y): zspawn|x|y|n
 function handlers.zspawn(x, y, n)
     local ok, res = pcall(function() return addZombiesInOutfit(tonumber(x), tonumber(y), 0, tonumber(n), nil, 50) end)
