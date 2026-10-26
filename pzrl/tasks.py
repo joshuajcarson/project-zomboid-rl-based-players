@@ -20,15 +20,15 @@ class Task:
     zombies_per_agent = 0   # extra zombies spawned around each agent at reset
     min_separation = 0.0    # agents are spawned at least this far apart (tiles)
     bite_damage = 1.5       # hit points per adjacent zombie per game second (server-side rule, see RLBridge.lua)
+    death_hp = DEATH_HP     # an agent at or below this health is dead for the episode (training can raise it so characters rarely truly die)
 
     def reward(self, prev, cur, everyone):
         raise NotImplementedError
 
-    @staticmethod
-    def survive_terms(prev, cur):
+    def survive_terms(self, prev, cur):
         r = 0.01                                   # small bonus for every step alive
         r -= max(0.0, prev["hp"] - cur["hp"]) / 100.0 * 2.0   # losing health hurts
-        if cur["hp"] <= DEATH_HP:
+        if cur["hp"] <= self.death_hp:
             r -= 5.0
         return r
 
@@ -70,7 +70,7 @@ class SafeRendezvous(Rendezvous):
 
     def reward(self, prev, cur, everyone):
         r = 0.01 - max(0.0, prev["hp"] - cur["hp"]) / 100.0 * self.damage_weight
-        if cur["hp"] <= DEATH_HP:
+        if cur["hp"] <= self.death_hp:
             r -= self.death_penalty
         other_now = nearest_other(cur, everyone)
         other_before = nearest_other(prev, everyone)

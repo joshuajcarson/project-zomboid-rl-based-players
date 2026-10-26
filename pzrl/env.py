@@ -42,7 +42,7 @@ class PZParallelEnv:
     def __init__(self, n_agents=2, task="survive", time_scale=1.0, step_seconds=1.0, max_steps=300,
                  base_id=40, seed=None, spawn_box=(10450, 9350, 10900, 10300), launcher=None,
                  give_weapon="Base.BaseballBat", player_damage=1.0, zombie_ring=(12, 22), zombie_behaviour="Normal",
-                 explicit_melee=True, backend="fake", keep_alive=False, rendered_agents=None, walk_speed=17.7):
+                 explicit_melee=True, backend="fake", keep_alive=False, rendered_agents=None, walk_speed=17.7, death_hp=None):
         if backend not in ("fake", "rendered", "mixed"):
             raise ValueError("backend must be 'fake' (headless fake clients, scalable), 'rendered' (real graphical clients, 1x) "
                              "or 'mixed' (the first agent, or `rendered_agents`, is a real client and the others are fake clients)")
@@ -52,6 +52,8 @@ class PZParallelEnv:
         self.walk_speed = walk_speed      # target walking speed of fake clients in tiles per 100 server ticks (a real runner: about 16); None = leave as is
         self.keep_alive = keep_alive      # leave rendered clients running on close() and reuse them next time (fast iteration)
         self.task = TASKS[task]
+        if death_hp is not None:
+            self.task.death_hp = death_hp
         self.n_agents = n_agents
         self.step_seconds = step_seconds
         self.max_steps = max_steps
@@ -355,7 +357,7 @@ class PZParallelEnv:
         for name in list(self.agents):
             cur = self.state[name]
             rewards[name] = self.task.reward(self.prev[name], cur, self.state)
-            dead = cur["dead"] or cur["hp"] <= DEATH_HP
+            dead = cur["dead"] or cur["hp"] <= self.task.death_hp
             terms[name] = dead
             truncs[name] = (not dead) and self.steps >= self.max_steps
             obs[name] = self._obs(name)

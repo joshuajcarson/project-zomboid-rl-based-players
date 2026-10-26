@@ -165,6 +165,7 @@ def main():
     ap.add_argument("--zombies", type=int, default=None)
     ap.add_argument("--ring", type=float, nargs=2, default=(12, 22))
     ap.add_argument("--box", type=float, nargs=4, default=(10650, 9350, 10900, 9700), help="spawn box x0 y0 x1 y1")
+    ap.add_argument("--death-hp", type=float, default=None, help="end an agent's episode at this health (default 10); 40 avoids real deaths")
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--gamma", type=float, default=0.97)
     ap.add_argument("--out", default=None)
@@ -175,7 +176,7 @@ def main():
     if a.zombies is not None:
         TASKS[a.task].zombies_per_agent = a.zombies
     env = PZParallelEnv(n_agents=a.agents, task=a.task, time_scale=a.time_scale, max_steps=a.steps, seed=int(time.time()) % 10000,
-                        zombie_ring=tuple(a.ring), spawn_box=tuple(a.box))
+                        zombie_ring=tuple(a.ring), spawn_box=tuple(a.box), death_hp=a.death_hp)
     obs_dim = env.observation_space(env.possible_agents[0]).shape[0]
     n_act = env.action_space(env.possible_agents[0]).n
     net = ActorCritic(obs_dim, n_act)
