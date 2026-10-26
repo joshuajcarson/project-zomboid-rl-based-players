@@ -1,0 +1,11 @@
+{"iter": 1, "samples": 480, "secs": 181.7, "return": -28.842, "kills": 0.0, "damage": 56.167, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 2.9}
+{"iter": 2, "samples": 480, "secs": 148.5, "return": -28.071, "kills": 0.0, "damage": 55.433, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 2.8}
+{"iter": 3, "samples": 480, "secs": 148.5, "return": -29.704, "kills": 0.0, "damage": 56.025, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 9.4}
+{"iter": 4, "samples": 480, "secs": 148.5, "return": -30.77, "kills": 0.0, "damage": 56.392, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 11.1}
+{"iter": 5, "samples": 480, "secs": 148.5, "return": -29.555, "kills": 0.0, "damage": 54.467, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 11.4}
+{"iter": 6, "samples": 480, "secs": 148.4, "return": -32.505, "kills": 0.0, "damage": 57.983, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 34.5}
+{"iter": 7, "samples": 480, "secs": 148.5, "return": -30.756, "kills": 0.0, "damage": 54.767, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 39.9}
+{"iter": 8, "samples": 480, "secs": 148.5, "return": -31.454, "kills": 0.0, "damage": 55.267, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 45.6}
+{"iter": 9, "samples": 480, "secs": 148.5, "return": -31.826, "kills": 0.0, "damage": 55.35, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 61.2}
+{"iter": 10, "samples": 442, "secs": 148.5, "return": -37.276, "kills": 0.0, "damage": 62.35, "deaths": 0.333, "steps": 40.0, "final_pair_distance": 60.7}
+{"iter": 11, "samples": 480, "secs": 174.5, "return": -31.255, "kills": 0.0, "damage": 53.692, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 80.0}
