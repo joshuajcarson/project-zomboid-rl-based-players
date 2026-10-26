@@ -110,7 +110,7 @@ class PZParallelEnv:
         self.channel = ServerChannel(L.channel_port)
         for i in self.ids:
             L.start_rendered(i)
-            self.control[f"Client{i}"] = RenderedControl(self.channel, f"Client{i}")
+            self.control[f"Client{i}"] = RenderedControl(self.channel, f"Client{i}", state=lambda n=f"Client{i}": self.state.get(n))
             time.sleep(20)      # stagger: each client loads for a while and the server handles one login at a time
         deadline = time.time() + 600
         while time.time() < deadline:
@@ -189,10 +189,13 @@ class PZParallelEnv:
         for name, (sx, sy) in zip(self.possible_agents, spawns):
             self.channel.command(f"heal|{name}")
             self.control[name].tp(sx, sy, 0)
-            self.channel.command(f"zclear|{sx:.0f}|{sy:.0f}|25")
-            if self.task.zombies_per_agent:
+            # same start on every backend: clear everything the observation can see (zRadius 30 plus margin), then exactly N
+            # zombies, each at its own random angle on the ring
+            self.channel.command(f"zclear|{sx:.0f}|{sy:.0f}|45")
+            for _ in range(self.task.zombies_per_agent):
                 ring = self.rng.uniform(*self.zombie_ring)
-                self.channel.command(f"zspawn|{sx + ring:.0f}|{sy:.0f}|{self.task.zombies_per_agent}")
+                ang = self.rng.uniform(0, 2 * math.pi)
+                self.channel.command(f"zspawn|{sx + ring * math.cos(ang):.0f}|{sy + ring * math.sin(ang):.0f}|1")
         self._read(self._game_seconds(4))          # let chunks and ownership settle
         self.agents = [a for a in self.possible_agents if a in self.state]
         self.prev = {a: dict(self.state[a]) for a in self.agents}

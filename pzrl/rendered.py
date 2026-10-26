@@ -17,6 +17,9 @@ class RenderedControl:
         return self.ch.command("|".join(parts))
 
     def goto(self, x, y):
+        me = self._state() if self._state else None
+        if me is not None and (x - me["x"]) ** 2 + (y - me["y"]) ** 2 < 0.25:   # "stay": target is where it stands
+            return self.stop()
         return self._bot("goto", f"{x:.2f}", f"{y:.2f}")
 
     def stop(self):

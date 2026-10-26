@@ -2,6 +2,8 @@
 
 Context for Claude Code sessions working in this repo on Joshua's Windows PC.
 
+**After a crash or session reset, read `docs/journal.md` first (task queue, how to resume, running log).**
+
 ## Goal
 
 RL-driven survivors in Project Zomboid: start with 1 agent, grow to 4 agents cooperating on one server. Policies run in Python. See `docs/approach.md` for architectures considered.

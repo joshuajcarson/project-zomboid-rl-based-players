@@ -45,17 +45,34 @@ function commands.reload(p)
     f(RL, commands, log)
     return true, "reloaded"
 end
+local function walking(p)
+    local ok, n = pcall(function() return #ISTimedActionQueue.getTimedActionQueue(p).queue end)
+    return ok and n > 0
+end
+
+-- The env re-issues a goto every step. A new target that points about the same way as the walk in progress (within ~37
+-- degrees) is ignored so the path is kept and the walk does not restart every step; anything else replaces the walk.
 function commands.goto(p, a)
     local x, y = tonumber(a.a), tonumber(a.b)
+    local dx, dy = x - p:getX(), y - p:getY()
+    local len = math.sqrt(dx * dx + dy * dy)
+    local g = RL.goal
+    if g and len > 0.01 and walking(p) then
+        local gx, gy = g.x - p:getX(), g.y - p:getY()
+        local glen = math.sqrt(gx * gx + gy * gy)
+        if glen > 0.5 and (dx * gx + dy * gy) / (len * glen) > 0.8 then return true, "continue" end
+    end
     local sq = getCell():getGridSquare(math.floor(x), math.floor(y), p:getZ())
     if not sq then return false, "square not loaded" end
     RL.run = true
+    RL.goal = { x = x, y = y }
     ISTimedActionQueue.clear(p)
     ISTimedActionQueue.add(ISWalkToTimedAction:new(p, sq))
     return true
 end
 function commands.stop(p)
     ISTimedActionQueue.clear(p)
+    RL.goal = nil
     RL.run = false
     return true
 end
