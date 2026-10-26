@@ -65,7 +65,9 @@ class SafeRendezvous(Rendezvous):
     """Rendezvous where staying unharmed matters ten times more: the first learned policies gathered at the teammate but took
     25-55 damage per episode, because 40 damage cost only 0.8 reward against a gain of about 8 from closing the distance."""
     name = "rendezvous_safe"
-    damage_weight = 20.0     # reward lost per 100 hit points (the plain tasks use 2.0)
+    # reward lost per 100 hit points (the plain tasks use 2.0). 20 was not enough: one biting zombie costs 0.3 per second, while
+    # staying within meet_radius of a teammate pays 0.5, so standing still and being bitten next to a teammate was rewarded.
+    damage_weight = 60.0
     death_penalty = 10.0     # (plain tasks: 5.0)
 
     def reward(self, prev, cur, everyone):

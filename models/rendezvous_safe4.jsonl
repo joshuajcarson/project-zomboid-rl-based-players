@@ -1,0 +1,15 @@
+{"iter": 1, "samples": 479, "secs": 182.7, "return": -4.503, "kills": 0.0, "damage": 57.242, "deaths": 0.333, "steps": 40.0, "final_pair_distance": 2.9}
+{"iter": 2, "samples": 465, "secs": 148.4, "return": -10.693, "kills": 0.0, "damage": 64.008, "deaths": 1.333, "steps": 40.0, "final_pair_distance": 4.2}
+{"iter": 3, "samples": 479, "secs": 148.5, "return": -6.77, "kills": 0.0, "damage": 59.792, "deaths": 0.333, "steps": 40.0, "final_pair_distance": 3.1}
+{"iter": 4, "samples": 480, "secs": 148.5, "return": -4.532, "kills": 0.0, "damage": 51.092, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 2.9}
+{"iter": 5, "samples": 480, "secs": 148.5, "return": -5.638, "kills": 0.0, "damage": 50.733, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 5.8}
+{"iter": 6, "samples": 480, "secs": 148.2, "return": -5.866, "kills": 0.0, "damage": 55.133, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 2.3}
+{"iter": 7, "samples": 480, "secs": 148.5, "return": -4.767, "kills": 0.0, "damage": 52.092, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 4.2}
+{"iter": 8, "samples": 479, "secs": 148.5, "return": -8.441, "kills": 0.0, "damage": 58.45, "deaths": 0.333, "steps": 40.0, "final_pair_distance": 6.1}
+{"iter": 9, "samples": 480, "secs": 148.5, "return": -7.707, "kills": 0.0, "damage": 56.208, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 19.5}
+{"iter": 10, "samples": 480, "secs": 148.5, "return": -2.914, "kills": 0.0, "damage": 53.458, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 2.9}
+{"iter": 11, "samples": 470, "secs": 148.5, "return": -8.637, "kills": 0.0, "damage": 54.408, "deaths": 0.333, "steps": 40.0, "final_pair_distance": 7.0}
+{"iter": 12, "samples": 480, "secs": 148.5, "return": -6.354, "kills": 0.0, "damage": 53.5, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 3.3}
+{"iter": 13, "samples": 480, "secs": 148.5, "return": -7.956, "kills": 0.0, "damage": 55.283, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 8.1}
+{"iter": 14, "samples": 478, "secs": 148.5, "return": -6.445, "kills": 0.0, "damage": 50.067, "deaths": 0.333, "steps": 40.0, "final_pair_distance": 3.7}
+{"iter": 15, "samples": 480, "secs": 148.5, "return": -6.178, "kills": 0.0, "damage": 51.592, "deaths": 0.0, "steps": 40.0, "final_pair_distance": 5.4}
