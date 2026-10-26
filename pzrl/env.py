@@ -160,7 +160,7 @@ class PZParallelEnv:
     def _prepare_rendered(self, name):
         self.control[name]._bot("reload")       # picks up <cache>/Lua/rl_bot_dev.lua when present (no-op otherwise)
         if self.give_weapon:
-            self.channel.command(f"give|{name}|{self.give_weapon}")
+            self.channel.command(f"ensure|{name}|{self.give_weapon}")     # one bat, normally the one in the starter-kit backpack
             self.control[name].equip(self.give_weapon)
 
     def recover(self, error=None):
@@ -239,10 +239,10 @@ class PZParallelEnv:
     # ---- helpers ----------------------------------------------------------------------------------------------------
     def _equip(self, name, item_type):
         """Give the item on the server and make the fake client wield it (it sends an Equip packet)."""
-        ack = self.channel.command(f"give|{name}|{item_type}")
+        ack = self.channel.command(f"ensure|{name}|{item_type}")    # reuses the starter-kit item, never piles up copies
         m = re.search(r"id=(\d+)", ack["msg"])
         if not (ack["ok"] and m):
-            raise RuntimeError(f"give {item_type} to {name} failed: {ack['msg']}")
+            raise RuntimeError(f"ensure {item_type} for {name} failed: {ack['msg']}")
         self.control[name].weapon(int(m.group(1)))
 
     def _read(self, n_messages):

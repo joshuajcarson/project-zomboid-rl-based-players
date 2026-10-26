@@ -135,6 +135,37 @@ function handlers.give(user, itemType)
     return false, tostring(res)
 end
 
+-- ensure|user|Base.Item : make sure the player owns exactly one of this item type (the starter kit already puts a bat in the
+-- backpack, as in the real game): keeps the first one found anywhere in the inventory, removes extras, adds one only if
+-- there is none. The ack message is "id=N count_before=M", N is the kept item's id (a fake client needs it to wield it).
+function handlers.ensure(user, itemType)
+    local p = findPlayer(user); if not p then return false, "no such player" end
+    local short = string.gsub(itemType, "^Base%.", "")
+    local ok, res = pcall(function()
+        local inv = p:getInventory()
+        local all = inv:getAllTypeRecurse(short)
+        local before = all:size()
+        local keep = before > 0 and all:get(0) or inv:AddItem(itemType)
+        for i = 1, before - 1 do
+            local extra = all:get(i)
+            local c = extra:getContainer()
+            if c then c:Remove(extra) end
+        end
+        return "id=" .. tostring(keep:getID()) .. " count_before=" .. tostring(before)
+    end)
+    return ok, tostring(res)
+end
+
+-- inv|user : what the player carries (a heavy load slows walking): item count, carried weight, and bats
+function handlers.inv(user)
+    local p = findPlayer(user); if not p then return false, "no such player" end
+    local ok, res = pcall(function()
+        local inv = p:getInventory()
+        return string.format("items=%d weight=%.1f bats=%d", inv:getItems():size(), inv:getCapacityWeight(), inv:getAllTypeRecurse("BaseballBat"):size())
+    end)
+    return ok, tostring(res)
+end
+
 -- admin|user : give a fake client the admin role so the server accepts its teleports and chat commands
 function handlers.admin(user)
     if not rlPromote then return false, "agent function rlPromote missing" end
