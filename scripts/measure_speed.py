@@ -13,6 +13,8 @@ env = PZParallelEnv(n_agents=2, task="rendezvous", backend=backend, time_scale=K
 try:
     for trial in range(3):
         env.reset()
+        for n in env.agents:
+            print('inventory', n, env.channel.command('inv|' + n)['msg'], flush=True)
         for _ in range(8): env._read(1)
         samples = {n: [] for n in env.agents}
         tick0 = env.last_message["tick"]
