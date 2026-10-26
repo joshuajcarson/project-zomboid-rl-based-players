@@ -26,10 +26,7 @@ ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
 OBS_DIM = 6 + 3 * ZOMBIE_SLOTS + 3 * MATE_SLOTS + 1
 
 
-def fake_speed(time_scale):
-    """Walking speed of an uncorrected fake client at the scenario's run speed, in tiles per 100 server ticks. Measured with
-    scripts/measure_speed.py: 23 at clock factor 1 and 35 at 4 (the factor does not cancel exactly); linear in between."""
-    return 19.0 + 4.0 * time_scale
+REAL_STEP_LEN = 3.5      # target distance per step given to a real client: it walks at its own speed (about 16 tiles per 100 ticks)
 
 
 class AgentDisconnected(RuntimeError):
@@ -94,6 +91,10 @@ class PZParallelEnv:
         L = self.launcher
         L.start_server(reuse=True)
         fake_names = [n for n in self.possible_agents if n not in self.rendered]
+        self.channel = ServerChannel(L.channel_port)
+        if not self.keep_alive:
+            self._wait_gone(fake_names)     # a client killed a moment ago is still listed: a second login with its name gets kicked
+            time.sleep(25)                  # ... and the server keeps the dead connection for a while after the player is gone
         if fake_names:
             fake_ids = [int(n[len("Client"):]) for n in fake_names]
             spawns = sample_spawns(len(fake_ids), self.task, self.rng, self.spawn_box)
@@ -102,7 +103,6 @@ class PZParallelEnv:
             self._scenario = scen
             for i in fake_ids:
                 self.control[f"Client{i}"] = ClientControl(L.start_client(i, scen))
-        self.channel = ServerChannel(L.channel_port)
         self._wait_connected(fake_names)
         # the synthetic bite rule stands in for zombie damage the fake clients do not take; real clients take the real thing
         self.channel.command(f"cfg|biteDamage|{self.task.bite_damage if not self.rendered else 0}")
@@ -111,6 +111,13 @@ class PZParallelEnv:
         if self.rendered:
             self._start_rendered()
         self._started = True
+
+    def _wait_gone(self, names, timeout=60):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if not ({p["u"] for p in self.channel.wait_obs(1)["p"]} & set(names)):
+                return
+            time.sleep(1)
 
     def _wait_connected(self, names):
         deadline = time.time() + 420
@@ -149,8 +156,6 @@ class PZParallelEnv:
             self._equip(name, self.give_weapon)
         if self.explicit_melee:
             ctl.autoattack(False)
-        if self.walk_speed:
-            ctl.speed(RUN_SPEED_UNITS * self.walk_speed / fake_speed(self.time_scale))
 
     def _prepare_rendered(self, name):
         self.control[name]._bot("reload")       # picks up <cache>/Lua/rl_bot_dev.lua when present (no-op otherwise)
@@ -283,6 +288,14 @@ class PZParallelEnv:
         p = self.state[name]
         return {"x": p["x"], "y": p["y"], "hp": p["hp"], "kills": p["kills"], "weapon": p["weapon"], "bag": p["bag"]}
 
+    def _move_len(self, name):
+        """How far ahead the target of a move action is. A fake client walks to its target and stops there, so this distance per
+        step IS its speed: walk_speed (tiles per 100 ticks, measured on a real runner) turns into tiles per step. A real client
+        walks at its own pace, so it just gets a target far enough ahead to keep moving."""
+        if name in self.rendered or not self.walk_speed:
+            return REAL_STEP_LEN if name in self.rendered else TILES_PER_GAME_SECOND * self.step_seconds * 1.5
+        return self.walk_speed / 100.0 * TICKS_PER_GAME_SECOND * self.step_seconds
+
     # ---- API --------------------------------------------------------------------------------------------------------
     def reset(self, seed=None, options=None):
         if seed is not None:
@@ -323,7 +336,6 @@ class PZParallelEnv:
         return {a: self._obs(a) for a in self.agents}, {a: self._info(a) for a in self.agents}
 
     def step(self, actions):
-        move_len = TILES_PER_GAME_SECOND * self.step_seconds * 1.5
         for name, a in actions.items():
             if name not in self.agents:
                 continue
@@ -334,6 +346,7 @@ class PZParallelEnv:
                 a = 0                                 # attacking means standing still this step
             dx, dy = MOVES[a]
             n = math.hypot(dx, dy) or 1.0
+            move_len = self._move_len(name)
             self.control[name].goto(me["x"] + dx / n * move_len, me["y"] + dy / n * move_len)
         self._read(self._game_seconds(self.step_seconds))
         self.steps += 1

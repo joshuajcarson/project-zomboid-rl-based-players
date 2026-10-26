@@ -9,12 +9,10 @@ backend = sys.argv[1] if len(sys.argv) > 1 else "mixed"
 K = float(sys.argv[2]) if len(sys.argv) > 2 else (1.0 if backend == "mixed" else 4.0)
 TASKS["rendezvous"].zombies_per_agent = 0
 env = PZParallelEnv(n_agents=2, task="rendezvous", backend=backend, time_scale=K, max_steps=14, seed=5,
-                    spawn_box=(10690, 9380, 10710, 9400), keep_alive=True)
+                    spawn_box=(10650, 9380, 10750, 9440), keep_alive=True)
 try:
     for trial in range(3):
         env.reset()
-        for n in env.agents:
-            env.control[n].tp(10650 + 20 * trial, 9450 + (10 if n.endswith("1") else 0), 0)
         for _ in range(8): env._read(1)
         samples = {n: [] for n in env.agents}
         tick0 = env.last_message["tick"]
