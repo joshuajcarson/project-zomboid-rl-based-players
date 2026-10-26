@@ -121,8 +121,18 @@ class PZParallelEnv:
         info = ctl.info()
         ctl.goto(info["x"], info["y"])
         # admin role: the server only honours a fake client's teleport requests if it is an admin
-        ack = self.channel.command(f"admin|{name}")
-        if not ack["ok"]:
+        for attempt in range(12):           # the connection can lag a moment behind the first observation (or be a stale duplicate)
+            ack = self.channel.command(f"admin|{name}")
+            if ack["ok"]:
+                break
+            if "no such connection" in ack["msg"]:
+                time.sleep(3 if attempt < 8 else 0)
+                if attempt == 8 and self.control.get(name) is not None:
+                    self._revive(name)      # still nothing: the client was probably kicked, start it again
+                    return
+                continue
+            raise RuntimeError(f"could not promote {name}: {ack['msg']}")
+        else:
             raise RuntimeError(f"could not promote {name}: {ack['msg']}")
         if self.give_weapon:
             self._equip(name, self.give_weapon)
