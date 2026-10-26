@@ -15,7 +15,8 @@ TASKS[task].zombies_per_agent = int(sys.argv[4]) if len(sys.argv) > 4 else 2
 rows = []
 backends = sys.argv[5].split(",") if len(sys.argv) > 5 else ["fake", "rendered"]
 for backend in backends:
-    env = PZParallelEnv(n_agents=1, task=task, backend=backend, max_steps=steps, seed=1, zombie_ring=(5, 8), time_scale=1.0)
+    env = PZParallelEnv(n_agents=1, task=task, backend=backend, max_steps=steps, seed=1, zombie_ring=(5, 8), time_scale=1.0,
+                      spawn_box=(10730, 9380, 10810, 9440))   # small box: a rendered client can crash after a teleport hundreds of tiles away
     try:
         for policy in ("idle", "scripted"):
             for ep in range(episodes):
