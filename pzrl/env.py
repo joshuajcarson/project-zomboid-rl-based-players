@@ -92,7 +92,7 @@ class PZParallelEnv:
         L.start_server(reuse=True)
         fake_names = [n for n in self.possible_agents if n not in self.rendered]
         self.channel = ServerChannel(L.channel_port)
-        if not self.keep_alive:
+        if fake_names:                      # fake clients are always launched fresh (keep_alive only keeps rendered ones)
             self._wait_gone(fake_names)     # a client killed a moment ago is still listed: a second login with its name gets kicked
             time.sleep(25)                  # ... and the server keeps the dead connection for a while after the player is gone
         if fake_names:
