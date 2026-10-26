@@ -189,6 +189,15 @@ class PZParallelEnv:
         for name, (sx, sy) in zip(self.possible_agents, spawns):
             self.channel.command(f"heal|{name}")
             self.control[name].tp(sx, sy, 0)
+        # a teleport takes a moment to show up (and chunks must load around the new spot): clear and spawn only once every
+        # agent has really arrived, otherwise the clear and the spawn happen around its old position
+        for _ in range(40):
+            self._read(1)
+            if all(math.hypot(self.state[n]["x"] - sx, self.state[n]["y"] - sy) < 4.0
+                   for n, (sx, sy) in zip(self.possible_agents, spawns) if n in self.state):
+                break
+        self._read(self._game_seconds(4))           # arriving loads chunks, which brings the world's own zombies: let that finish
+        for name, (sx, sy) in zip(self.possible_agents, spawns):
             # same start on every backend: clear everything the observation can see (zRadius 30 plus margin), then exactly N
             # zombies, each at its own random angle on the ring
             self.channel.command(f"zclear|{sx:.0f}|{sy:.0f}|45")
