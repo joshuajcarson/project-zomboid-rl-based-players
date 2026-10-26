@@ -28,6 +28,8 @@ ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
 OBS_DIM = 6 + 3 * ZOMBIE_SLOTS + 3 * MATE_SLOTS + 1
 
 
+STAGGER_STEPS = 3             # seconds a landed hit keeps the nearby zombies' bites weak (to be fitted against real fights)
+STAGGER_BITE_SCALE = 0.35
 REAL_STEP_LEN = 3.5      # target distance per step given to a real client: it walks at its own speed (about 16 tiles per 100 ticks)
 
 
@@ -53,6 +55,7 @@ class PZParallelEnv:
         self.backend = backend
         self.calibrated_combat = calibrated_combat   # fake swings use pzrl.combat (fitted to the real client) instead of one lethal hit
         self.combat_rng = random.Random(0 if seed is None else seed + 1)
+        self._stagger = {}                           # per agent: steps left in which a landed hit still keeps the zombies' bites weak
         self._loss = {}                              # per agent: health lost in each of the last few steps (a hurt character hits less)
         self.walk_speed = walk_speed      # target walking speed of fake clients in tiles per 100 server ticks (a real runner: about 16); None = leave as is
         self.keep_alive = keep_alive      # leave rendered clients running on close() and reuse them next time (fast iteration)
@@ -363,13 +366,22 @@ class PZParallelEnv:
             me = self.state[name]
             a = int(a)
             if a == ATTACK:
-                self.control[name].attack(self._swing_damage(name))
+                dmg = self._swing_damage(name)
+                self.control[name].attack(dmg)
+                if dmg:                                    # a landed hit staggers the zombies around: they bite less for a moment
+                    self._stagger[name] = STAGGER_STEPS
+                    self.channel.command(f"bitescale|{name}|{STAGGER_BITE_SCALE}")
                 a = 0                                 # attacking means standing still this step
             dx, dy = MOVES[a]
             n = math.hypot(dx, dy) or 1.0
             move_len = self._move_len(name)
             self.control[name].goto(me["x"] + dx / n * move_len, me["y"] + dy / n * move_len)
         self._read(self._game_seconds(self.step_seconds))
+        for name in list(self._stagger):
+            self._stagger[name] -= 1
+            if self._stagger[name] <= 0:
+                del self._stagger[name]
+                self.channel.command(f"bitescale|{name}|1.0")
         for name in self.agents:
             lost = max(0.0, self.prev[name]["hp"] - self.state[name]["hp"]) if name in self.prev and name in self.state else 0.0
             self._loss.setdefault(name, collections.deque(maxlen=10)).append(lost)

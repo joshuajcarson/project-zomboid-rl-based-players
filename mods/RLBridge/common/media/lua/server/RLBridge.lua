@@ -8,6 +8,7 @@
 -- threshold without the character truly dying (a dead character cannot be healed: it would have to be recreated, which costs minutes)
 local cfg = { obsEvery = 5, zRadius = 30, zMax = 8, biteDamage = 0, biteRange = 1.2, minHp = 3 }
 local ticks = 0
+local biteScale = {}   -- per player multiplier on the synthetic bite (a landed hit staggers the zombies: the env lowers it for a few seconds)
 local failed = {}
 
 local function log(msg) print("RLBRIDGE " .. msg) end
@@ -74,7 +75,8 @@ local function applyBites(players, zl)
         end
         if near > 0 then
             local health = try("health", function() return p:getBodyDamage():getHealth() end, 100)
-            local amount = math.min(near * cfg.biteDamage * dt, math.max(0, health - cfg.minHp))
+            local user = try("username", function() return p:getUsername() end, "")
+            local amount = math.min(near * cfg.biteDamage * (biteScale[user] or 1.0) * dt, math.max(0, health - cfg.minHp))
             local ok = amount <= 0 or hurt(p, amount)
             if not ok and not failed["hurt"] then failed["hurt"] = true; log("failed: hurt") end
         end
@@ -137,6 +139,12 @@ function handlers.give(user, itemType)
         return true, "id=" .. tostring(okId and id or "?")
     end
     return false, tostring(res)
+end
+
+-- bitescale|user|f : multiply that player's synthetic bite damage by f (1 = normal)
+function handlers.bitescale(user, f)
+    biteScale[user] = tonumber(f) or 1.0
+    return true, "ok"
 end
 
 -- ensure|user|Base.Item : make sure the player owns exactly one of this item type (the starter kit already puts a bat in the

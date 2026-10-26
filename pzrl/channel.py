@@ -134,7 +134,7 @@ class ClientControl:
         """Send a command; the control socket answers 'err not-ready' until the player exists, so retry that."""
         for _ in range(retries):
             r = self.request(line)
-            if r in ("ok", "miss") or r.startswith(("info", "hit")):
+            if r in ("ok", "miss") or r.startswith(("info", "hit", "swing")):
                 return r
             if r != "err not-ready":
                 raise RuntimeError(f"{line!r} -> {r}")
