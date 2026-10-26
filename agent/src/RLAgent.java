@@ -25,6 +25,7 @@ public class RLAgent {
             log("time scaling x" + RLClock.SCALE + " for " + a.get("classes"));
         }
         if (a.containsKey("channel")) RLServerChannel.start(Integer.parseInt(a.get("channel")));
+        if (a.containsKey("autostart")) startAutoClick();
         if (a.containsKey("client")) { // fake-client JVM: optional control socket, no server Lua hooks
             if (a.containsKey("control")) RLClientControl.start(Integer.parseInt(a.get("control")));
             return;
@@ -34,6 +35,29 @@ public class RLAgent {
         t.start();
     }
 
+    /** Rendered client: the loading screen waits for a click ("Click to Start"); press it as soon as the game offers it. */
+    private static void startAutoClick() {
+        Thread t = new Thread(() -> {
+            try {
+                Class<?> c = null;
+                while (c == null) { Thread.sleep(500); try { c = Class.forName("zombie.gameStates.GameLoadingState"); } catch (Throwable ignored) { } }
+                java.lang.reflect.Field shown = findField(c, "showedClickToSkip"); shown.setAccessible(true);
+                java.lang.reflect.Field force = findField(c, "forceDone"); force.setAccessible(true);
+                Class<?> gw = Class.forName("zombie.GameWindow");
+                while (true) {
+                    Thread.sleep(500);
+                    Object sm = gw.getField("states").get(null);
+                    Object cur = sm == null ? null : findField(sm.getClass(), "current").get(sm);
+                    if (cur != null && c.isInstance(cur) && shown.getBoolean(null)) {
+                        Thread.sleep(1500); force.setBoolean(cur, true); log("clicked through loading screen");
+                        Thread.sleep(5000);
+                    }
+                }
+            } catch (Throwable e) { log("autostart stopped: " + e); }
+        }, "rl-autostart");
+        t.setDaemon(true);
+        t.start();
+    }
 
     /** Evaluate "pkg.Class.staticField.method(1,2).field" style paths by reflection. */
     static Object eval(String expr) throws Exception {
