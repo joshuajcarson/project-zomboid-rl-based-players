@@ -31,7 +31,9 @@ if ($User) {
     $modList = @('VERSION = 1,', '', 'mods', '{', '    mod = RLBridge,', '    mod = RLClient,', '}', '', 'maps', '{', '}')
     Set-Content -Path (Join-Path (Join-Path $ClientCache 'mods') 'default.txt') -Value $modList
 } elseif (Test-Path $cfgFile) { Remove-Item $cfgFile }
-if (-not $AgentArgs -and $User) { $AgentArgs = 'client;autostart' }   # auto-login accounts also click through the loading screen
+# the bot's live logic (swing instrumentation, aim override use, tidy) is loaded by the RLBot 'reload' command from this file in the client's Lua folder
+if (Test-Path (Join-Path $PSScriptRoot 'rl_bot_dev.lua')) { Copy-Item (Join-Path $PSScriptRoot 'rl_bot_dev.lua') (Join-Path $luaDir 'rl_bot_dev.lua') -Force }
+if (-not $AgentArgs -and $User) { $AgentArgs = 'client;autostart;aim' }   # auto-login accounts also click through the loading screen
 $agentArg = @()
 if ($AgentArgs) {
     $jar = if ($env:RL_AGENT_JAR) { $env:RL_AGENT_JAR } else { Join-Path (Join-Path $RepoRoot 'agent') 'rl-agent.jar' }

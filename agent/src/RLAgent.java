@@ -25,6 +25,12 @@ public class RLAgent {
             log("time scaling x" + RLClock.SCALE + " for " + a.get("classes"));
         }
         if (a.containsKey("channel")) RLServerChannel.start(Integer.parseInt(a.get("channel")));
+        if (a.containsKey("aim")) {   // rendered client: aim override for the bot (see RLMouse)
+            inst.addTransformer(new RLMouseTransformer("zombie/input/AimingReticle"));
+            Thread ta = new Thread(RLAgent::installAimFunctions, "rl-agent-aim");
+            ta.setDaemon(true);
+            ta.start();
+        }
         if (a.containsKey("autostart")) startAutoClick();
         if (a.containsKey("client")) { // fake-client JVM: optional control socket, no server Lua hooks
             if (a.containsKey("control")) RLClientControl.start(Integer.parseInt(a.get("control")));
@@ -153,6 +159,40 @@ public class RLAgent {
             try { return k.getDeclaredField(n); } catch (NoSuchFieldException ignored) { }
         }
         throw new NoSuchFieldException(n + " on " + c.getName());
+    }
+
+    /** Registers the Lua globals rlAim(x, y) and rlAimClear() on the client's Lua environment, again whenever the game replaces that
+     *  environment (it rebuilds Lua after connecting to a server, which discards earlier globals). */
+    private static void installAimFunctions() {
+        try {
+            Class<?> jf = Class.forName("se.krka.kahlua.vm.JavaFunction");
+            Method frameGet = Class.forName("se.krka.kahlua.vm.LuaCallFrame").getMethod("get", int.class);
+            Method rawset = Class.forName("se.krka.kahlua.vm.KahluaTable").getMethod("rawset", Object.class, Object.class);
+            InvocationHandler set = (proxy, m, a) -> {
+                if (!m.getName().equals("call")) return null;
+                RLMouse.ox = ((Number) frameGet.invoke(a[0], 0)).intValue();
+                RLMouse.oy = ((Number) frameGet.invoke(a[0], 1)).intValue();
+                return 0;
+            };
+            InvocationHandler clear = (proxy, m, a) -> {
+                if (!m.getName().equals("call")) return null;
+                RLMouse.ox = RLMouse.NONE; RLMouse.oy = RLMouse.NONE;
+                return 0;
+            };
+            Object fSet = Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, set);
+            Object fClear = Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, clear);
+            Object last = null;
+            while (true) {
+                Thread.sleep(250);
+                Object env = null;
+                try { env = Class.forName("zombie.Lua.LuaManager").getField("env").get(null); } catch (Throwable ignored) { }
+                if (env == null || env == last) continue;
+                rawset.invoke(env, "rlAim", fSet);
+                rawset.invoke(env, "rlAimClear", fClear);
+                last = env;
+                log("aim: installed rlAim / rlAimClear");
+            }
+        } catch (Throwable e) { log("aim install failed: " + e); }
     }
 
     private static void installWhenReady() {

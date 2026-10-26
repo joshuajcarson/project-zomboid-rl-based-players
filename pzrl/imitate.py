@@ -74,6 +74,9 @@ def main():
     ap.add_argument("--box", type=float, nargs=4, default=(10650, 9350, 10900, 9700))
     ap.add_argument("--eps", type=float, default=0.15, help="fraction of random actions executed (labels stay the baseline's)")
     ap.add_argument("--epochs", type=int, default=40)
+    ap.add_argument("--extra", nargs="*", default=[], help="extra labelled datasets (.npz with X, Y), e.g. observations from the real client")
+    ap.add_argument("--extra-weight", type=int, default=3, help="repeat the extra data this many times (it is the data the policy will meet)")
+    ap.add_argument("--skip-collect", default=None, help="reuse this saved fake-backend dataset instead of running the env")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     out = pathlib.Path(a.out or f"models/{a.task}_bc"); out.parent.mkdir(parents=True, exist_ok=True)
@@ -81,10 +84,18 @@ def main():
     env = PZParallelEnv(n_agents=a.agents, task=a.task, time_scale=a.time_scale, max_steps=a.steps, seed=int(time.time()) % 10000,
                         zombie_ring=tuple(a.ring), spawn_box=tuple(a.box))
     rng = np.random.default_rng(0)
-    try:
-        X, Y, stats = collect(env, BASELINES[a.task], a.episodes, a.eps, rng)
-    finally:
+    if a.skip_collect:
+        d = np.load(a.skip_collect); X, Y, stats = d["X"], d["Y"], []
         env.close()
+    else:
+        try:
+            X, Y, stats = collect(env, BASELINES[a.task], a.episodes, a.eps, rng)
+        finally:
+            env.close()
+    for path in a.extra:
+        d = np.load(path)
+        X = np.concatenate([X] + [d["X"]] * a.extra_weight); Y = np.concatenate([Y] + [d["Y"]] * a.extra_weight)
+        print("added", len(d["Y"]), "x", a.extra_weight, "samples from", path, flush=True)
     print("collected", len(Y), "samples; action histogram", np.bincount(Y, minlength=10).tolist(), flush=True)
     print("data-collection episodes (baseline with %.0f%% random actions):" % (100 * a.eps), json.dumps(stats[:3]), "...", flush=True)
     np.savez_compressed(str(out) + "_data.npz", X=X, Y=Y)

@@ -8,6 +8,8 @@ from pzrl.env import PZParallelEnv
 from pzrl.tasks import TASKS
 from pzrl.baselines import BASELINES, idle
 net = None
+import os
+saved = {"X": [], "Y": []}      # PZ_SAVE_OBS=path.npz: keep every observation with the scripted fighter's action as its label (DAgger data)
 
 episodes = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 steps = int(sys.argv[2]) if len(sys.argv) > 2 else 45
@@ -26,6 +28,9 @@ try:
         hp0 = env.state[a0]["hp"]; zn0 = env.state[a0]["zn"]; zmin = zn0; hpmin = hp0; swings = 0
         while env.agents:
             act = {a: (net.act(obs[a], greedy=True)[0] if net else idle(obs[a]) if policy == "idle" else BASELINES["fight"](obs[a])) for a in env.agents}
+            if os.environ.get("PZ_SAVE_OBS"):
+                for a in env.agents:
+                    saved["X"].append(obs[a].copy()); saved["Y"].append(BASELINES["fight"](obs[a]))
             swings += sum(1 for v in act.values() if v == 9)
             obs, rew, term, trunc, info = env.step(act)
             st = env.state[a0]; zmin = min(zmin, st["zn"]); hpmin = min(hpmin, st["hp"])
@@ -34,3 +39,8 @@ try:
                           "combat": {k: round(v, 2) for k, v in getattr(env, "combat_stats", {}).items()}}), flush=True)
 finally:
     env.close()
+
+if os.environ.get("PZ_SAVE_OBS") and saved["X"]:
+    import numpy as np
+    np.savez_compressed(os.environ["PZ_SAVE_OBS"], X=np.array(saved["X"], np.float32), Y=np.array(saved["Y"], np.int64))
+    print("saved", len(saved["Y"]), "labelled observations to", os.environ["PZ_SAVE_OBS"])
