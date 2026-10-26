@@ -15,7 +15,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from .env import PZParallelEnv
+from .env import AgentDisconnected, PZParallelEnv
 from .tasks import TASKS
 from .baselines import BASELINES
 
@@ -39,7 +39,19 @@ class ActorCritic(nn.Module):
             return int(a), float(dist.log_prob(a)), float(v)
 
 
-def run_episode(env, net, greedy=False):
+def run_episode(env, net, greedy=False, tries=3):
+    """One episode of all agents; an episode broken by a dropped client is thrown away and played again after recovery."""
+    for attempt in range(tries):
+        try:
+            return _run_episode(env, net, greedy)
+        except AgentDisconnected as e:
+            print("episode lost:", e, flush=True)
+            if attempt == tries - 1:
+                raise
+            env.recover(e)
+
+
+def _run_episode(env, net, greedy=False):
     """One episode of all agents. Returns per-agent trajectories and a summary dict."""
     obs, _ = env.reset()
     traj = {a: {"obs": [], "act": [], "logp": [], "val": [], "rew": [], "done": [], "last_v": 0.0} for a in env.agents}

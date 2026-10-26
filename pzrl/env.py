@@ -13,7 +13,7 @@ import numpy as np
 
 from .channel import ClientControl, ServerChannel
 from .rendered import RenderedControl
-from .launcher import TILES_PER_GAME_SECOND, Launcher
+from .launcher import RUN_SPEED_UNITS, TILES_PER_GAME_SECOND, Launcher
 from .spaces import Box, Discrete
 from .tasks import DEATH_HP, TASKS, dist, nearest_other, sample_spawns
 
@@ -26,8 +26,17 @@ ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
 OBS_DIM = 6 + 3 * ZOMBIE_SLOTS + 3 * MATE_SLOTS + 1
 
 
+def fake_speed(time_scale):
+    """Walking speed of an uncorrected fake client at the scenario's run speed, in tiles per 100 server ticks. Measured with
+    scripts/measure_speed.py: 23 at clock factor 1 and 35 at 4 (the factor does not cancel exactly); linear in between."""
+    return 19.0 + 4.0 * time_scale
+
+
 class AgentDisconnected(RuntimeError):
     """An agent's client left the server (kick, crash, closed window)."""
+    def __init__(self, message, name=None):
+        super().__init__(message)
+        self.name = name
 
 
 class PZParallelEnv:
@@ -36,13 +45,14 @@ class PZParallelEnv:
     def __init__(self, n_agents=2, task="survive", time_scale=1.0, step_seconds=1.0, max_steps=300,
                  base_id=40, seed=None, spawn_box=(10450, 9350, 10900, 10300), launcher=None,
                  give_weapon="Base.BaseballBat", player_damage=1.0, zombie_ring=(12, 22), zombie_behaviour="Normal",
-                 explicit_melee=True, backend="fake", keep_alive=False, rendered_agents=None):
+                 explicit_melee=True, backend="fake", keep_alive=False, rendered_agents=None, walk_speed=16.0):
         if backend not in ("fake", "rendered", "mixed"):
             raise ValueError("backend must be 'fake' (headless fake clients, scalable), 'rendered' (real graphical clients, 1x) "
                              "or 'mixed' (the first agent, or `rendered_agents`, is a real client and the others are fake clients)")
         if backend != "fake" and time_scale != 1.0:
             raise ValueError("rendered clients run at real time only (time_scale=1)")
         self.backend = backend
+        self.walk_speed = walk_speed      # target walking speed of fake clients in tiles per 100 server ticks (a real runner: about 16); None = leave as is
         self.keep_alive = keep_alive      # leave rendered clients running on close() and reuse them next time (fast iteration)
         self.task = TASKS[task]
         self.n_agents = n_agents
@@ -139,12 +149,20 @@ class PZParallelEnv:
             self._equip(name, self.give_weapon)
         if self.explicit_melee:
             ctl.autoattack(False)
+        if self.walk_speed:
+            ctl.speed(RUN_SPEED_UNITS * self.walk_speed / fake_speed(self.time_scale))
 
     def _prepare_rendered(self, name):
         self.control[name]._bot("reload")       # picks up <cache>/Lua/rl_bot_dev.lua when present (no-op otherwise)
         if self.give_weapon:
             self.channel.command(f"give|{name}|{self.give_weapon}")
             self.control[name].equip(self.give_weapon)
+
+    def recover(self, error=None):
+        """Relaunch every agent that has dropped out (or just the one named by an AgentDisconnected)."""
+        names = [error.name] if error is not None and error.name else [n for n, c in self._missing.items() if c >= 12]
+        for name in names:
+            self._revive(name)
 
     def _revive(self, name):
         """A character that really died (health 0) cannot be healed: relaunch its client, which logs in and gets a new character."""
@@ -235,7 +253,7 @@ class PZParallelEnv:
                     continue
                 self._missing[name] = 0 if name in here else self._missing.get(name, 0) + 1
                 if self._missing[name] >= 12:
-                    raise AgentDisconnected(f"{name} has been missing from the server for {self._missing[name]} observations")
+                    raise AgentDisconnected(f"{name} has been missing from the server for {self._missing[name]} observations", name)
         return msg
 
     def _game_seconds(self, seconds):
@@ -282,7 +300,10 @@ class PZParallelEnv:
         # a teleport takes a moment to show up (and chunks must load around the new spot): clear and spawn only once every
         # agent has really arrived, otherwise the clear and the spawn happen around its old position
         for _ in range(40):
-            self._read(1)
+            try:
+                self._read(1)
+            except AgentDisconnected as e:      # kicked or crashed during the teleport: start it again and carry on
+                self.recover(e)
             if all(math.hypot(self.state[n]["x"] - sx, self.state[n]["y"] - sy) < 4.0
                    for n, (sx, sy) in zip(self.possible_agents, spawns) if n in self.state):
                 break
