@@ -72,7 +72,7 @@ class PZParallelEnv:
     # ---- process / connection management ------------------------------------------------------------------------------
     def _start(self):
         L = self.launcher
-        L.start_server(reuse=self.backend == "rendered")
+        L.start_server(reuse=True)
         if self.backend == "rendered":
             return self._start_rendered()
         spawns = sample_spawns(self.n_agents, self.task, self.rng, self.spawn_box)
