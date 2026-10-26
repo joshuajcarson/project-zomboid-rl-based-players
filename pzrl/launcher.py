@@ -1,5 +1,6 @@
 """Starts and stops the server and fake-client processes for an RL run (Windows, PowerShell scripts from scripts/)."""
 import json
+import os
 import pathlib
 import subprocess
 import time
@@ -24,6 +25,17 @@ def kill_clients():
     script = (
         "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | "
         f"Where-Object {{ $_.CommandLine -match [regex]::Escape('{ROOT}') -and $_.CommandLine -match 'FakeClientManager' }} | "
+        "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
+    )
+    subprocess.run(["powershell", "-NoProfile", "-Command", script], creationflags=_FLAGS, check=False)
+    time.sleep(1)
+
+
+def kill_rendered():
+    """Stop leftover rendered-client JVMs of this repo (started with the client agent jar)."""
+    script = (
+        "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | "
+        "Where-Object { $_.CommandLine -match 'rl-agent-client' } | "
         "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
     )
     subprocess.run(["powershell", "-NoProfile", "-Command", script], creationflags=_FLAGS, check=False)
@@ -116,6 +128,16 @@ class Launcher:
             stdout=out, stderr=subprocess.STDOUT)
         return self.control_base + client_id
 
+    def start_rendered(self, client_id):
+        """Start a rendered (graphical, 640x480) client that logs in as ClientN and passes character creation by itself.
+        Needs agent/rl-agent-client.jar (scripts/build-agent.ps1 with RL_AGENT_OUT)."""
+        LOGS.mkdir(exist_ok=True)
+        out = open(LOGS / f"env-rendered-{client_id}-{time.strftime('%Y%m%d-%H%M%S')}.log", "wb")
+        env = dict(os.environ, RL_AGENT_JAR=str(ROOT / "agent" / "rl-agent-client.jar"))
+        self.clients[client_id] = _ps(
+            ["-File", str(ROOT / "scripts" / "start-client.ps1"), "-Small", "-User", f"Client{client_id}",
+             "-Pass", f"Client{client_id}", "-Hash", "0"], stdout=out, stderr=subprocess.STDOUT, env=env)
+
     def stop_client(self, client_id):
         p = self.clients.pop(client_id, None)
         if p is not None:
@@ -130,3 +152,4 @@ class Launcher:
             kill_stale()
         else:
             kill_clients()
+        kill_rendered()

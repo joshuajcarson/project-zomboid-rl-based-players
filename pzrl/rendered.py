@@ -8,8 +8,9 @@ local player with the game's own pathfinding and swings with the game's own atta
 
 
 class RenderedControl:
-    def __init__(self, channel, user):
+    def __init__(self, channel, user, state=None):
         self.ch, self.user = channel, user
+        self._state = state          # callable returning the latest published player dict (for info())
 
     def _bot(self, cmd, a="", b=""):
         parts = ["bot", self.user, cmd] + ([str(a)] if a != "" else []) + ([str(b)] if b != "" else [])
@@ -29,6 +30,19 @@ class RenderedControl:
 
     def info(self):
         return self._bot("info")
+
+    # --- the ClientControl surface PZParallelEnv uses -------------------------------------------------------------
+    def tp(self, x, y, z=0):
+        return self.ch.command(f"tp|{self.user}|{x:.1f}|{y:.1f}|{z}")
+
+    def weapon(self, item_id):          # the rendered bot equips by item type, see equip()
+        return {"ok": True}
+
+    def autoattack(self, on):           # the real game has no auto melee
+        return {"ok": True}
+
+    def close(self):
+        pass
 
     def give(self, item_type):
         return self.ch.command(f"give|{self.user}|{item_type}")

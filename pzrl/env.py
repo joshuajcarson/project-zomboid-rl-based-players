@@ -12,6 +12,7 @@ import time
 import numpy as np
 
 from .channel import ClientControl, ServerChannel
+from .rendered import RenderedControl
 from .launcher import TILES_PER_GAME_SECOND, Launcher
 from .spaces import Box, Discrete
 from .tasks import DEATH_HP, TASKS, dist, nearest_other, sample_spawns
@@ -31,7 +32,12 @@ class PZParallelEnv:
     def __init__(self, n_agents=2, task="survive", time_scale=1.0, step_seconds=1.0, max_steps=300,
                  base_id=40, seed=None, spawn_box=(10450, 9350, 10900, 10300), launcher=None,
                  give_weapon="Base.BaseballBat", player_damage=1.0, zombie_ring=(12, 22), zombie_behaviour="Normal",
-                 explicit_melee=True):
+                 explicit_melee=True, backend="fake"):
+        if backend not in ("fake", "rendered"):
+            raise ValueError("backend must be 'fake' (headless fake clients, scalable) or 'rendered' (real graphical clients, 1x)")
+        if backend == "rendered" and time_scale != 1.0:
+            raise ValueError("rendered clients run at real time only (time_scale=1)")
+        self.backend = backend
         self.task = TASKS[task]
         self.n_agents = n_agents
         self.step_seconds = step_seconds
@@ -66,7 +72,9 @@ class PZParallelEnv:
     # ---- process / connection management ------------------------------------------------------------------------------
     def _start(self):
         L = self.launcher
-        L.start_server()
+        L.start_server(reuse=self.backend == "rendered")
+        if self.backend == "rendered":
+            return self._start_rendered()
         spawns = sample_spawns(self.n_agents, self.task, self.rng, self.spawn_box)
         scen = L.write_scenario(self.ids, spawns, name=f"env-{self.n_agents}", damage=self.player_damage,
                                 zombie_behaviour=self.zombie_behaviour)
@@ -93,6 +101,29 @@ class PZParallelEnv:
                 self._equip(name, self.give_weapon)
             if self.explicit_melee:
                 ctl.autoattack(False)
+        self._started = True
+
+    def _start_rendered(self):
+        """Rendered backend: real graphical clients are driven by RLBot.lua through the server channel; the observations are the
+        same server-side bridge messages, so the same policies run unchanged."""
+        L = self.launcher
+        self.channel = ServerChannel(L.channel_port)
+        for i in self.ids:
+            L.start_rendered(i)
+            self.control[f"Client{i}"] = RenderedControl(self.channel, f"Client{i}")
+            time.sleep(20)      # stagger: each client loads for a while and the server handles one login at a time
+        deadline = time.time() + 600
+        while time.time() < deadline:
+            msg = self.channel.wait_obs(1)
+            if set(self.possible_agents) <= {p["u"] for p in msg["p"]}:
+                break
+        else:
+            raise TimeoutError("rendered clients did not all enter the world")
+        self.channel.command(f"cfg|biteDamage|0")      # real zombies do the damage here, no synthetic bite rule
+        for name, ctl in self.control.items():
+            if self.give_weapon:
+                self.channel.command(f"give|{name}|{self.give_weapon}")
+                ctl.equip(self.give_weapon)
         self._started = True
 
     def close(self):
