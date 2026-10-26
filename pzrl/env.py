@@ -13,7 +13,7 @@ import numpy as np
 
 from .channel import ClientControl, ServerChannel
 from .rendered import RenderedControl
-from .launcher import RUN_SPEED_UNITS, TILES_PER_GAME_SECOND, Launcher
+from .launcher import RUN_SPEED_UNITS, TILES_PER_GAME_SECOND, Launcher, kill_rendered
 from .spaces import Box, Discrete
 from .tasks import DEATH_HP, TASKS, dist, nearest_other, sample_spawns
 
@@ -178,9 +178,11 @@ class PZParallelEnv:
         L = self.launcher
         self._reviving.add(name)
         L.stop_client(i)
+        if name in self.rendered:
+            kill_rendered()                 # the old client may have been started by an earlier run (keep_alive): only one fits anyway
         self.control.pop(name, None)
         self.state.pop(name, None)
-        time.sleep(6)                       # let the server notice the disconnect before the same account logs in again
+        time.sleep(30 if name in self.rendered else 6)                       # let the server notice the disconnect before the same account logs in again
         if name in self.rendered:
             L.start_rendered(i)
             self.control[name] = RenderedControl(self.channel, name, state=lambda n=name: self.state.get(n))
