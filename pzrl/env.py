@@ -84,6 +84,7 @@ class PZParallelEnv:
         spawns = sample_spawns(self.n_agents, self.task, self.rng, self.spawn_box)
         scen = L.write_scenario(self.ids, spawns, name=f"env-{self.n_agents}", damage=self.player_damage,
                                 zombie_behaviour=self.zombie_behaviour)
+        self._scenario = scen
         for i in self.ids:
             port = L.start_client(i, scen)
             self.control[f"Client{i}"] = ClientControl(port)
@@ -96,18 +97,51 @@ class PZParallelEnv:
         else:
             raise TimeoutError("agents did not all connect")
         self.channel.command(f"cfg|biteDamage|{self.task.bite_damage}")
-        for name, ctl in self.control.items():
-            info = ctl.info()
-            ctl.goto(info["x"], info["y"])
-            # admin role: the server only honours a fake client's teleport requests if it is an admin
-            ack = self.channel.command(f"admin|{name}")
-            if not ack["ok"]:
-                raise RuntimeError(f"could not promote {name}: {ack['msg']}")
-            if self.give_weapon:
-                self._equip(name, self.give_weapon)
-            if self.explicit_melee:
-                ctl.autoattack(False)
+        for name in self.control:
+            self._prepare_fake(name)
         self._started = True
+
+    def _prepare_fake(self, name):
+        ctl = self.control[name]
+        info = ctl.info()
+        ctl.goto(info["x"], info["y"])
+        # admin role: the server only honours a fake client's teleport requests if it is an admin
+        ack = self.channel.command(f"admin|{name}")
+        if not ack["ok"]:
+            raise RuntimeError(f"could not promote {name}: {ack['msg']}")
+        if self.give_weapon:
+            self._equip(name, self.give_weapon)
+        if self.explicit_melee:
+            ctl.autoattack(False)
+
+    def _revive(self, name):
+        """A character that really died (health 0) cannot be healed: relaunch its client, which logs in and gets a new character."""
+        i = int(name[len("Client"):])
+        L = self.launcher
+        L.stop_client(i)
+        self.control.pop(name, None)
+        self.state.pop(name, None)
+        time.sleep(6)                       # let the server notice the disconnect before the same account logs in again
+        if self.backend == "rendered":
+            L.start_rendered(i)
+            self.control[name] = RenderedControl(self.channel, name, state=lambda n=name: self.state.get(n))
+        else:
+            self.control[name] = ClientControl(L.start_client(i, self._scenario))
+        deadline = time.time() + 240
+        while time.time() < deadline:
+            msg = self._read(1)
+            if any(p["u"] == name and not p["dead"] for p in msg["p"]):
+                break
+        else:
+            raise TimeoutError(f"{name} did not come back after dying")
+        self._missing[name] = 0
+        if self.backend == "rendered":
+            self.control[name]._bot("reload")
+            if self.give_weapon:
+                self.channel.command(f"give|{name}|{self.give_weapon}")
+                self.control[name].equip(self.give_weapon)
+        else:
+            self._prepare_fake(name)
 
     def _start_rendered(self):
         """Rendered backend: real graphical clients are driven by RLBot.lua through the server channel; the observations are the
@@ -204,6 +238,9 @@ class PZParallelEnv:
             self._start()
         spawns = sample_spawns(self.n_agents, self.task, self.rng, self.spawn_box)
         self.channel.command(f"cfg|biteDamage|{self.task.bite_damage}")   # the task may have changed since startup
+        for name in self.possible_agents:
+            if self.state.get(name, {}).get("dead"):
+                self._revive(name)
         for name, (sx, sy) in zip(self.possible_agents, spawns):
             self.channel.command(f"heal|{name}")
             self.control[name].tp(sx, sy, 0)
