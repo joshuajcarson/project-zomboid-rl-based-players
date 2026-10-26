@@ -89,11 +89,18 @@ class PZParallelEnv:
             port = L.start_client(i, scen)
             self.control[f"Client{i}"] = ClientControl(port)
         self.channel = ServerChannel(L.channel_port)
-        deadline = time.time() + 180
+        deadline = time.time() + 420
+        retry_at, retries = time.time() + 75, 0
         while time.time() < deadline:
             msg = self.channel.wait_obs(1)
-            if set(self.possible_agents) <= {p["u"] for p in msg["p"]}:
+            present = {p["u"] for p in msg["p"]}
+            if set(self.possible_agents) <= present:
                 break
+            if time.time() > retry_at and retries < 3:      # a client that never reached the server (stuck connect): start it again
+                retries += 1; retry_at = time.time() + 75
+                for name in self.possible_agents:
+                    if name not in present:
+                        self._revive(name)
         else:
             raise TimeoutError("agents did not all connect")
         self.channel.command(f"cfg|biteDamage|{self.task.bite_damage}")
