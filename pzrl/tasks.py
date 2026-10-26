@@ -90,7 +90,10 @@ class Fight(Task):
     zombies_per_agent = 10
 
     def reward(self, prev, cur, everyone):
-        return self.survive_terms(prev, cur) + 1.0 * max(0, cur["kills"] - prev["kills"])
+        # kills alone are too sparse to learn from at the start: damage dealt to zombies (known to the fake backend's swing model)
+        # is a dense stand-in that leads to kills
+        dealt = max(0.0, cur.get("dealt", 0.0) - prev.get("dealt", 0.0))
+        return self.survive_terms(prev, cur) + 1.0 * max(0, cur["kills"] - prev["kills"]) + 1.5 * dealt
 
 
 TASKS = {t.name: t for t in (Survive(), Rendezvous(), SafeRendezvous(), Fight())}

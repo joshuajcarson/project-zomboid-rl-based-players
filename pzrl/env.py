@@ -57,6 +57,7 @@ class PZParallelEnv:
         self.calibrated_combat = calibrated_combat   # fake swings use pzrl.combat (fitted to the real client) instead of one lethal hit
         self.combat_rng = random.Random(0 if seed is None else seed + 1)
         self.combat_stats = {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}   # what the calibrated swing model delivered (for fitting)
+        self._dealt = {}                             # per agent: damage its swings have dealt to zombies this episode (calibrated backend)
         self._zombie_hp = {}                         # server zombie id -> health left under the calibrated swing model
         self._target = {}                            # per agent: server id of the zombie its swings go to
         self._stagger = {}                           # per agent: steps left in which a landed hit still keeps the zombies' bites weak
@@ -356,7 +357,7 @@ class PZParallelEnv:
             if all(math.hypot(self.state[n]["x"] - sx, self.state[n]["y"] - sy) < 4.0
                    for n, (sx, sy) in zip(self.possible_agents, spawns) if n in self.state):
                 break
-        self._zombie_hp.clear(); self._target.clear()
+        self._zombie_hp.clear(); self._target.clear(); self._dealt.clear()
         self._read(self._game_seconds(4))           # arriving loads chunks, which brings the world's own zombies: let that finish
         for name, (sx, sy) in zip(self.possible_agents, spawns):
             # same start on every backend: clear everything the observation can see (zRadius 30 plus margin), then exactly N
@@ -384,6 +385,7 @@ class PZParallelEnv:
                     # The server only removes a zombie when it gets a full-strength hit from its owner, so partial damage is tracked here:
                     # the calibrated hits wear the zombie down and the swing that finishes it is sent as a lethal hit.
                     if dmg > 0:
+                        self._dealt[name] = self._dealt.get(name, 0.0) + min(dmg, self._zombie_hp.get(zid, 1.0))
                         left = self._zombie_hp.get(zid, 1.0) - dmg
                         if left <= 0:
                             self._zombie_hp.pop(zid, None)
@@ -402,6 +404,9 @@ class PZParallelEnv:
             move_len = self._move_len(name)
             self.control[name].goto(me["x"] + dx / n * move_len, me["y"] + dy / n * move_len)
         self._read(self._game_seconds(self.step_seconds))
+        for name in self.agents:
+            if name in self.state:
+                self.state[name]["dealt"] = self._dealt.get(name, 0.0)
         for name in list(self._stagger):
             self._stagger[name] -= 1
             if self._stagger[name] <= 0:
