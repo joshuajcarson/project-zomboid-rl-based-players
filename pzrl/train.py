@@ -58,7 +58,7 @@ def run_episode(env, net, greedy=False):
             t["rew"].append(rew[a]); t["done"].append(bool(term[a]))
             if trunc[a] and a in obs:      # time limit: bootstrap from the value of the last observation
                 t["last_v"] = net.act(obs[a], True)[2]
-        if env.task.name == "rendezvous" and len(env.state) > 1:
+        if env.task.name.startswith("rendezvous") and len(env.state) > 1:
             ps = list(env.state.values())
             dmin.append(min(np.hypot(p["x"] - q["x"], p["y"] - q["y"]) for p in ps for q in ps if p is not q))
     summ = {"return": float(np.mean([sum(t["rew"]) for t in traj.values()])),

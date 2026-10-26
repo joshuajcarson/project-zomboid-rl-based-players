@@ -57,4 +57,4 @@ def idle(obs):
     return 0
 
 
-BASELINES = {"survive": flee, "rendezvous": seek_mate, "fight": charge}
+BASELINES = {"survive": flee, "rendezvous": seek_mate, "rendezvous_safe": seek_mate, "fight": charge}
