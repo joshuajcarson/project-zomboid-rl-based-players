@@ -125,6 +125,8 @@ class PZParallelEnv:
         else:
             raise TimeoutError("rendered clients did not all enter the world")
         self.channel.command(f"cfg|biteDamage|0")      # real zombies do the damage here, no synthetic bite rule
+        for ctl in self.control.values():
+            ctl._bot("reload")                          # picks up <cache>/Lua/rl_bot_dev.lua when present (no-op otherwise)
         for name, ctl in self.control.items():
             if self.give_weapon:
                 self.channel.command(f"give|{name}|{self.give_weapon}")

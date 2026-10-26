@@ -10,8 +10,8 @@ how to run things lives in `CLAUDE.md`. Rule from the user: commit and push afte
 4. Client Lua edits (`mods/RLBridge/common/media/lua/client/*.lua`) need `scripts/install-mods.ps1 -Enable RLBridge` plus a server restart; `rl_bot_dev.lua` + `reload` is the no-restart iteration path.
 
 ## Task queue (top first)
-1. Rerun `scripts/compare_backends.py fight 60 5 2` (fake vs rendered, matched spawns, path-keeping rendered goto) and record the table in docs/approach.md. Output goes to logs/compare_backends2.out and logs/compare_backends.json.
-2. Fix whatever the rerun shows (rendered movement per step, kills counter, respawn after death for rendered players).
+1. DONE: matched comparison (docs/approach.md): damage when idle matches, fighting does not (rendered bot gets 0 kills of 2 in 5 episodes, fake gets 2 of 2).
+2. Make rendered fighting work: do not restart a swing in progress (RLBot commands.attack), handle hit-reaction and knockdown states (wait, shove, step back), then re-measure with compare_backends.py rendered. Iterate through `.pzclient/Lua/rl_bot_dev.lua` (the env sends `reload` on rendered start), fold into RLBot.lua and restart the server only when done. Also remove the `shot` command (it crashes the client).
 3. Screenshots for the user: try an in-game screenshot command (RLBot `shot`) and save good ones into docs/media/ (see Media below).
 4. Train a first policy (shared-policy PPO) on the fake backend: survive, then rendezvous, then fight; needs gymnasium/pettingzoo/stable-baselines3 (ask before installing: the user is asleep, so write a small dependency-free learner in numpy instead, or install only if the user already said yes).
 5. Evaluate trained policy on the rendered backend and record the transfer gap.
@@ -21,6 +21,7 @@ how to run things lives in `CLAUDE.md`. Rule from the user: commit and push afte
 Screenshots and clips for the user go in `docs/media/` (commit them) with a one-line caption in the log below.
 
 ## Log (newest first)
+- 2026-10-25 22:30: matched comparison done, see docs/approach.md: idle damage matches (82-92 both), fighting does not (fake kills 2/2 for 2-18 damage, rendered 0 kills and ~85 damage in 4 of 5).
 - 2026-10-25 22:10: DO NOT send the RLBot `shot` command: `getCore():TakeScreenshot()` kills the rendered client's JVM without a log line (twice). Media must come from elsewhere (data-driven plots, or a window capture if the screen is on). Also found: a real client's position is client-authoritative (server `teleportTo` does nothing; RLBot `tp` does the move), the server anti-cheat kicks that teleport for speed (all AntiCheat* options are set to 4 = off in .pzdata/Server/rl.ini, research server only), and a teleport of ~750 tiles can crash the client (keep spawn boxes small).
 - 2026-10-25 night: rendered backend works end to end (`PZParallelEnv(backend="rendered")`); first fake-vs-rendered table was unmatched (fake 4-20 zombies near, rendered 0-2) and showed rendered movement per step far lower than fake; spawn matching and path-keeping goto added, rerun in progress.
 - 2026-10-25: unattended rendered-client start (auto character creation, click-through of "Click to Start"); rendered bot walks, equips, swings and kills with the game's own combat (aim comes from the mouse cursor, hit reaction blocks swings); real zombies hurt rendered players hard.
