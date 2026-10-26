@@ -30,7 +30,7 @@ OBS_DIM = 6 + 3 * ZOMBIE_SLOTS + 3 * MATE_SLOTS + 1
 
 
 STAGGER_STEPS = int(os.environ.get("PZ_STAGGER_STEPS", "3"))              # seconds a landed hit keeps the nearby zombies' bites weak (to be fitted against real fights)
-STAGGER_BITE_SCALE = float(os.environ.get("PZ_STAGGER_SCALE", "0.35"))
+STAGGER_BITE_SCALE = float(os.environ.get("PZ_STAGGER_SCALE", "0.45"))
 REAL_STEP_LEN = 3.5      # target distance per step given to a real client: it walks at its own speed (about 16 tiles per 100 ticks)
 
 

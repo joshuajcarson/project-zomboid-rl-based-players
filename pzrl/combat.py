@@ -16,11 +16,11 @@ import os
 # within reach every zombie gets the overall real calm hit rate. HIT_CHANCE_BY_DISTANCE_REAL keeps the measured bands for reference.
 HIT_CHANCE_BY_DISTANCE = [(2.0, 0.36)]
 HIT_CHANCE_BY_DISTANCE_REAL = [(0.7, 0.22), (1.3, 0.40), (2.0, 0.12)]
-HURT_FACTOR = float(os.environ.get("PZ_HURT_FACTOR", "0.5"))             # 0.18 / 0.36: a character in pain or panic hits half as often
+HURT_FACTOR = float(os.environ.get("PZ_HURT_FACTOR", "1.0"))             # 0.18 / 0.36: a character in pain or panic hits half as often
 DAMAGE_MEDIAN = 0.104        # lognormal fit to the damage of swings that hit: median 0.104, 90th percentile 0.39
 DAMAGE_SIGMA = 1.03
 MAX_DAMAGE = 1.0
-HIT_SCALE = float(os.environ.get("PZ_HIT_SCALE", "1.0"))     # global multiplier on the hit chance, for fitting aggregate fight outcomes
+HIT_SCALE = float(os.environ.get("PZ_HIT_SCALE", "0.8"))     # global multiplier on the hit chance, for fitting aggregate fight outcomes
 
 
 def hit_chance(distance, hurt):
