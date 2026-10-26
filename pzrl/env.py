@@ -4,6 +4,7 @@ Interface follows pettingzoo.ParallelEnv (reset/step/agents/possible_agents/obse
 requiring pettingzoo to be installed. One step is `step_seconds` of GAME time regardless of the clock factor
 `time_scale`, so a larger time_scale means more training steps per real second.
 """
+import collections
 import math
 import random
 import re
@@ -12,6 +13,7 @@ import time
 import numpy as np
 
 from .channel import ClientControl, ServerChannel
+from .combat import sample_swing
 from .rendered import RenderedControl
 from .launcher import RUN_SPEED_UNITS, TILES_PER_GAME_SECOND, Launcher, kill_rendered
 from .spaces import Box, Discrete
@@ -42,13 +44,16 @@ class PZParallelEnv:
     def __init__(self, n_agents=2, task="survive", time_scale=1.0, step_seconds=1.0, max_steps=300,
                  base_id=40, seed=None, spawn_box=(10450, 9350, 10900, 10300), launcher=None,
                  give_weapon="Base.BaseballBat", player_damage=1.0, zombie_ring=(12, 22), zombie_behaviour="Normal",
-                 explicit_melee=True, backend="fake", keep_alive=False, rendered_agents=None, walk_speed=17.7, death_hp=None):
+                 explicit_melee=True, backend="fake", keep_alive=False, rendered_agents=None, walk_speed=17.7, death_hp=None, calibrated_combat=True):
         if backend not in ("fake", "rendered", "mixed"):
             raise ValueError("backend must be 'fake' (headless fake clients, scalable), 'rendered' (real graphical clients, 1x) "
                              "or 'mixed' (the first agent, or `rendered_agents`, is a real client and the others are fake clients)")
         if backend != "fake" and time_scale != 1.0:
             raise ValueError("rendered clients run at real time only (time_scale=1)")
         self.backend = backend
+        self.calibrated_combat = calibrated_combat   # fake swings use pzrl.combat (fitted to the real client) instead of one lethal hit
+        self.combat_rng = random.Random(0 if seed is None else seed + 1)
+        self._loss = {}                              # per agent: health lost in each of the last few steps (a hurt character hits less)
         self.walk_speed = walk_speed      # target walking speed of fake clients in tiles per 100 server ticks (a real runner: about 16); None = leave as is
         self.keep_alive = keep_alive      # leave rendered clients running on close() and reuse them next time (fast iteration)
         self.task = TASKS[task]
@@ -293,6 +298,17 @@ class PZParallelEnv:
         p = self.state[name]
         return {"x": p["x"], "y": p["y"], "hp": p["hp"], "kills": p["kills"], "weapon": p["weapon"], "bag": p["bag"]}
 
+    def _swing_damage(self, name):
+        """Damage of this swing from the calibrated model (fake clients only); None = leave it to the client."""
+        if not self.calibrated_combat or name in self.rendered:
+            return None
+        me = self.state[name]
+        dists = [math.hypot(z[0] - me["x"], z[1] - me["y"]) for z in me["z"]]
+        if not dists:
+            return None
+        hurt = sum(self._loss.get(name, ())) >= 10.0        # lost 10+ health in the last 10 steps: pain and panic
+        return sample_swing(min(dists), hurt, self.combat_rng)
+
     def _move_len(self, name):
         """How far ahead the target of a move action is. A fake client walks to its target and stops there, so this distance per
         step IS its speed: walk_speed (tiles per 100 ticks, measured on a real runner) turns into tiles per step. A real client
@@ -347,13 +363,16 @@ class PZParallelEnv:
             me = self.state[name]
             a = int(a)
             if a == ATTACK:
-                self.control[name].attack()
+                self.control[name].attack(self._swing_damage(name))
                 a = 0                                 # attacking means standing still this step
             dx, dy = MOVES[a]
             n = math.hypot(dx, dy) or 1.0
             move_len = self._move_len(name)
             self.control[name].goto(me["x"] + dx / n * move_len, me["y"] + dy / n * move_len)
         self._read(self._game_seconds(self.step_seconds))
+        for name in self.agents:
+            lost = max(0.0, self.prev[name]["hp"] - self.state[name]["hp"]) if name in self.prev and name in self.state else 0.0
+            self._loss.setdefault(name, collections.deque(maxlen=10)).append(lost)
         self.steps += 1
         obs, rewards, terms, truncs, infos = {}, {}, {}, {}, {}
         for name in list(self.agents):

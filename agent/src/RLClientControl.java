@@ -125,7 +125,8 @@ public final class RLClientControl {
                 case "autoattack": // autoattack on|off : the game's built-in melee (2 tile reach, fixed period)
                     setUpdatePeriod.invoke(attackLimiter, arg.equals("on") ? attackPeriod : Long.MAX_VALUE / 4);
                     return "ok";
-                case "attack": { // hit the nearest owned zombie within 2 tiles, exactly like the built-in melee does
+                case "attack": { // attack [dmg]: hit the nearest owned zombie within 2 tiles with the given damage (default: the scenario's), 0 = a swing that does nothing
+                    float dmgArg = arg.isEmpty() ? Float.NaN : Float.parseFloat(arg.trim());
                     Object best = null; double bd = 2.0;
                     float px = fx.getFloat(player), py = fy.getFloat(player);
                     for (Object z : new java.util.ArrayList<>(zombieMap.values())) {
@@ -133,7 +134,8 @@ public final class RLClientControl {
                         if (d < bd) { bd = d; best = z; }
                     }
                     if (best == null) return "miss";
-                    float dmg = fDamage.getFloat(null);
+                    float dmg = Float.isNaN(dmgArg) ? fDamage.getFloat(null) : dmgArg;
+                    if (dmg <= 0f) return "swing " + String.format("%.2f", bd);
                     sendHitZombie.invoke(client, best, dmg);
                     float h = zhealth.getFloat(best) - dmg;
                     zhealth.setFloat(best, h);
