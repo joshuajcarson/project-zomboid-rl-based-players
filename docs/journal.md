@@ -12,7 +12,7 @@ how to run things lives in `CLAUDE.md`. Rule from the user: commit and push afte
 ## Task queue (top first)
 1. DONE: matched comparison (docs/approach.md): damage when idle matches, fighting does not (rendered bot gets 0 kills of 2 in 5 episodes, fake gets 2 of 2).
 2. Make rendered fighting work: do not restart a swing in progress (RLBot commands.attack), handle hit-reaction and knockdown states (wait, shove, step back), then re-measure with compare_backends.py rendered. Iterate through `.pzclient/Lua/rl_bot_dev.lua` (the env sends `reload` on rendered start), fold into RLBot.lua and restart the server only when done. Also remove the `shot` command (it crashes the client).
-3. Screenshots for the user: try an in-game screenshot command (RLBot `shot`) and save good ones into docs/media/ (see Media below).
+3. Media for the user: game screenshots are not possible so far (TakeScreenshot kills the client; window capture blank). Use scripts/record_episode.py (top-down GIF from observations) for trained policies and save into docs/media/.
 4. Train a first policy (shared-policy PPO) on the fake backend: survive, then rendezvous, then fight; needs gymnasium/pettingzoo/stable-baselines3 (ask before installing: the user is asleep, so write a small dependency-free learner in numpy instead, or install only if the user already said yes).
 5. Evaluate trained policy on the rendered backend and record the transfer gap.
 6. Longer-run stability, crash recovery, parallel servers; JDK env-var reminder is still open (memory file).
@@ -21,6 +21,7 @@ how to run things lives in `CLAUDE.md`. Rule from the user: commit and push afte
 Screenshots and clips for the user go in `docs/media/` (commit them) with a one-line caption in the log below.
 
 ## Log (newest first)
+- 2026-10-26 02:30: TRANSFER WORKS for movement: rendezvous policy trained only on fake clients, run with one real rendered client (backend="mixed", scripts/eval_transfer.py): final distance 8-11 tiles in 4 of 5 episodes (fake-only 9.7). Episode 0 the real client did not move at all (first reset after load; cause unknown). Only 15.8 GB RAM: one real client + server + fake clients fits, two real clients do not.
 - 2026-10-26 00:40: rendezvous PPO iteration 30: return 2.49, final pair distance 18 tiles (from ~100 at iteration 1). Picture docs/media/rendezvous_learning_iter30.png.
 - 2026-10-26 00:00: FIRST LEARNING: PPO (pzrl/train.py, shared policy, torch CPU) on rendezvous (2 agents, no zombies, 150x150 spawn box, fake backend at 4x): mean return 0.37 -> 0.75 -> 1.79 at iterations 5/10/15, final pair distance 95 -> 73 -> 61 tiles. Picture: docs/media/rendezvous_learning_iter15.png (run: logs/train_rendezvous4.out, checkpoint models/rendezvous.pt, curve models/rendezvous.png). Run continues to iteration 80 then evaluates against the scripted baseline.
 - 2026-10-25 23:00: rendered fighting investigated (docs/approach.md, last section): hits land but do ~0.19 of a zombie's health on average and staggers block swings, so 0 kills in 4 episodes with the improved swing; dev file v1 is NOT folded into RLBot.lua. Decision: move on to training PPO (torch CPU is installed) on the fake backend for survive/rendezvous first and evaluate on the rendered backend; revisit fighting later (try holding the attack for charge, backing away between swings).

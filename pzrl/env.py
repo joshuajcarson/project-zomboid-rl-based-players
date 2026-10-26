@@ -36,10 +36,11 @@ class PZParallelEnv:
     def __init__(self, n_agents=2, task="survive", time_scale=1.0, step_seconds=1.0, max_steps=300,
                  base_id=40, seed=None, spawn_box=(10450, 9350, 10900, 10300), launcher=None,
                  give_weapon="Base.BaseballBat", player_damage=1.0, zombie_ring=(12, 22), zombie_behaviour="Normal",
-                 explicit_melee=True, backend="fake", keep_alive=False):
-        if backend not in ("fake", "rendered"):
-            raise ValueError("backend must be 'fake' (headless fake clients, scalable) or 'rendered' (real graphical clients, 1x)")
-        if backend == "rendered" and time_scale != 1.0:
+                 explicit_melee=True, backend="fake", keep_alive=False, rendered_agents=None):
+        if backend not in ("fake", "rendered", "mixed"):
+            raise ValueError("backend must be 'fake' (headless fake clients, scalable), 'rendered' (real graphical clients, 1x) "
+                             "or 'mixed' (the first agent, or `rendered_agents`, is a real client and the others are fake clients)")
+        if backend != "fake" and time_scale != 1.0:
             raise ValueError("rendered clients run at real time only (time_scale=1)")
         self.backend = backend
         self.keep_alive = keep_alive      # leave rendered clients running on close() and reuse them next time (fast iteration)
@@ -51,6 +52,8 @@ class PZParallelEnv:
         self.spawn_box = spawn_box
         self.ids = [base_id + i for i in range(n_agents)]
         self.possible_agents = [f"Client{i}" for i in self.ids]
+        self.rendered = (set(self.possible_agents) if backend == "rendered" else
+                         set(rendered_agents if rendered_agents is not None else self.possible_agents[:1]) if backend == "mixed" else set())
         self.agents = []
         self.launcher = launcher or Launcher(time_scale=time_scale)
         self.time_scale = time_scale
@@ -79,34 +82,39 @@ class PZParallelEnv:
     def _start(self):
         L = self.launcher
         L.start_server(reuse=True)
-        if self.backend == "rendered":
-            return self._start_rendered()
-        spawns = sample_spawns(self.n_agents, self.task, self.rng, self.spawn_box)
-        scen = L.write_scenario(self.ids, spawns, name=f"env-{self.n_agents}", damage=self.player_damage,
-                                zombie_behaviour=self.zombie_behaviour)
-        self._scenario = scen
-        for i in self.ids:
-            port = L.start_client(i, scen)
-            self.control[f"Client{i}"] = ClientControl(port)
+        fake_names = [n for n in self.possible_agents if n not in self.rendered]
+        if fake_names:
+            fake_ids = [int(n[len("Client"):]) for n in fake_names]
+            spawns = sample_spawns(len(fake_ids), self.task, self.rng, self.spawn_box)
+            scen = L.write_scenario(fake_ids, spawns, name=f"env-{len(fake_ids)}", damage=self.player_damage,
+                                    zombie_behaviour=self.zombie_behaviour)
+            self._scenario = scen
+            for i in fake_ids:
+                self.control[f"Client{i}"] = ClientControl(L.start_client(i, scen))
         self.channel = ServerChannel(L.channel_port)
+        self._wait_connected(fake_names)
+        # the synthetic bite rule stands in for zombie damage the fake clients do not take; real clients take the real thing
+        self.channel.command(f"cfg|biteDamage|{self.task.bite_damage if not self.rendered else 0}")
+        for name in fake_names:
+            self._prepare_fake(name)
+        if self.rendered:
+            self._start_rendered()
+        self._started = True
+
+    def _wait_connected(self, names):
         deadline = time.time() + 420
         retry_at, retries = time.time() + 75, 0
         while time.time() < deadline:
             msg = self.channel.wait_obs(1)
             present = {p["u"] for p in msg["p"]}
-            if set(self.possible_agents) <= present:
-                break
+            if set(names) <= present:
+                return
             if time.time() > retry_at and retries < 3:      # a client that never reached the server (stuck connect): start it again
                 retries += 1; retry_at = time.time() + 75
-                for name in self.possible_agents:
+                for name in names:
                     if name not in present:
                         self._revive(name)
-        else:
-            raise TimeoutError("agents did not all connect")
-        self.channel.command(f"cfg|biteDamage|{self.task.bite_damage}")
-        for name in self.control:
-            self._prepare_fake(name)
-        self._started = True
+        raise TimeoutError("agents did not all connect")
 
     def _prepare_fake(self, name):
         ctl = self.control[name]
@@ -121,6 +129,12 @@ class PZParallelEnv:
         if self.explicit_melee:
             ctl.autoattack(False)
 
+    def _prepare_rendered(self, name):
+        self.control[name]._bot("reload")       # picks up <cache>/Lua/rl_bot_dev.lua when present (no-op otherwise)
+        if self.give_weapon:
+            self.channel.command(f"give|{name}|{self.give_weapon}")
+            self.control[name].equip(self.give_weapon)
+
     def _revive(self, name):
         """A character that really died (health 0) cannot be healed: relaunch its client, which logs in and gets a new character."""
         i = int(name[len("Client"):])
@@ -129,7 +143,7 @@ class PZParallelEnv:
         self.control.pop(name, None)
         self.state.pop(name, None)
         time.sleep(6)                       # let the server notice the disconnect before the same account logs in again
-        if self.backend == "rendered":
+        if name in self.rendered:
             L.start_rendered(i)
             self.control[name] = RenderedControl(self.channel, name, state=lambda n=name: self.state.get(n))
         else:
@@ -142,26 +156,24 @@ class PZParallelEnv:
         else:
             raise TimeoutError(f"{name} did not come back after dying")
         self._missing[name] = 0
-        if self.backend == "rendered":
-            self.control[name]._bot("reload")
-            if self.give_weapon:
-                self.channel.command(f"give|{name}|{self.give_weapon}")
-                self.control[name].equip(self.give_weapon)
+        if name in self.rendered:
+            self._prepare_rendered(name)
         else:
             self._prepare_fake(name)
 
     def _start_rendered(self):
-        """Rendered backend: real graphical clients are driven by RLBot.lua through the server channel; the observations are the
-        same server-side bridge messages, so the same policies run unchanged."""
+        """Real graphical clients are driven by RLBot.lua through the server channel; the observations are the same
+        server-side bridge messages, so the same policies run unchanged."""
         L = self.launcher
-        self.channel = ServerChannel(L.channel_port)
         msg = self.channel.wait_obs(1)
         running = {p["u"] for p in msg["p"]}
-        for i in self.ids:
-            if f"Client{i}" not in running:
-                L.start_rendered(i)
+        for name in self.possible_agents:
+            if name not in self.rendered:
+                continue
+            if name not in running:
+                L.start_rendered(int(name[len("Client"):]))
                 time.sleep(20)      # stagger: each client loads for a while and the server handles one login at a time
-            self.control[f"Client{i}"] = RenderedControl(self.channel, f"Client{i}", state=lambda n=f"Client{i}": self.state.get(n))
+            self.control[name] = RenderedControl(self.channel, name, state=lambda n=name: self.state.get(n))
         deadline = time.time() + 600
         while time.time() < deadline:
             msg = self.channel.wait_obs(1)
@@ -169,21 +181,20 @@ class PZParallelEnv:
                 break
         else:
             raise TimeoutError("rendered clients did not all enter the world")
-        self.channel.command(f"cfg|biteDamage|0")      # real zombies do the damage here, no synthetic bite rule
-        for ctl in self.control.values():
-            ctl._bot("reload")                          # picks up <cache>/Lua/rl_bot_dev.lua when present (no-op otherwise)
-        for name, ctl in self.control.items():
-            if self.give_weapon:
-                self.channel.command(f"give|{name}|{self.give_weapon}")
-                ctl.equip(self.give_weapon)
-        self._started = True
+        for name in self.rendered:
+            self._prepare_rendered(name)
 
     def close(self):
         for c in self.control.values():
             c.close()
         if self.channel:
             self.channel.close()
-        if not (self.keep_alive and self.backend == "rendered"):
+        if self.keep_alive and self.rendered:
+            L = self.launcher                   # leave the real clients running for the next run, stop the fake ones
+            for name in self.possible_agents:
+                if name not in self.rendered:
+                    L.stop_client(int(name[len("Client"):]))
+        else:
             self.launcher.stop_all()
         self._started = False
 
