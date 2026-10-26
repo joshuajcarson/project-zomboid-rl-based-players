@@ -70,6 +70,7 @@ class PZParallelEnv:
         self.last_message = None
         self._started = False
         self._missing = {}
+        self._reviving = set()
 
     # ---- spaces -----------------------------------------------------------------------------------------------------
     def observation_space(self, agent):
@@ -149,6 +150,7 @@ class PZParallelEnv:
         """A character that really died (health 0) cannot be healed: relaunch its client, which logs in and gets a new character."""
         i = int(name[len("Client"):])
         L = self.launcher
+        self._reviving.add(name)
         L.stop_client(i)
         self.control.pop(name, None)
         self.state.pop(name, None)
@@ -166,6 +168,7 @@ class PZParallelEnv:
         else:
             raise TimeoutError(f"{name} did not come back after dying")
         self._missing[name] = 0
+        self._reviving.discard(name)
         if name in self.rendered:
             self._prepare_rendered(name)
         else:
@@ -226,6 +229,8 @@ class PZParallelEnv:
                 self.state[p["u"]] = p
         if self._started:                    # a kicked or crashed client would otherwise leave stale state that looks like an idle agent
             for name in self.possible_agents:
+                if name in self._reviving:
+                    continue
                 self._missing[name] = 0 if name in here else self._missing.get(name, 0) + 1
                 if self._missing[name] >= 12:
                     raise AgentDisconnected(f"{name} has been missing from the server for {self._missing[name]} observations")
