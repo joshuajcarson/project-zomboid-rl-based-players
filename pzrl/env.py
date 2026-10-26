@@ -256,7 +256,7 @@ class PZParallelEnv:
     # ---- helpers ----------------------------------------------------------------------------------------------------
     def _equip(self, name, item_type):
         """Give the item on the server and make the fake client wield it (it sends an Equip packet)."""
-        ack = self.channel.command(f"ensure|{name}|{item_type}")    # reuses the starter-kit item, never piles up copies
+        ack = self.channel.command(f"ensureroot|{name}|{item_type}")    # one copy, in the main inventory (a fake client cannot wield from a bag)
         m = re.search(r"id=(\d+)", ack["msg"])
         if not (ack["ok"] and m):
             raise RuntimeError(f"ensure {item_type} for {name} failed: {ack['msg']}")

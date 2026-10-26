@@ -189,6 +189,35 @@ function handlers.ensure(user, itemType)
     return ok, tostring(res)
 end
 
+-- ensureroot|user|Base.Item : like ensure, but the one kept item lives in the main inventory itself, not inside a bag. A fake client can
+-- only wield items from there (a bat in the backpack leaves it hitting with bare hands); real clients equip from the bag themselves.
+function handlers.ensureroot(user, itemType)
+    local p = findPlayer(user); if not p then return false, "no such player" end
+    local short = string.gsub(itemType, "^Base%\.", "")
+    local ok, res = pcall(function()
+        local inv = p:getInventory()
+        local keep
+        local items = inv:getItems()
+        for i = 0, items:size() - 1 do
+            local it = items:get(i)
+            if it:getType() == short then keep = it; break end
+        end
+        local all = inv:getAllTypeRecurse(short)
+        local before = all:size()
+        local extras = {}
+        for i = 0, before - 1 do
+            if all:get(i) ~= keep then extras[#extras + 1] = all:get(i) end
+        end
+        for _, extra in ipairs(extras) do
+            local c = extra:getContainer()
+            if c then c:Remove(extra) end
+        end
+        keep = keep or inv:AddItem(itemType)
+        return "id=" .. tostring(keep:getID()) .. " count_before=" .. tostring(before)
+    end)
+    return ok, tostring(res)
+end
+
 -- inv|user : what the player carries (a heavy load slows walking): item count, carried weight, and bats
 function handlers.inv(user)
     local p = findPlayer(user); if not p then return false, "no such player" end
