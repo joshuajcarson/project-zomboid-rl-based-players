@@ -1,0 +1,13 @@
+{
+ "policy_greedy": {
+  "return": 7.845,
+  "steps": 40.0,
+  "kills": 3.75,
+  "damage": 22.406,
+  "deaths": 0.0,
+  "final_pair_distance": 3.337
+ },
+ "scripted": {
+  "return": -2.944
+ }
+}
