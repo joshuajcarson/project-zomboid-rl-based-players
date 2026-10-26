@@ -2,7 +2,7 @@
 
 Context for Claude Code sessions working in this repo on Joshua's Windows PC.
 
-**After a crash or session reset, read `docs/journal.md` first (task queue, how to resume, running log).**
+**After a crash or session reset, read `docs/journal.md` first (task queue, how to resume, running log). Game mechanics, how they differ from our simulation and what to add: `docs/pz-mechanics.md`.**
 
 ## Goal
 
