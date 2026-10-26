@@ -36,7 +36,11 @@ class RenderedControl:
 
     # --- the ClientControl surface PZParallelEnv uses -------------------------------------------------------------
     def tp(self, x, y, z=0):
-        return self.ch.command(f"tp|{self.user}|{x:.1f}|{y:.1f}|{z}")
+        # the position of a real client is client-authoritative: the server-side tp command would not move it
+        return self._bot("tp", f"{x:.1f}", f"{y:.1f}")
+
+    def shot(self):
+        return self._bot("shot")
 
     def weapon(self, item_id):          # the rendered bot equips by item type, see equip()
         return {"ok": True}

@@ -76,6 +76,22 @@ function commands.stop(p)
     RL.run = false
     return true
 end
+-- tp: a real client's position is client-authoritative, so a server-side teleport does nothing; move the local player
+function commands.tp(p, a)
+    local x, y, z = tonumber(a.a), tonumber(a.b), tonumber(a.c) or 0
+    ISTimedActionQueue.clear(p)
+    RL.goal = nil
+    local ok, err = pcall(function() p:teleportTo(x, y, z) end)
+    if not ok then
+        ok, err = pcall(function() p:setX(x); p:setY(y); p:setZ(z); p:setLastX(x); p:setLastY(y); p:setLastZ(z) end)
+    end
+    return ok, tostring(err)
+end
+-- shot: ask the game for a screenshot of the client view (files land in the client's cache Screenshots folder)
+function commands.shot(p)
+    local ok, err = pcall(function() getCore():TakeScreenshot() end)
+    return ok, tostring(err)
+end
 function commands.equip(p, a) return equip(p, a.a) end
 function commands.attack(p)
     local z, d = nearestZombie(p, 2.0)
