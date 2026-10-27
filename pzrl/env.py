@@ -172,6 +172,19 @@ class PZParallelEnv:
         if self.explicit_melee:
             ctl.autoattack(False)
 
+    def _rearm_rendered(self, name):
+        """A rendered character's bat wears out (15 condition points) and breaks after a few hundred hits, leaving the hands empty: equip the
+        best bat at full condition at every reset, and give a new one if the weapon slot is still empty afterwards."""
+        if not self.give_weapon:
+            return
+        self.control[name].equip(self.give_weapon)
+        self._read(4)
+        if not self.state.get(name, {}).get("weapon"):
+            self.channel.command(f"give|{name}|{self.give_weapon}")
+            time.sleep(1.0)
+            self.control[name].equip(self.give_weapon)
+            self._read(4)
+
     def _prepare_rendered(self, name):
         self.control[name]._bot("reload")       # picks up <cache>/Lua/rl_bot_dev.lua when present (no-op otherwise)
         if self.give_weapon:
@@ -346,6 +359,9 @@ class PZParallelEnv:
         for name in self.possible_agents:
             if self.state.get(name, {}).get("dead"):
                 self._revive(name)
+        for name in self.rendered:
+            if name in self.control:
+                self._rearm_rendered(name)
         for name, (sx, sy) in zip(self.possible_agents, spawns):
             self.channel.command(f"heal|{name}")
             self.control[name].tp(sx, sy, 0)

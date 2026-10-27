@@ -29,8 +29,15 @@ local function snap(p, z)
         z:getOnlineID(), stat(p, "ENDURANCE"), stat(p, "PANIC"), stat(p, "STRESS"), stat(p, "FATIGUE"), stat(p, "PAIN"), arms(p),
         p:getPerkLevel(Perks.Strength), p:getPerkLevel(Perks.Blunt), p:getPerkLevel(Perks.Fitness), z:getHealth())
 end
+RL.autoRearm = true
 RL.tick = function(p)
     if RL.run then p:setRunning(true) end
+    RL.frameCount = (RL.frameCount or 0) + 1
+    -- a knockdown or a broken weapon can leave the hands empty: pick the bat up again, like a player would
+    if RL.autoRearm and RL.frameCount % 30 == 0 and not p:getPrimaryHandItem() then
+        local ok = commands.equip and commands.equip(p, { a = "Base.BaseballBat" })
+        log("REARM hands were empty, equip=" .. tostring(ok))
+    end
     local sw = RL.swing
     if not sw then return end
     sw.frames = sw.frames + 1
@@ -140,4 +147,25 @@ commands.aimcheck = function(p)
     if rlAimClear then rlAimClear() end
     log(string.format("aimcheck rlAim=%s zombie_dist=%.2f angle_error_without_override=%.1f deg with_override=%.1f deg", tostring(rlAim ~= nil), bd, off, on))
     return true, "logged"
+end
+
+
+-- equip: wield the best-condition item of the given type and restore its condition to full. A bat has 15 condition points and loses them
+-- with hits; a character that fights for hours breaks it, and a broken bat leaves the hands empty (the real character's bat did break during
+-- the experiments). Episodes are short, so a full-condition weapon at the start of each is the right thing to simulate.
+commands.equip = function(p, a)
+    local short = string.gsub((a and a.a) or "Base.BaseballBat", "^Base%.", "")
+    local all = p:getInventory():getAllTypeRecurse(short)
+    local best, bc = nil, -1
+    for i = 0, all:size() - 1 do
+        local it = all:get(i)
+        local c = it:getCondition()
+        if c > bc then best, bc = it, c end
+    end
+    if not best then log("equip: no " .. short .. " in the inventory"); return false, "none" end
+    pcall(function() best:setCondition(best:getConditionMax()) end)
+    p:setPrimaryHandItem(best)
+    if best:isRequiresEquippedBothHands() then p:setSecondaryHandItem(best) end
+    log(string.format("equip %s condition %d -> %d/%d", short, bc, best:getCondition(), best:getConditionMax()))
+    return true, "ok"
 end
