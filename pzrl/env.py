@@ -4,9 +4,12 @@ Interface follows pettingzoo.ParallelEnv (reset/step/agents/possible_agents/obse
 requiring pettingzoo to be installed. One step is `step_seconds` of GAME time regardless of the clock factor
 `time_scale`, so a larger time_scale means more training steps per real second.
 """
+import atexit
 import collections
 import math
 import os
+import pathlib
+import subprocess
 import random
 import re
 import time
@@ -34,6 +37,40 @@ STAGGER_BITE_SCALE = float(os.environ.get("PZ_STAGGER_SCALE", "0.45"))
 REAL_STEP_LEN = 3.5      # target distance per step given to a real client: it walks at its own speed (about 16 tiles per 100 ticks)
 
 
+LOCK_PATH = pathlib.Path(__file__).resolve().parent.parent / "logs" / ".env.lock"
+
+
+class EnvInUse(RuntimeError):
+    """Another experiment process already owns the server and the game clients (two at once log in under the same names and launch
+    duplicate game windows)."""
+
+
+def _pid_alive(pid):
+    out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True).stdout
+    return str(pid) in out
+
+
+def _acquire_lock():
+    LOCK_PATH.parent.mkdir(exist_ok=True)
+    if LOCK_PATH.exists():
+        try:
+            pid = int(LOCK_PATH.read_text().split()[0])
+        except (ValueError, IndexError):
+            pid = 0
+        if pid and pid != os.getpid() and _pid_alive(pid):
+            raise EnvInUse(f"another experiment (pid {pid}) owns the env: stop it first (python scripts/pz_ctl.py list / stop-runs)")
+    LOCK_PATH.write_text(f"{os.getpid()} {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    atexit.register(_release_lock)
+
+
+def _release_lock():
+    try:
+        if LOCK_PATH.exists() and LOCK_PATH.read_text().split()[0] == str(os.getpid()):
+            LOCK_PATH.unlink()
+    except Exception:
+        pass
+
+
 class AgentDisconnected(RuntimeError):
     """An agent's client left the server (kick, crash, closed window)."""
     def __init__(self, message, name=None):
@@ -48,6 +85,7 @@ class PZParallelEnv:
                  base_id=40, seed=None, spawn_box=(10450, 9350, 10900, 10300), launcher=None,
                  give_weapon="Base.BaseballBat", player_damage=1.0, zombie_ring=(12, 22), zombie_behaviour="Normal",
                  explicit_melee=True, backend="fake", keep_alive=False, rendered_agents=None, walk_speed=17.7, death_hp=None, calibrated_combat=True):
+        _acquire_lock()                  # one experiment at a time (see EnvInUse)
         if backend not in ("fake", "rendered", "mixed"):
             raise ValueError("backend must be 'fake' (headless fake clients, scalable), 'rendered' (real graphical clients, 1x) "
                              "or 'mixed' (the first agent, or `rendered_agents`, is a real client and the others are fake clients)")

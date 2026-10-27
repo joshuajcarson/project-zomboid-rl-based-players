@@ -22,7 +22,10 @@ def kind(name, cmd):
         if "FakeClientManager" in cmd: return "fake"
         if "GameServer" in cmd or "rl-agent.jar" in cmd: return "server"
         return "java"
-    if "scripts/" in cmd.replace("\\", "/") and "pz_ctl" not in cmd and ("compare_" in cmd or "_demo" in cmd or "_test" in cmd or "_run_" in cmd):
+    c = cmd.replace("\\", "/")
+    if "pz_ctl" not in c and any(k in c for k in ("compare_", "_demo", "_test", "_run_", "_policy_study", "_fit_fight", "_eval_bc", "_record_",
+                                                  "rendered_fight_lab", "eval_transfer", "measure_speed", "aim_check", "pzrl.train", "pzrl.imitate",
+                                                  "_transfer_zombies", "_speed_check", "start-client.ps1")):
         return "run"
     return None
 
