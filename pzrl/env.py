@@ -16,7 +16,7 @@ import numpy as np
 from .channel import ClientControl, ServerChannel
 from .combat import sample_swing
 from .rendered import RenderedControl
-from .launcher import RUN_SPEED_UNITS, TILES_PER_GAME_SECOND, Launcher, kill_rendered
+from .launcher import RUN_SPEED_UNITS, TILES_PER_GAME_SECOND, Launcher, kill_rendered, rendered_alive
 from .spaces import Box, Discrete
 from .tasks import DEATH_HP, TASKS, dist, nearest_other, sample_spawns
 
@@ -221,7 +221,9 @@ class PZParallelEnv:
         server-side bridge messages, so the same policies run unchanged."""
         L = self.launcher
         msg = self.channel.wait_obs(1)
-        running = {p["u"] for p in msg["p"]}
+        running = {p["u"] for p in msg["p"]} if rendered_alive() else set()   # the server's list still shows a client killed seconds ago
+        if not running and any(n in {p["u"] for p in msg["p"]} for n in self.rendered):
+            self._wait_gone(sorted(self.rendered), timeout=90)             # let the server drop the dead session before logging in again
         for name in self.possible_agents:
             if name not in self.rendered:
                 continue

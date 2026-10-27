@@ -42,6 +42,13 @@ def kill_rendered():
     time.sleep(1)
 
 
+def rendered_alive():
+    """True when a rendered client JVM of this repo is running (the server's player list lags a killed client by many seconds)."""
+    script = "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | Where-Object { $_.CommandLine -match 'rl-agent-client' } | Measure-Object | ForEach-Object { $_.Count }"
+    out = subprocess.run(["powershell", "-NoProfile", "-Command", script], capture_output=True, text=True, creationflags=_FLAGS).stdout.strip()
+    return out.isdigit() and int(out) > 0
+
+
 def kill_stale():
     """Stop leftover game server / fake client JVMs that belong to this repo (matched by repo path in the command line)."""
     script = (
