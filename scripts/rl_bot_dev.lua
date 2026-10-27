@@ -30,6 +30,22 @@ local function snap(p, z)
         p:getPerkLevel(Perks.Strength), p:getPerkLevel(Perks.Blunt), p:getPerkLevel(Perks.Fitness), z:getHealth())
 end
 RL.autoRearm = true
+-- bone: log where the nearest zombie's head bone is (the game picks the hit zone of a downed zombie by which bone the swing reaches)
+commands.bone = function(p, a)
+    local zs = getCell():getZombieList()
+    local best, bd
+    for i = 0, zs:size() - 1 do
+        local z = zs:get(i)
+        local d = math.sqrt((z:getX() - p:getX()) ^ 2 + (z:getY() - p:getY()) ^ 2)
+        if not bd or d < bd then best, bd = z, d end
+    end
+    if not best then return false, "no zombie" end
+    for _, bn in ipairs({ "Bip01_Head", "Bip01_Pelvis", "Bip01_L_Foot" }) do
+        local ok, x, y, zz = pcall(rlBone, best, bn)
+        log(string.format("bone: %s ok=%s x=%s y=%s z=%s zombie=%.2f,%.2f", bn, tostring(ok), tostring(x), tostring(y), tostring(zz), best:getX(), best:getY()))
+    end
+    return true, "bone"
+end
 -- god|1 or god|0: the env switches invincibility on between episodes and off while one runs
 commands.god = function(p, a)
     local on = (a and a.a) == "1"
@@ -82,9 +98,14 @@ RL.tick = function(p)
     local onfloor = false
     pcall(function() onfloor = z:isOnFloor() end)
     local ax, ay = z:getX(), z:getY()
+    if onfloor and RL.headSign == 2 and rlBone then
+        -- aim at the head bone itself (rlBone is provided by the client agent)
+        local okb, hx, hy = pcall(rlBone, z, "Bip01_Head")
+        if okb and hx then ax, ay = hx, hy end
+    end
     if onfloor and RL.headSign ~= 0 then
         local okd, fd = pcall(function() return z:getForwardDirection() end)
-        if okd and fd then
+        if okd and fd and RL.headSign ~= 2 then
             local fx, fy = fd:getX(), fd:getY()
             local n = math.sqrt(fx * fx + fy * fy)
             if n > 0.01 then ax, ay = z:getX() + RL.headSign * 0.6 * fx / n, z:getY() + RL.headSign * 0.6 * fy / n end

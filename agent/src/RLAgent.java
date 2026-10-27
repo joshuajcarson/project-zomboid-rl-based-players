@@ -179,6 +179,24 @@ public class RLAgent {
                 RLMouse.ox = RLMouse.NONE; RLMouse.oy = RLMouse.NONE;
                 return 0;
             };
+            Method framePush = Class.forName("se.krka.kahlua.vm.LuaCallFrame").getMethod("push", Object.class);
+            // rlBone(object, boneName) -> x, y, z of that bone in world coordinates (the game picks the body zone of a hit on a downed
+            // zombie by which bone the swing reaches; Lua has no access to the helper that computes it)
+            InvocationHandler bone = (proxy, m, a) -> {
+                if (!m.getName().equals("call")) return null;
+                try {
+                    Object obj = frameGet.invoke(a[0], 0);
+                    Object name = frameGet.invoke(a[0], 1);
+                    Class<?> v3 = Class.forName("zombie.iso.Vector3");
+                    Object v = v3.getConstructor().newInstance();
+                    Object r = Class.forName("zombie.CombatManager").getMethod("getBoneWorldPos", Class.forName("zombie.iso.IsoMovingObject"), String.class, v3)
+                        .invoke(null, obj, String.valueOf(name), v);
+                    if (r == null) r = v;
+                    for (String f : new String[] { "x", "y", "z" }) framePush.invoke(a[0], ((Number) v3.getField(f).get(r)).doubleValue());
+                    return 3;
+                } catch (Throwable e) { log("rlBone failed: " + e + " / " + e.getCause()); return 0; }
+            };
+            Object fBone = Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, bone);
             Object fSet = Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, set);
             Object fClear = Proxy.newProxyInstance(jf.getClassLoader(), new Class<?>[] { jf }, clear);
             Object last = null;
@@ -189,6 +207,7 @@ public class RLAgent {
                 if (env == null || env == last) continue;
                 rawset.invoke(env, "rlAim", fSet);
                 rawset.invoke(env, "rlAimClear", fClear);
+                rawset.invoke(env, "rlBone", fBone);
                 last = env;
                 log("aim: installed rlAim / rlAimClear");
             }
