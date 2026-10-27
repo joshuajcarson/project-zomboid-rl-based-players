@@ -6,7 +6,7 @@ sys.path.insert(0, ".")
 import numpy as np
 from pzrl.env import PZParallelEnv
 from pzrl.tasks import TASKS
-from pzrl.baselines import BASELINES, idle
+from pzrl.baselines import BASELINES, idle, parse_policy
 net = None
 import os
 saved = {"X": [], "Y": []}      # PZ_SAVE_OBS=path.npz: keep every observation with the scripted fighter's action as its label (DAgger data)
@@ -27,7 +27,7 @@ try:
         obs, _ = env.reset(); a0 = env.agents[0]
         hp0 = env.state[a0]["hp"]; zn0 = env.state[a0]["zn"]; zmin = zn0; hpmin = hp0; swings = 0
         while env.agents:
-            act = {a: (net.act(obs[a], greedy=True)[0] if net else idle(obs[a]) if policy == "idle" else BASELINES["fight"](obs[a])) for a in env.agents}
+            act = {a: (net.act(obs[a], greedy=True)[0] if net else idle(obs[a]) if policy == "idle" else (parse_policy(policy) or BASELINES["fight"])(obs[a])) for a in env.agents}
             if os.environ.get("PZ_SAVE_OBS"):
                 for a in env.agents:
                     saved["X"].append(obs[a].copy()); saved["Y"].append(BASELINES["fight"](obs[a]))

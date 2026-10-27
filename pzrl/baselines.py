@@ -53,6 +53,29 @@ def charge(obs):
     return ATTACK if math.hypot(v[0], v[1]) * 30 < 1.8 else _dir_to_action(*v)
 
 
+def charge_param(swing_dist=1.8, flee_hp=0.0, flee_dist=3.0):
+    """charge with two knobs: swing only inside `swing_dist` tiles (otherwise keep closing in), and walk away from the nearest zombie
+    when health is below `flee_hp` and it is within `flee_dist` tiles. Written as a pure function of the observation so it can label
+    observations for imitation. charge_param(1.8, 0) is `charge`."""
+    def policy(obs):
+        v = nearest_zombie_vec(obs)
+        if v is None:
+            return 0
+        d = math.hypot(v[0], v[1]) * 30
+        if obs[0] * 100 < flee_hp and d < flee_dist:
+            return _dir_to_action(-v[0], -v[1])
+        return ATTACK if d < swing_dist else _dir_to_action(*v)
+    return policy
+
+
+def parse_policy(spec):
+    """'charge:1.2:35' -> charge_param(1.2, 35); anything else is looked up by name."""
+    if spec.startswith("charge:"):
+        parts = [float(x) for x in spec.split(":")[1:]]
+        return charge_param(*parts)
+    return None
+
+
 def idle(obs):
     return 0
 
