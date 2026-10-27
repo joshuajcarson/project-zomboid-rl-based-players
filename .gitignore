@@ -27,3 +27,6 @@ agent/build/
 agent/*.jar
 .pzclient/
 scenarios/generated/
+
+# Daily progress clips stay on this machine
+clips/
