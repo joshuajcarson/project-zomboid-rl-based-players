@@ -30,6 +30,12 @@ local function snap(p, z)
         p:getPerkLevel(Perks.Strength), p:getPerkLevel(Perks.Blunt), p:getPerkLevel(Perks.Fitness), z:getHealth())
 end
 RL.autoRearm = true
+-- god|1 or god|0: the env switches invincibility on between episodes and off while one runs
+commands.god = function(p, a)
+    local on = (a and a.a) == "1"
+    p:setGodMod(on)
+    return true, "god=" .. tostring(on)
+end
 -- rl_bot_cfg.txt (written by the experiment script): headSign=0 (face the zombie's centre), 1 or -1 (face the end of a downed zombie that its
 -- forward vector points to, or the opposite end: the head end is the one that kills quickly)
 RL.headSign = 0
@@ -106,12 +112,12 @@ RL.tick = function(p)
         if not sw.began then sw.began = true; sw.zhp0 = z:getHealth(); sw.s0 = snap(p, z); sw.d0 = math.sqrt((z:getX()-p:getX())^2 + (z:getY()-p:getY())^2) end
     elseif sw.began then
         log(string.format("COMBAT swing %s dmg=%.3f dist=%.2f frames=%d floor=%d head=%d proj=%.2f front=%d", sw.s0, sw.zhp0 - z:getHealth(), sw.d0, sw.frames, sw.onfloor and 1 or 0, RL.headSign, sw.proj or 0, sw.front or 0))
-        -- a zombie that takes no damage for several swings in a row is out of reach (caught in a fence or equipment): stop wasting swings on it
+        -- misses are common (about half the swings), so only a long run of zero-damage swings means the zombie is out of reach (caught in a fence or equipment): stop wasting swings on it
         RL.stuck = RL.stuck or {}
         local zid = z:getOnlineID()
         local rec = RL.stuck[zid] or { n = 0 }
         if sw.zhp0 - z:getHealth() < 0.01 then rec.n = rec.n + 1 else rec.n = 0 end
-        if rec.n >= 4 then rec.until_ = getTimestampMs() + 20000; rec.n = 0; log("COMBAT giveup zid=" .. zid) end
+        if rec.n >= 8 then rec.until_ = getTimestampMs() + 6000; rec.n = 0; log("COMBAT giveup zid=" .. zid) end
         RL.stuck[zid] = rec
         RL.swing = nil; p:setIsAiming(false); if rlAimClear then rlAimClear() end
     elseif sw.frames >= 3 then p:pressedAttack() end

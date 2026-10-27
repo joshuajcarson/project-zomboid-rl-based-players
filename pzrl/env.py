@@ -210,6 +210,14 @@ class PZParallelEnv:
         if self.explicit_melee:
             ctl.autoattack(False)
 
+    def _god(self, name, on):
+        """Invincibility for a real character while no episode is running (the client decides its own damage; a leftover zombie can
+        otherwise kill it during a reset, and a dead character costs minutes to replace). Needs the 'god' command in rl_bot_dev.lua."""
+        try:
+            self.control[name]._bot("god", "1" if on else "0")
+        except Exception:
+            pass
+
     def _rearm_rendered(self, name):
         """A rendered character's bat wears out (15 condition points) and breaks after a few hundred hits, leaving the hands empty: equip the
         best bat at full condition at every reset, and give a new one if the weapon slot is still empty afterwards."""
@@ -399,6 +407,7 @@ class PZParallelEnv:
                 self._revive(name)
         for name in self.rendered:
             if name in self.control:
+                self._god(name, True)
                 self._rearm_rendered(name)
         for name, (sx, sy) in zip(self.possible_agents, spawns):
             self.channel.command(f"heal|{name}")
@@ -424,6 +433,9 @@ class PZParallelEnv:
                 ang = self.rng.uniform(0, 2 * math.pi)
                 self.channel.command(f"zspawn|{sx + ring * math.cos(ang):.0f}|{sy + ring * math.sin(ang):.0f}|1")
         self._read(self._game_seconds(4))          # let chunks and ownership settle
+        for name in self.rendered:
+            if name in self.control:
+                self._god(name, False)
         self.agents = [a for a in self.possible_agents if a in self.state]
         self.prev = {a: dict(self.state[a]) for a in self.agents}
         self.steps = 0
@@ -482,5 +494,8 @@ class PZParallelEnv:
             obs[name] = self._obs(name)
             infos[name] = self._info(name)
             self.prev[name] = dict(cur)
+        for name in list(self.agents):
+            if (terms[name] or truncs[name]) and name in self.rendered and name in self.control:
+                self._god(name, True)               # nothing may kill a real character between episodes
         self.agents = [a for a in self.agents if not (terms[a] or truncs[a])]
         return obs, rewards, terms, truncs, infos

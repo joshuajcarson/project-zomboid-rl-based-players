@@ -30,3 +30,4 @@ scenarios/generated/
 
 # Daily progress clips stay on this machine
 clips/
+.scratch/
