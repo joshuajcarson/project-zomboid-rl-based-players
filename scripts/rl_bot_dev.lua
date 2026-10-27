@@ -89,13 +89,23 @@ RL.tick = function(p)
         pcall(function() p:setAimAtFloor(false) end)
     end
     sw.onfloor = onfloor or sw.onfloor
+    if onfloor and not sw.proj then
+        -- where the player stands along the downed zombie's body axis decides the body part hit (legs, chest or head), per the wiki
+        local okf, fd = pcall(function() return z:getForwardDirection() end)
+        if okf and fd then
+            local n = math.sqrt(fd:getX() ^ 2 + fd:getY() ^ 2)
+            if n > 0.01 then sw.proj = ((p:getX() - z:getX()) * fd:getX() + (p:getY() - z:getY()) * fd:getY()) / n end
+        end
+        local okb, fr = pcall(function() return z:isFallOnFront() end)
+        sw.front = okb and fr and 1 or 0
+    end
     p:setIsAiming(true)
     local okc, sx, sy = pcall(ISCoordConversion.ToScreen, ax, ay, z:getZ(), 0)
     if okc and sx and rlAim then local zm = getCore():getZoom(0); rlAim(math.floor(sx / zm), math.floor(sy / zm)) end
     if p:isAttackStarted() then
         if not sw.began then sw.began = true; sw.zhp0 = z:getHealth(); sw.s0 = snap(p, z); sw.d0 = math.sqrt((z:getX()-p:getX())^2 + (z:getY()-p:getY())^2) end
     elseif sw.began then
-        log(string.format("COMBAT swing %s dmg=%.3f dist=%.2f frames=%d floor=%d head=%d", sw.s0, sw.zhp0 - z:getHealth(), sw.d0, sw.frames, sw.onfloor and 1 or 0, RL.headSign))
+        log(string.format("COMBAT swing %s dmg=%.3f dist=%.2f frames=%d floor=%d head=%d proj=%.2f front=%d", sw.s0, sw.zhp0 - z:getHealth(), sw.d0, sw.frames, sw.onfloor and 1 or 0, RL.headSign, sw.proj or 0, sw.front or 0))
         -- a zombie that takes no damage for several swings in a row is out of reach (caught in a fence or equipment): stop wasting swings on it
         RL.stuck = RL.stuck or {}
         local zid = z:getOnlineID()
