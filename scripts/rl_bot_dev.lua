@@ -39,12 +39,14 @@ end
 -- rl_bot_cfg.txt (written by the experiment script): headSign=0 (face the zombie's centre), 1 or -1 (face the end of a downed zombie that its
 -- forward vector points to, or the opposite end: the head end is the one that kills quickly)
 RL.headSign = 0
+RL.giveup = false   -- off by default: the 8-miss rule cut kills from 1.75 to 1.08 in the 2026-10-27 benchmark
 do
     local okr, r = pcall(getFileReader, "rl_bot_cfg.txt", false)
     if okr and r then
         local line = r:readLine(); r:close()
         local v = line and string.match(line, "headSign=(-?%d)")
         if v then RL.headSign = tonumber(v) end
+        RL.giveup = (line and string.find(line, "giveup=1", 1, true)) ~= nil
     end
     log("bot config: headSign=" .. tostring(RL.headSign))
 end
@@ -117,7 +119,7 @@ RL.tick = function(p)
         local zid = z:getOnlineID()
         local rec = RL.stuck[zid] or { n = 0 }
         if sw.zhp0 - z:getHealth() < 0.01 then rec.n = rec.n + 1 else rec.n = 0 end
-        if rec.n >= 8 then rec.until_ = getTimestampMs() + 6000; rec.n = 0; log("COMBAT giveup zid=" .. zid) end
+        if RL.giveup and rec.n >= 8 then rec.until_ = getTimestampMs() + 6000; rec.n = 0; log("COMBAT giveup zid=" .. zid) end
         RL.stuck[zid] = rec
         RL.swing = nil; p:setIsAiming(false); if rlAimClear then rlAimClear() end
     elseif sw.frames >= 3 then p:pressedAttack() end
