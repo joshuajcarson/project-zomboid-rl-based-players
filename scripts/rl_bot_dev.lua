@@ -34,7 +34,7 @@ RL.tick = function(p)
     if RL.run then p:setRunning(true) end
     RL.frameCount = (RL.frameCount or 0) + 1
     -- a knockdown or a broken weapon can leave the hands empty: pick the bat up again, like a player would
-    if RL.autoRearm and RL.frameCount % 30 == 0 and not p:getPrimaryHandItem() then
+    if RL.autoRearm and RL.frameCount % 30 == 0 and (not p:getPrimaryHandItem() or (p:getSecondaryHandItem() ~= p:getPrimaryHandItem() and p:getPrimaryHandItem():isTwoHandWeapon())) then
         local ok = commands.equip and commands.equip(p, { a = "Base.BaseballBat" })
         log("REARM hands were empty, equip=" .. tostring(ok))
     end
@@ -164,8 +164,14 @@ commands.equip = function(p, a)
     end
     if not best then log("equip: no " .. short .. " in the inventory"); return false, "none" end
     pcall(function() best:setCondition(best:getConditionMax()) end)
+    -- a bat is a "two-handed" weapon (full damage only with both hands; one-handed it does half the damage for a much larger endurance cost),
+    -- but isRequiresEquippedBothHands() is false for it, so ask isTwoHandWeapon() as well
+    local two = false
+    pcall(function() two = best:isTwoHandWeapon() end)
+    if not two then pcall(function() two = best:isRequiresEquippedBothHands() end) end
     p:setPrimaryHandItem(best)
-    if best:isRequiresEquippedBothHands() then p:setSecondaryHandItem(best) end
-    log(string.format("equip %s condition %d -> %d/%d", short, bc, best:getCondition(), best:getConditionMax()))
+    if two then p:setSecondaryHandItem(best) end
+    log(string.format("equip %s condition %d -> %d/%d two_handed=%s both_hands_holding=%s", short, bc, best:getCondition(), best:getConditionMax(), tostring(two),
+        tostring(p:getSecondaryHandItem() == best)))
     return true, "ok"
 end
