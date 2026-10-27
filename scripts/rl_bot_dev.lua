@@ -30,6 +30,31 @@ local function snap(p, z)
         p:getPerkLevel(Perks.Strength), p:getPerkLevel(Perks.Blunt), p:getPerkLevel(Perks.Fitness), z:getHealth())
 end
 RL.autoRearm = true
+-- rl_bot_cfg.txt (written by the experiment script): headSign=0 (face the zombie's centre), 1 or -1 (face the end of a downed zombie that its
+-- forward vector points to, or the opposite end: the head end is the one that kills quickly)
+RL.headSign = 0
+do
+    local okr, r = pcall(getFileReader, "rl_bot_cfg.txt", false)
+    if okr and r then
+        local line = r:readLine(); r:close()
+        local v = line and string.match(line, "headSign=(-?%d)")
+        if v then RL.headSign = tonumber(v) end
+    end
+    log("bot config: headSign=" .. tostring(RL.headSign))
+end
+do
+    RL.baseAttack = RL.baseAttack or commands.attack   -- reloads must not stack wrappers
+    local baseAttack = RL.baseAttack
+    commands.attack = function(p, a)
+        local okr, res, msg = baseAttack(p, a)
+        local sw = RL.swing
+        if okr and sw and RL.stuck then
+            local rec = RL.stuck[sw.zombie:getOnlineID()]
+            if rec and rec.until_ and rec.until_ > getTimestampMs() then RL.swing = nil; return false, "unreachable" end
+        end
+        return okr, res, msg
+    end
+end
 RL.tick = function(p)
     if RL.run then p:setRunning(true) end
     RL.frameCount = (RL.frameCount or 0) + 1
@@ -46,13 +71,38 @@ RL.tick = function(p)
         if sw.began then log("COMBAT end(dead=" .. tostring(z:isDead()) .. ") " .. snap(p, z) .. " zhp_start=" .. string.format("%.3f", sw.zhp0)) end
         RL.swing = nil; p:setIsAiming(false); return
     end
-    p:faceThisObject(z); p:setIsAiming(true)
-    local okc, sx, sy = pcall(ISCoordConversion.ToScreen, z:getX(), z:getY(), z:getZ(), 0)
+    local onfloor = false
+    pcall(function() onfloor = z:isOnFloor() end)
+    local ax, ay = z:getX(), z:getY()
+    if onfloor and RL.headSign ~= 0 then
+        local okd, fd = pcall(function() return z:getForwardDirection() end)
+        if okd and fd then
+            local fx, fy = fd:getX(), fd:getY()
+            local n = math.sqrt(fx * fx + fy * fy)
+            if n > 0.01 then ax, ay = z:getX() + RL.headSign * 0.6 * fx / n, z:getY() + RL.headSign * 0.6 * fy / n end
+        end
+        local v = Vector2.new(ax - p:getX(), ay - p:getY()); v:normalize()
+        p:setForwardDirection(v)
+        pcall(function() p:setAimAtFloor(true, math.sqrt((ax - p:getX()) ^ 2 + (ay - p:getY()) ^ 2)) end)
+    else
+        p:faceThisObject(z)
+        pcall(function() p:setAimAtFloor(false) end)
+    end
+    sw.onfloor = onfloor or sw.onfloor
+    p:setIsAiming(true)
+    local okc, sx, sy = pcall(ISCoordConversion.ToScreen, ax, ay, z:getZ(), 0)
     if okc and sx and rlAim then local zm = getCore():getZoom(0); rlAim(math.floor(sx / zm), math.floor(sy / zm)) end
     if p:isAttackStarted() then
         if not sw.began then sw.began = true; sw.zhp0 = z:getHealth(); sw.s0 = snap(p, z); sw.d0 = math.sqrt((z:getX()-p:getX())^2 + (z:getY()-p:getY())^2) end
     elseif sw.began then
-        log(string.format("COMBAT swing %s dmg=%.3f dist=%.2f frames=%d", sw.s0, sw.zhp0 - z:getHealth(), sw.d0, sw.frames))
+        log(string.format("COMBAT swing %s dmg=%.3f dist=%.2f frames=%d floor=%d head=%d", sw.s0, sw.zhp0 - z:getHealth(), sw.d0, sw.frames, sw.onfloor and 1 or 0, RL.headSign))
+        -- a zombie that takes no damage for several swings in a row is out of reach (caught in a fence or equipment): stop wasting swings on it
+        RL.stuck = RL.stuck or {}
+        local zid = z:getOnlineID()
+        local rec = RL.stuck[zid] or { n = 0 }
+        if sw.zhp0 - z:getHealth() < 0.01 then rec.n = rec.n + 1 else rec.n = 0 end
+        if rec.n >= 4 then rec.until_ = getTimestampMs() + 20000; rec.n = 0; log("COMBAT giveup zid=" .. zid) end
+        RL.stuck[zid] = rec
         RL.swing = nil; p:setIsAiming(false); if rlAimClear then rlAimClear() end
     elseif sw.frames >= 3 then p:pressedAttack() end
 end
