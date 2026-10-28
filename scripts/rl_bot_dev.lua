@@ -15,6 +15,9 @@ end
 -- lost its bat, e.g. after dying and getting a fresh body, stayed bare-handed and kept dying)
 commands.giveitem = function(p, a)
     local t = (a and a.a) or "Base.BaseballBat"
+    local short = string.gsub(t, "^Base%.", "")
+    local have = p:getInventory():getAllTypeRecurse(short):size()
+    if have > 0 then return true, "already have " .. have end      -- idempotent: the env calls this at every reset
     local ok, it = pcall(function() return p:getInventory():AddItem(t) end)
     return ok and it ~= nil, tostring(ok and it and it:getType() or it)
 end
