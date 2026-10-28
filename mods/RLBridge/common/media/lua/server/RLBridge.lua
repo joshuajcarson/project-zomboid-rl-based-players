@@ -274,6 +274,33 @@ function handlers.zclear(x, y, r)
     return true, "removed " .. removed .. " " .. errs
 end
 
+-- hutches|x|y|r|remove : list the IsoHutch objects (animal hutches and dog houses) within r squares of (x, y) on the ground floor; with
+-- remove=1 also take them out of the world. A client crashes (NullPointerException in IsoHutch.removeFromWorld) when it unloads the chunk
+-- of a hutch that has no animal, which ends every rendered run after a few episodes.
+function handlers.hutches(x, y, r, remove)
+    x, y, r = tonumber(x), tonumber(y), tonumber(r) or 10
+    local cell, found = getCell(), {}
+    for sx = math.floor(x - r), math.ceil(x + r) do
+        for sy = math.floor(y - r), math.ceil(y + r) do
+            local sq = cell:getGridSquare(sx, sy, 0)
+            if sq then
+                local objs = sq:getObjects()
+                for i = objs:size() - 1, 0, -1 do
+                    local o = objs:get(i)
+                    if instanceof(o, "IsoHutch") then
+                        found[#found + 1] = sx .. "," .. sy
+                        if remove == "1" then
+                            pcall(function() sq:transmitRemoveItemFromSquare(o) end)
+                            pcall(function() sq:RemoveTileObject(o) end)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return true, #found .. " hutch squares: " .. table.concat(found, " ")
+end
+
 -- development-only commands, present only when the server was started with -Dev (rl.dev=true)
 if rlDev then
     -- get|<reflection path>  : see agent rlGet, e.g. get|zombie.network.GameServer.Players.size()
