@@ -301,6 +301,30 @@ function handlers.hutches(x, y, r, remove)
     return true, #found .. " hutch squares: " .. table.concat(found, " ")
 end
 
+-- openness|x|y|r : how obstructed the loaded squares within r of (x, y) are (ground floor). Result: "loaded=N blocked=B building=G fence=F
+-- hutch=H": squares loaded, squares with a solid object or tree, squares inside a building, squares with a fence/wall edge flag, hutch
+-- objects. Used to pick an open field for fight experiments (needs a player nearby so the chunks are loaded).
+function handlers.openness(x, y, r)
+    x, y, r = tonumber(x), tonumber(y), tonumber(r) or 25
+    local cell, loaded, blocked, building, fence, hutch = getCell(), 0, 0, 0, 0, 0
+    for sx = math.floor(x - r), math.ceil(x + r) do
+        for sy = math.floor(y - r), math.ceil(y + r) do
+            local sq = cell:getGridSquare(sx, sy, 0)
+            if sq then
+                loaded = loaded + 1
+                if sq:isSolid() or sq:isSolidTrans() or sq:HasTree() then blocked = blocked + 1 end
+                if sq:getBuilding() ~= nil then building = building + 1 end
+                if sq:Is(IsoFlagType.collideW) or sq:Is(IsoFlagType.collideN) or sq:Is(IsoFlagType.HoppableW) or sq:Is(IsoFlagType.HoppableN) then fence = fence + 1 end
+                local objs = sq:getObjects()
+                for i = 0, objs:size() - 1 do
+                    if instanceof(objs:get(i), "IsoHutch") then hutch = hutch + 1 end
+                end
+            end
+        end
+    end
+    return true, string.format("loaded=%d blocked=%d building=%d fence=%d hutch=%d", loaded, blocked, building, fence, hutch)
+end
+
 -- development-only commands, present only when the server was started with -Dev (rl.dev=true)
 if rlDev then
     -- get|<reflection path>  : see agent rlGet, e.g. get|zombie.network.GameServer.Players.size()
