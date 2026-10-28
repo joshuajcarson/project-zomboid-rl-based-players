@@ -23,7 +23,7 @@ if policy.endswith(".pt"):            # a trained checkpoint (greedy)
 _cfg = os.path.join(".pzclient", "Lua", "rl_bot_cfg.txt")        # bot settings read by rl_bot_dev.lua at reload
 os.makedirs(os.path.dirname(_cfg), exist_ok=True)
 open(_cfg, "w").write("headSign=" + os.environ.get("PZ_HEAD_SIGN", "0") + " giveup=" + os.environ.get("PZ_GIVEUP", "0"))
-env = PZParallelEnv(n_agents=1, task="fight", backend=backend, max_steps=steps, seed=7, zombie_ring=(5, 8), time_scale=1.0 if backend != "fake" else 4.0,
+env = PZParallelEnv(n_agents=1, task="fight", backend=backend, max_steps=steps, seed=int(os.environ.get("PZ_SEED", "7")), zombie_ring=(5, 8), time_scale=1.0 if backend != "fake" else 4.0,
                     spawn_box=(10730, 9380, 10810, 9440), keep_alive=True)
 try:
     for ep in range(episodes):

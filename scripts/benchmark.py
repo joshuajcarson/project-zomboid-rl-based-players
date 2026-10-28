@@ -8,7 +8,7 @@ Conditions are the lab's defaults (2 zombies on a ring, 45 steps, two-handed bat
 bump --protocol and say why in docs/results.md. Reference rows (idle, charge:1.8:0) are added automatically so a score always sits
 next to simple bots measured the same day. One experiment at a time (the env lock), so run this when nothing else is.
 """
-import argparse, datetime, hashlib, json, os, pathlib, subprocess, sys
+import argparse, datetime, hashlib, json, os, pathlib, subprocess, sys, time
 
 LEDGER = pathlib.Path("results/ledger.jsonl")
 REFERENCE = ["idle", "charge:1.8:0"]
@@ -19,15 +19,24 @@ def git_commit():
 
 
 def run_policy(policy, backend, episodes, steps):
-    out = subprocess.run([sys.executable, "scripts/rendered_fight_lab.py", str(episodes), str(steps), policy, backend],
-                         capture_output=True, text=True)
+    """The rendered client sometimes drops out mid-run (AgentDisconnected after 10-20 episodes): restart it and carry on until the
+    requested number of episodes is done (at most 4 launches, each with its own seed)."""
     pathlib.Path("logs").mkdir(exist_ok=True)
-    pathlib.Path("logs/bench_%s.out" % policy.replace("/", "_").replace("\\", "_").replace(":", "_")).write_text(out.stdout + out.stderr)
-    eps = [json.loads(l) for l in out.stdout.splitlines() if l.startswith('{"ep"')]
-    if len(eps) < episodes:
-        print("WARNING: %s finished %d of %d episodes (see logs/bench_*.out)" % (policy, len(eps), episodes))
+    eps, log = [], ""
+    for attempt in range(4):
+        env = dict(os.environ, PZ_SEED=str(7 + attempt))
+        out = subprocess.run([sys.executable, "scripts/rendered_fight_lab.py", str(episodes - len(eps)), str(steps), policy, backend],
+                             capture_output=True, text=True, env=env)
+        log += out.stdout + out.stderr
+        eps += [json.loads(l) for l in out.stdout.splitlines() if l.startswith('{"ep"')]
+        if len(eps) >= episodes or backend == "fake":
+            break
+        print("WARNING: %s has %d of %d episodes after launch %d, restarting the client" % (policy, len(eps), episodes, attempt + 1), flush=True)
+        subprocess.run([sys.executable, "scripts/pz_ctl.py", "stop-clients"])
+        time.sleep(100)
+    pathlib.Path("logs/bench_%s.out" % policy.replace("/", "_").replace("\\", "_").replace(":", "_")).write_text(log)
     if not eps:
-        sys.exit("no episodes for %s:\n%s" % (policy, (out.stdout + out.stderr)[-1500:]))
+        sys.exit("no episodes for %s: %s" % (policy, log[-1500:]))
     return eps
 
 
