@@ -92,12 +92,14 @@ do
         local v = line and string.match(line, "headSign=(-?%d)")
         if v then RL.headSign = tonumber(v) end
         RL.giveup = (line and string.find(line, "giveup=1", 1, true)) ~= nil
+        RL.noblock = (line and string.find(line, "noblock=1", 1, true)) ~= nil   -- A/B switch for the obstacle (fence) check
     end
     log("bot config: headSign=" .. tostring(RL.headSign))
 end
 do
     -- true when a wall, tall fence or closed door lies between the player and the point (the game would not let the swing through)
     RL.blockedBetween = function(p, tx, ty)
+        if RL.noblock then return false end
         local cell = getCell()
         local px, py, pz = p:getX(), p:getY(), p:getZ()
         local dx, dy = tx - px, ty - py
