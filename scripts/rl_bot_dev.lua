@@ -11,11 +11,12 @@ commands.tidy = function(p, a)
     return true, "tidied"
 end
 
--- say|text: status line above the character and in its chat, so a person watching the game window sees which experiment and phase runs
+-- say|text: status line in the character's speech bubble and Say chat, so a person watching the game window sees which experiment and phase runs
 commands.say = function(p, a)
     local text = (a and a.a) or ""
-    pcall(function() p:addLineChatElement(text) end)
-    pcall(function() HaloTextHelper.addText(p, text, HaloTextHelper.getColorWhite()) end)
+    -- the game's own chat path: the same call a typed /say ends in (speech bubble over the head plus a line in the Say chat tab). The
+    -- first version used HaloTextHelper.addText with a colour object, which throws "No implementation found for function: addText".
+    pcall(function() p:Say(text) end)
     log("STATUS " .. text)
     return true, "said"
 end
