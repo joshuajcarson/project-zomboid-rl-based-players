@@ -67,7 +67,7 @@ do
     log("bot config: headSign=" .. tostring(RL.headSign))
 end
 do
-    -- true when a wall, fence or closed door lies between the player and the point (the game would not let the swing through)
+    -- true when a wall, tall fence or closed door lies between the player and the point (the game would not let the swing through)
     RL.blockedBetween = function(p, tx, ty)
         local cell = getCell()
         local px, py, pz = p:getX(), p:getY(), p:getZ()
@@ -78,7 +78,8 @@ do
             local sq = cell:getGridSquare(math.floor(px + dx * i / n), math.floor(py + dy * i / n), math.floor(pz))
             if not sq then return true end
             if prev and sq ~= prev then
-                local okb, blocked = pcall(function() return prev:isBlockedTo(sq) end)
+                -- a short (hoppable) fence does not stop a swing, only walls, tall fences and closed doors do
+                local okb, blocked = pcall(function() return prev:isBlockedTo(sq) and not prev:isHoppableTo(sq) end)
                 if okb and blocked then return true end
             end
             prev = sq
