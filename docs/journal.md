@@ -82,3 +82,6 @@ Floor-swing check on the same run: 121 floor swings, only 3 with dmg>0 (0.18, 0.
 1. Kill events are ground truth. Infer from results whether damage per swing, body part per swing or similar metrics predict kills as expected.
 2. Unmonitored overnight runs are fine while under the weekly limit (rule in global CLAUDE.md: stop new work at 90%).
 3. Next build: scripted fighter first; the human demo recorder comes later.
+
+### 2026-10-28 swing distance analysis and spacing test
+Swing log analysis (1342 standing swings, all of 10-27/28): hit rate and mean damage by distance to the target: <0.8 tiles 16% / 0.025; 0.8-1.0 63% / 0.15; 1.0-1.2 71% / 0.18; 1.2-1.5 45% / 0.12; >1.5 14% / 0.03. Endurance (mostly ~1.0) and panic barely changed damage (panic>10 about halves it). Test: `charge:1.8:0:3:0.8` (step back when closer than 0.8 tiles instead of swinging), 21 episodes completed: 1.19 kills, 37.0 damage, 4 low-hp episodes, WORSE than charge:1.8:0 (1.58-1.75 kills, 21-31 dmg). Stepping back (a one-second compass move) does not fix the close-range misses; the close-range swings are probably zombies already hugging or grabbing the player, where backing off just gives free hits. Not adopted. Benchmark's reference rows (idle, charge:1.8:0) are still running at 30 episodes each for a matched comparison.
