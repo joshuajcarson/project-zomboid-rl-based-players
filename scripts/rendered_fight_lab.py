@@ -23,8 +23,12 @@ if policy.endswith(".pt"):            # a trained checkpoint (greedy)
 _cfg = os.path.join(".pzclient", "Lua", "rl_bot_cfg.txt")        # bot settings read by rl_bot_dev.lua at reload
 os.makedirs(os.path.dirname(_cfg), exist_ok=True)
 open(_cfg, "w").write("headSign=" + os.environ.get("PZ_HEAD_SIGN", "0") + " giveup=" + os.environ.get("PZ_GIVEUP", "0") + " noblock=" + os.environ.get("PZ_NOBLOCK", "0"))
+PROTOCOL = os.environ.get("PZ_PROTOCOL", "fight-v1")
+# fight-v1/v2: the old arena in Muldraugh (shed, dog house, fences, playground); fight-v3: an open field (the user's map coordinate 4010,11767;
+# the in-game scan found 0 blocked / building / fence / hutch squares within 30 tiles, scripts/find_open_field.py)
+SPAWN_BOX = (3995, 11752, 4025, 11782) if PROTOCOL == "fight-v3" else (10730, 9380, 10810, 9440)
 env = PZParallelEnv(n_agents=1, task="fight", backend=backend, max_steps=steps, seed=int(os.environ.get("PZ_SEED", "7")), zombie_ring=(5, 8), time_scale=1.0 if backend != "fake" else 4.0,
-                    spawn_box=(10730, 9380, 10810, 9440), keep_alive=True, end_when_clear=os.environ.get("PZ_PROTOCOL") == "fight-v2")
+                    spawn_box=SPAWN_BOX, keep_alive=True, end_when_clear=PROTOCOL in ("fight-v2", "fight-v3"))
 env.status_text = os.environ.get("PZ_STATUS") or ("fight lab: " + policy)   # shown above the character in the game window
 try:
     for ep in range(episodes):

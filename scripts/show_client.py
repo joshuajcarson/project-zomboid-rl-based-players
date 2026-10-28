@@ -17,7 +17,7 @@ while time.time() < deadline:
 else:
     sys.exit("client did not enter the world")
 time.sleep(25)
-for cmd in ("bot|Client40|god|1", "tp|Client40|%s|%s|%s" % (x, y, z)):
+for cmd in ("bot|Client40|god|1", "bot|Client40|tp|%s|%s|%s" % (x, y, z)):
     print(cmd, ch.command(cmd, timeout=15))
 if "--rmhutch" in sys.argv:       # remove animal hutches / dog houses around the arena while its chunks are loaded (they crash clients on unload)
     for _ in range(3):

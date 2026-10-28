@@ -20,6 +20,31 @@ commands.say = function(p, a)
     log("STATUS " .. text)
     return true, "said"
 end
+-- openness|r: how obstructed the squares within r of the player are (the client has its surroundings loaded; the server's grid is empty
+-- unless a chunk happens to be loaded there). Logged as OPENNESS: loaded / blocked (solid object or tree) / building / fence edge / hutch.
+commands.openness = function(p, a)
+    local r = tonumber(a and a.a) or 25
+    local cell, px, py = getCell(), math.floor(p:getX()), math.floor(p:getY())
+    local loaded, blocked, building, fence, hutch = 0, 0, 0, 0, 0
+    local function f(fn) local ok, v = pcall(fn); return ok and v end
+    for sx = px - r, px + r do
+        for sy = py - r, py + r do
+            local sq = cell:getGridSquare(sx, sy, 0)
+            if sq then
+                loaded = loaded + 1
+                if f(function() return sq:isSolid() or sq:isSolidTrans() or sq:HasTree() end) then blocked = blocked + 1 end
+                if f(function() return sq:getBuilding() ~= nil end) then building = building + 1 end
+                if f(function() return sq:Is(IsoFlagType.collideW) or sq:Is(IsoFlagType.collideN) or sq:Is(IsoFlagType.HoppableW) or sq:Is(IsoFlagType.HoppableN) end) then fence = fence + 1 end
+                local objs = sq:getObjects()
+                for i = 0, objs:size() - 1 do
+                    if f(function() return instanceof(objs:get(i), "IsoHutch") end) then hutch = hutch + 1 end
+                end
+            end
+        end
+    end
+    log(string.format("OPENNESS at=%d,%d r=%d loaded=%d blocked=%d building=%d fence=%d hutch=%d", px, py, r, loaded, blocked, building, fence, hutch))
+    return true, "openness"
+end
 -- invcount|Base.Item: how many of an item the CLIENT's own inventory holds (the server's `inv` can differ: server-side AddItem never reaches a
 -- real client, so only this count says what the character really carries). Logged as INVCOUNT.
 commands.invcount = function(p, a)
