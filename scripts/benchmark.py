@@ -21,7 +21,11 @@ def git_commit():
 def run_policy(policy, backend, episodes, steps):
     out = subprocess.run([sys.executable, "scripts/rendered_fight_lab.py", str(episodes), str(steps), policy, backend],
                          capture_output=True, text=True)
+    pathlib.Path("logs").mkdir(exist_ok=True)
+    pathlib.Path("logs/bench_%s.out" % policy.replace("/", "_").replace("\\", "_").replace(":", "_")).write_text(out.stdout + out.stderr)
     eps = [json.loads(l) for l in out.stdout.splitlines() if l.startswith('{"ep"')]
+    if len(eps) < episodes:
+        print("WARNING: %s finished %d of %d episodes (see logs/bench_*.out)" % (policy, len(eps), episodes))
     if not eps:
         sys.exit("no episodes for %s:\n%s" % (policy, (out.stdout + out.stderr)[-1500:]))
     return eps
