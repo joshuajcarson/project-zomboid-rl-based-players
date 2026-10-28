@@ -11,6 +11,14 @@ commands.tidy = function(p, a)
     return true, "tidied"
 end
 
+-- giveitem|Base.Item: add an item to the client's own inventory (a server-side AddItem never reaches a real client, so a character that
+-- lost its bat, e.g. after dying and getting a fresh body, stayed bare-handed and kept dying)
+commands.giveitem = function(p, a)
+    local t = (a and a.a) or "Base.BaseballBat"
+    local ok, it = pcall(function() return p:getInventory():AddItem(t) end)
+    return ok and it ~= nil, tostring(ok and it and it:getType() or it)
+end
+
 -- instrumentation: one COMBAT line per finished swing with the character state at the start of the swing and the zombie health lost
 local function stat(p, name)
     local ok, v = pcall(function() return p:getStats():get(CharacterStat[name]) end)

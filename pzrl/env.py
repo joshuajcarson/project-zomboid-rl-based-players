@@ -227,6 +227,10 @@ class PZParallelEnv:
         self._read(4)
         if not self.state.get(name, {}).get("weapon"):
             self.channel.command(f"give|{name}|{self.give_weapon}")
+            try:
+                self.control[name]._bot("giveitem", self.give_weapon)   # the server's give never reaches a real client's inventory
+            except Exception:
+                pass
             time.sleep(1.0)
             self.control[name].equip(self.give_weapon)
             self._read(4)
