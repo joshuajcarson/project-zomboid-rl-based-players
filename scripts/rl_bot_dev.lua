@@ -11,6 +11,14 @@ commands.tidy = function(p, a)
     return true, "tidied"
 end
 
+-- say|text: status line above the character and in its chat, so a person watching the game window sees which experiment and phase runs
+commands.say = function(p, a)
+    local text = (a and a.a) or ""
+    pcall(function() p:addLineChatElement(text) end)
+    pcall(function() HaloTextHelper.addText(p, text, HaloTextHelper.getColorWhite()) end)
+    log("STATUS " .. text)
+    return true, "said"
+end
 -- giveitem|Base.Item: add an item to the client's own inventory (a server-side AddItem never reaches a real client, so a character that
 -- lost its bat, e.g. after dying and getting a fresh body, stayed bare-handed and kept dying)
 commands.giveitem = function(p, a)

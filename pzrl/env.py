@@ -210,6 +210,15 @@ class PZParallelEnv:
         if self.explicit_melee:
             ctl.autoattack(False)
 
+    def say(self, text):
+        """Show a status line above every rendered character (and in its chat) so a person watching the game window can tell which
+        experiment, policy and phase is running. Cheap and best effort: a failure here must never affect a run."""
+        for name in self.rendered:
+            try:
+                self.control[name]._bot("say", str(text)[:120])
+            except Exception:
+                pass
+
     def _god(self, name, on):
         """Invincibility for a real character while no episode is running (the client decides its own damage; a leftover zombie can
         otherwise kill it during a reset, and a dead character costs minutes to replace). Needs the 'god' command in rl_bot_dev.lua."""
@@ -404,6 +413,9 @@ class PZParallelEnv:
             self.rng = random.Random(seed)
         if not self._started:
             self._start()
+        self._episode_no = getattr(self, "_episode_no", 0) + 1
+        if getattr(self, "status_text", ""):
+            self.say(f"{self.status_text} | episode {self._episode_no} | resetting")
         spawns = sample_spawns(self.n_agents, self.task, self.rng, self.spawn_box)
         self.channel.command(f"cfg|biteDamage|{self.task.bite_damage}")   # the task may have changed since startup
         for name in self.possible_agents:

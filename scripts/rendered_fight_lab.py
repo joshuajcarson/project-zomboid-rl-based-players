@@ -25,9 +25,11 @@ os.makedirs(os.path.dirname(_cfg), exist_ok=True)
 open(_cfg, "w").write("headSign=" + os.environ.get("PZ_HEAD_SIGN", "0") + " giveup=" + os.environ.get("PZ_GIVEUP", "0"))
 env = PZParallelEnv(n_agents=1, task="fight", backend=backend, max_steps=steps, seed=int(os.environ.get("PZ_SEED", "7")), zombie_ring=(5, 8), time_scale=1.0 if backend != "fake" else 4.0,
                     spawn_box=(10730, 9380, 10810, 9440), keep_alive=True)
+env.status_text = os.environ.get("PZ_STATUS") or ("fight lab: " + policy)   # shown above the character in the game window
 try:
     for ep in range(episodes):
         obs, _ = env.reset(); a0 = env.agents[0]
+        env.say(f"{env.status_text} | episode {ep + 1}/{episodes} | fighting")
         hp0 = env.state[a0]["hp"]; zn0 = env.state[a0]["zn"]; zmin = zn0; hpmin = hp0; swings = 0
         while env.agents:
             act = {a: (net.act(obs[a], greedy=True)[0] if net else idle(obs[a]) if policy == "idle" else (parse_policy(policy) or BASELINES["fight"])(obs[a])) for a in env.agents}
