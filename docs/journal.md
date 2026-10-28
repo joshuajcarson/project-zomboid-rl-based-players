@@ -91,3 +91,13 @@ Swing log analysis (1342 standing swings, all of 10-27/28): hit rate and mean da
 2. Client crash: after the reset teleport (`RLBOT tp`) the game throws `NullPointerException ... IsoHutch.removeFromWorld(IsoHutch.java:1095)` ("animal" is null) while unloading a chunk (IsoChunkMap.Right/LoadRight), the client leaves IngameState and the env sees AgentDisconnected, after only 2-3 episodes per launch. This is a game bug on chunk unload for an animal hutch near our arena; every launch gives a few episodes. benchmark.py now relaunches the client until the requested episode count is reached (4 launches max). TODO: find the hutch (look for IsoHutch near x 10730-10810, y 9380-9440 and wherever the reset teleports from) and either move the arena/teleport anchor so no chunk with the hutch unloads, or remove the hutch. Question for Joshua: have you seen hutches/animal pens near the arena?
 Hutch crash repeated on a show_client.py run (client started, tp to 10770,9410, then NPE in IsoHutch.removeFromWorld via IsoChunkMap.Down/LoadDown, i.e. the chunk being unloaded after the teleport, 12:06). The client's packets right before it concern objects at x 10703-10765, y 9401-9477 (arena west edge), which is probably where the hutch is. `scripts/show_client.py [x y z]` starts one rendered client and places it with godmode on for a human to walk around.
 Joshua (2026-10-28 12:1x) stood next to an unusable dog house; Client40 was at x=10731.56 y=9413.47 then, so the hutch is right on the west edge of the arena spawn box (10730..10810, 9380..9440). Added server command `hutches|x|y|r|remove` (RLBridge.lua) to list/remove IsoHutch objects; needs a server restart to load.
+
+## Backlog (maintained by Claude; user 2026-10-28: "do not wait for approval, keep creating and burning down the backlog toward the long-term goals")
+Order matters; each item ends in a committed result in this journal.
+1. Hutch crash: remove hutches near the arena (server `hutches|x|y|r|1`, run while a player has the chunks loaded) and verify with a 30-episode benchmark that no client drops out. IN PROGRESS.
+2. In-client new character after a death (death-screen "CONTINUE WITH NEW CHARACTER") instead of relaunching the client; then `giveitem` bat.
+3. Matched 30-episode references (idle, charge:1.8:0) on the clean setup; update docs/results.md.
+4. Scripted fighter: engagement/spacing ideas that survive 30 episodes (min_dist step-back failed at 21 episodes), pace by panic.
+5. DAgger / behaviour-cloning round on the real client against the scripted fighter, benchmarked in the ledger.
+6. Observation: obstacles (fences, walls) and visibility; day/time control; wound types.
+7. Human demo recorder; cohesion band; 2+ agents.
