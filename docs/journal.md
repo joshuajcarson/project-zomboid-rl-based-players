@@ -102,3 +102,6 @@ Order matters; each item ends in a committed result in this journal.
 6. Observation: obstacles (fences, walls) and visibility; day/time control; wound types.
 7. Human demo recorder; cohesion band; 2+ agents.
 Hutch found and removed (2026-10-28 ~12:50): the server scan with a client in range listed 6 hutch squares at x 10713-10714, y 9391-9392 (the dog house); `hutches|10730|9411|45|1` removed them (re-scan: 0). Verify with a 30-episode run that no client drops out.
+
+### 2026-10-28 zero-population world (user idea)
+User: the map has a "zero zombies" setting, and we can still spawn zombies for tests. Set `Zombies = 6` (None) and PopulationMultiplier/StartMultiplier/PeakMultiplier = 0.0 in `.pzdata/Server/rl_SandboxVars.lua` (git-ignored; applied at the next server boot). Reason: the hutch-fix run showed deaths jumping to ~5 of 18 episodes, plausibly from extra world zombies drawn by generator noise, and fights otherwise depend on whatever the world population is. Zombies already saved in loaded chunks stay: the env's `zclear` (radius 45) at each reset handles the arena; a wider `zclear` after boot cleans the rest. Protocol note: results after this change are not strictly comparable with earlier rows (fewer stray zombies); keep a fresh reference pair.
