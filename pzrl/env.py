@@ -84,7 +84,8 @@ class PZParallelEnv:
     def __init__(self, n_agents=2, task="survive", time_scale=1.0, step_seconds=1.0, max_steps=300,
                  base_id=40, seed=None, spawn_box=(10450, 9350, 10900, 10300), launcher=None,
                  give_weapon="Base.BaseballBat", player_damage=1.0, zombie_ring=(12, 22), zombie_behaviour="Normal",
-                 explicit_melee=True, backend="fake", keep_alive=False, rendered_agents=None, walk_speed=17.7, death_hp=None, calibrated_combat=True):
+                 explicit_melee=True, backend="fake", keep_alive=False, rendered_agents=None, walk_speed=17.7, death_hp=None, calibrated_combat=True,
+                 end_when_clear=False, clear_steps=3):
         _acquire_lock()                  # one experiment at a time (see EnvInUse)
         if backend not in ("fake", "rendered", "mixed"):
             raise ValueError("backend must be 'fake' (headless fake clients, scalable), 'rendered' (real graphical clients, 1x) "
@@ -108,6 +109,9 @@ class PZParallelEnv:
         self.n_agents = n_agents
         self.step_seconds = step_seconds
         self.max_steps = max_steps
+        self.end_when_clear = end_when_clear      # fight-v2: end the episode once no zombie has been alive for `clear_steps` steps in a row
+        self.clear_steps = clear_steps
+        self._clear_run = {}
         self.rng = random.Random(seed)
         self.spawn_box = spawn_box
         self.ids = [base_id + i for i in range(n_agents)]
@@ -461,6 +465,7 @@ class PZParallelEnv:
         self.agents = [a for a in self.possible_agents if a in self.state]
         self.prev = {a: dict(self.state[a]) for a in self.agents}
         self.steps = 0
+        self._clear_run = {}
         return {a: self._obs(a) for a in self.agents}, {a: self._info(a) for a in self.agents}
 
     def step(self, actions):
@@ -512,7 +517,11 @@ class PZParallelEnv:
             rewards[name] = self.task.reward(self.prev[name], cur, self.state)
             dead = cur["dead"] or cur["hp"] <= self.task.death_hp
             terms[name] = dead
-            truncs[name] = (not dead) and self.steps >= self.max_steps
+            cleared = False
+            if self.end_when_clear and not dead and self.steps >= 5:      # not in the first steps: the spawned zombies need a moment to register
+                self._clear_run[name] = self._clear_run.get(name, 0) + 1 if cur["zn"] == 0 else 0
+                cleared = self._clear_run[name] >= self.clear_steps
+            truncs[name] = (not dead) and (self.steps >= self.max_steps or cleared)
             obs[name] = self._obs(name)
             infos[name] = self._info(name)
             self.prev[name] = dict(cur)

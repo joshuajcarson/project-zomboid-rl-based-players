@@ -11,6 +11,9 @@ next to simple bots measured the same day. One experiment at a time (the env loc
 import argparse, datetime, hashlib, json, os, pathlib, subprocess, sys, time
 
 LEDGER = pathlib.Path("results/ledger.jsonl")
+PROTOCOL = "fight-v1"            # set from --protocol in main(); passed to the lab as PZ_PROTOCOL
+IDLE_EPISODES = 10            # idle is near-deterministic (0 kills, damage from stray zombies): 10 episodes are enough
+MAX_REF_AGE_DAYS = 0          # a reference row measured today (same protocol, backend, policy, >= 20 episodes or idle >= 10) is reused
 REFERENCE = ["idle", "charge:1.8:0"]
 
 
@@ -24,7 +27,7 @@ def run_policy(policy, backend, episodes, steps):
     pathlib.Path("logs").mkdir(exist_ok=True)
     eps, log = [], ""
     for attempt in range(4):
-        env = dict(os.environ, PZ_SEED=str(7 + attempt))
+        env = dict(os.environ, PZ_SEED=str(7 + attempt), PZ_PROTOCOL=PROTOCOL)
         out = subprocess.run([sys.executable, "scripts/rendered_fight_lab.py", str(episodes - len(eps)), str(steps), policy, backend],
                              capture_output=True, text=True, env=env)
         log += out.stdout + out.stderr
@@ -67,6 +70,21 @@ def report():
     print("wrote docs/results.md,", len(rows), "rows")
 
 
+def have_reference(policy, backend, protocol, min_eps, setup):
+    """True when the ledger already holds a row for this reference today (same protocol and backend): references cost half of every
+    benchmark's wall time and do not change within a day."""
+    if not LEDGER.exists():
+        return False
+    today = datetime.date.today().isoformat()
+    need = IDLE_EPISODES if policy == "idle" else min_eps
+    for l in LEDGER.read_text().splitlines():
+        if l.strip():
+            r = json.loads(l)
+            if setup and r.get("setup") == setup and (r["date"], r["protocol"], r["backend"], r["policy"]) == (today, protocol, backend, policy) and r["episodes"] >= need                     and r.get("kills") is not None and (policy != "charge:1.8:0" or r["of"] > 0):
+                return True
+    return False
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("policies", nargs="*")
@@ -75,13 +93,21 @@ def main():
     ap.add_argument("--steps", type=int, default=45)
     ap.add_argument("--protocol", default="fight-v1")
     ap.add_argument("--note", default="")
+    ap.add_argument("--setup", default="", help="tag naming the world/bot setup (e.g. lowpop-hutchfree-floor-aim); a reference row with the same tag measured today is reused instead of rerun")
     ap.add_argument("--clip", default=None, help="policy to record a GIF of into clips/ after the runs")
     ap.add_argument("--report", action="store_true")
     a = ap.parse_args()
     if not a.report:
         LEDGER.parent.mkdir(exist_ok=True)
+        global PROTOCOL
+        PROTOCOL = a.protocol
         for policy in a.policies + [p for p in REFERENCE if p not in a.policies]:
-            r = row(policy, a.backend, run_policy(policy, a.backend, a.episodes, a.steps), a.protocol, a.note)
+            if policy in REFERENCE and policy not in a.policies and have_reference(policy, a.backend, a.protocol, min(a.episodes, 20), a.setup):
+                print("reference %s already measured today for %s/%s: skipped" % (policy, a.backend, a.protocol), flush=True)
+                continue
+            n = IDLE_EPISODES if policy == "idle" else a.episodes
+            r = row(policy, a.backend, run_policy(policy, a.backend, n, a.steps), a.protocol, a.note)
+            r["setup"] = a.setup
             with LEDGER.open("a") as f: f.write(json.dumps(r) + "\n")
             print(json.dumps(r), flush=True)
     report()
