@@ -77,3 +77,8 @@ Floor-swing check on the same run: 121 floor swings, only 3 with dmg>0 (0.18, 0.
 1. Floor swings: is "zhp" a fair damage measure for downed zombies, or does the game track their health differently (do you know of any wiki or in-game signal)? Guess: treat server kill events as ground truth.
 2. Is it OK to leave the real client running overnight and use up to ~90% of weekly usage on experiments, per the new global rule? Guess: yes.
 3. Priority after head targeting: build the human demo recorder (you play, we log), or keep improving the scripted fighter? Guess: scripted fighter first, recorder after.
+
+### Answers from Joshua (2026-10-28)
+1. Kill events are ground truth. Infer from results whether damage per swing, body part per swing or similar metrics predict kills as expected.
+2. Unmonitored overnight runs are fine while under the weekly limit (rule in global CLAUDE.md: stop new work at 90%).
+3. Next build: scripted fighter first; the human demo recorder comes later.
