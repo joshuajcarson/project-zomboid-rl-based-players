@@ -25,27 +25,42 @@ def check_alive(env, name):
     return "ok", ""
 
 
+def client_count(env, name, item, wait=6.0):
+    """The item count of the CLIENT's own inventory. The server's `inv` cannot be used: server-side AddItem never reaches a real client, so
+    its view drifts (11 phantom bats against 1 real one on 2026-10-28). The bot logs INVCOUNT to the client's log; read it from there."""
+    import glob, os
+    logs = sorted(glob.glob(str(LOG.parent / "env-rendered-*.log")), key=os.path.getmtime)
+    if not logs:
+        return None
+    path = logs[-1]
+    start = os.path.getsize(path)
+    env.control[name]._bot("invcount", item)
+    short = item.split(".")[-1]
+    deadline = time.time() + wait
+    while time.time() < deadline:
+        time.sleep(0.5)
+        with open(path, "rb") as f:
+            f.seek(start)
+            m = re.search(rb"INVCOUNT " + short.encode() + rb"=(\d+)", f.read())
+        if m:
+            return int(m.group(1))
+    return None
+
+
 def check_one_bat(env, name):
-    """Exactly one bat in the whole inventory. Extra bats weigh 2 each (48 of them slowed the character and drained endurance in the
+    """Exactly one bat in the client's inventory. Extra bats weigh 2 each (48 of them slowed the character and drained endurance in the
     2026-10-28 runs); none means a fresh body fights bare-handed."""
     if not env.give_weapon or name not in env.rendered:
         return "ok", "not applicable"
-    short = env.give_weapon
-    try:
-        a = env.channel.command(f"inv|{name}", timeout=10)
-        have = parse_inv(a["msg"]).get("bats", -1)
-    except Exception as e:                                  # an unreadable inventory is a failure, not a pass
-        return "failed", f"inventory unreadable: {e}"
+    have = client_count(env, name, env.give_weapon)
+    if have is None:                                        # an unreadable inventory is a failure, not a pass
+        return "failed", "client inventory count unreadable"
     if have == 1:
         return "ok", ""
-    env.control[name]._bot("tidy", short)                   # client-side: keeps one bat when there are several
+    env.control[name]._bot("tidy", env.give_weapon)         # client-side: keeps one bat when there are several
     if have == 0:
-        env.control[name]._bot("giveitem", short)           # idempotent: adds one only when none is there
-    time.sleep(1.0)
-    try:
-        now = parse_inv(env.channel.command(f"inv|{name}", timeout=10)["msg"]).get("bats", -1)
-    except Exception:
-        now = -1
+        env.control[name]._bot("giveitem", env.give_weapon)  # idempotent: adds one only when none is there
+    now = client_count(env, name, env.give_weapon)
     return ("repaired", f"bats {have} -> {now}") if now == 1 else ("failed", f"bats {have} -> {now} after repair")
 
 

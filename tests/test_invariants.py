@@ -9,6 +9,9 @@ class Chan:
     def command(self, line, timeout=10): return {"ok": True, "msg": "items=3 weight=1.0 bats=%d" % self.bats}
 
 
+inv.client_count = lambda env, name, item, wait=6.0: env.channel.bats     # the real one reads the client log
+
+
 class Ctl:
     def __init__(self, chan): self.sent = []; self.chan = chan
     def _bot(self, cmd, arg=None):

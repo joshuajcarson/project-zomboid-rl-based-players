@@ -20,6 +20,15 @@ commands.say = function(p, a)
     log("STATUS " .. text)
     return true, "said"
 end
+-- invcount|Base.Item: how many of an item the CLIENT's own inventory holds (the server's `inv` can differ: server-side AddItem never reaches a
+-- real client, so only this count says what the character really carries). Logged as INVCOUNT.
+commands.invcount = function(p, a)
+    local short = string.gsub((a and a.a) or "Base.BaseballBat", "^Base%.", "")
+    local inv = p:getInventory()
+    local n = inv:getAllTypeRecurse(short):size()
+    log(string.format("INVCOUNT %s=%d items=%d weight=%.1f", short, n, inv:getItems():size(), inv:getCapacityWeight()))
+    return true, "invcount " .. n
+end
 -- giveitem|Base.Item: add an item to the client's own inventory (a server-side AddItem never reaches a real client, so a character that
 -- lost its bat, e.g. after dying and getting a fresh body, stayed bare-handed and kept dying)
 commands.giveitem = function(p, a)

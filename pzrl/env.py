@@ -239,7 +239,7 @@ class PZParallelEnv:
         self.control[name].equip(self.give_weapon)
         self._read(4)
         if not self.state.get(name, {}).get("weapon"):
-            self.channel.command(f"give|{name}|{self.give_weapon}")
+            # (no server-side give here: AddItem on the server never reaches a real client and only piles phantom bats into the server's view)
             try:
                 self.control[name]._bot("giveitem", self.give_weapon)   # the server's give never reaches a real client's inventory
             except Exception:
@@ -252,7 +252,7 @@ class PZParallelEnv:
         self.control[name]._bot("reload")       # picks up <cache>/Lua/rl_bot_dev.lua when present (no-op otherwise)
         if self.give_weapon:
             self.control[name]._bot("tidy", self.give_weapon)    # a real client owns its inventory: drop extra copies of the weapon there
-            self.channel.command(f"ensure|{name}|{self.give_weapon}")     # one bat, normally the one in the starter-kit backpack
+            # the one-bat rule is enforced by pzrl/invariants.py from the client's own count
             self.control[name].equip(self.give_weapon)
 
     def recover(self, error=None):
