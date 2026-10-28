@@ -63,7 +63,7 @@ end
 -- rl_bot_cfg.txt (written by the experiment script): headSign=0 (face the zombie's centre), 1 or -1 (face the end of a downed zombie that its
 -- forward vector points to, or the opposite end: the head end is the one that kills quickly)
 RL.headSign = 0
-RL.giveup = false   -- off by default: the 8-miss rule cut kills from 1.75 to 1.08 in the 2026-10-27 benchmark
+RL.giveup = false   -- set by rl_bot_cfg.txt (giveup=1). The old 8-misses/6 s rule cut kills 1.75 -> 1.08 once; the 12-miss rule with a 10 s lockout is being re-tested (2026-10-28)
 do
     local okr, r = pcall(getFileReader, "rl_bot_cfg.txt", false)
     if okr and r then
@@ -192,7 +192,15 @@ RL.tick = function(p)
         local zid = z:getOnlineID()
         local rec = RL.stuck[zid] or { n = 0 }
         if sw.zhp0 - z:getHealth() < 0.01 then rec.n = rec.n + 1 else rec.n = 0 end
-        if RL.giveup and rec.n >= 8 then rec.until_ = getTimestampMs() + 6000; rec.n = 0; log("COMBAT giveup zid=" .. zid) end
+        if RL.giveup and rec.n >= (RL.giveupN or 12) then
+            -- 12 zero-damage swings in a row (a reachable zombie survives that about 1 time in 200) means it is stuck in equipment or a fence:
+            -- lock it out for 10 s and walk 4 tiles away from it so the other zombie (or this one, free) can come to us
+            rec.until_ = getTimestampMs() + 10000; rec.n = 0
+            local dx, dy = p:getX() - z:getX(), p:getY() - z:getY()
+            local n = math.sqrt(dx * dx + dy * dy); if n < 0.05 then n = 1 end
+            pcall(commands.goto, p, { a = string.format("%.2f", p:getX() + 4 * dx / n), b = string.format("%.2f", p:getY() + 4 * dy / n) })
+            log("COMBAT giveup zid=" .. zid)
+        end
         RL.stuck[zid] = rec
         RL.swing = nil; p:setIsAiming(false); if rlAimClear then rlAimClear() end
     elseif sw.frames >= 3 then p:pressedAttack() end
