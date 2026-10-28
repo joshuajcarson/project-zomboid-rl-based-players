@@ -101,3 +101,4 @@ Order matters; each item ends in a committed result in this journal.
 5. DAgger / behaviour-cloning round on the real client against the scripted fighter, benchmarked in the ledger.
 6. Observation: obstacles (fences, walls) and visibility; day/time control; wound types.
 7. Human demo recorder; cohesion band; 2+ agents.
+Hutch found and removed (2026-10-28 ~12:50): the server scan with a client in range listed 6 hutch squares at x 10713-10714, y 9391-9392 (the dog house); `hutches|10730|9411|45|1` removed them (re-scan: 0). Verify with a 30-episode run that no client drops out.
