@@ -67,11 +67,54 @@ do
     log("bot config: headSign=" .. tostring(RL.headSign))
 end
 do
+    -- true when a wall, fence or closed door lies between the player and the point (the game would not let the swing through)
+    RL.blockedBetween = function(p, tx, ty)
+        local cell = getCell()
+        local px, py, pz = p:getX(), p:getY(), p:getZ()
+        local dx, dy = tx - px, ty - py
+        local n = math.max(1, math.ceil(math.sqrt(dx * dx + dy * dy) / 0.5))
+        local prev = cell:getGridSquare(math.floor(px), math.floor(py), math.floor(pz))
+        for i = 1, n do
+            local sq = cell:getGridSquare(math.floor(px + dx * i / n), math.floor(py + dy * i / n), math.floor(pz))
+            if not sq then return true end
+            if prev and sq ~= prev then
+                local okb, blocked = pcall(function() return prev:isBlockedTo(sq) end)
+                if okb and blocked then return true end
+            end
+            prev = sq
+        end
+        return false
+    end
     RL.baseAttack = RL.baseAttack or commands.attack   -- reloads must not stack wrappers
     local baseAttack = RL.baseAttack
     commands.attack = function(p, a)
         local okr, res, msg = baseAttack(p, a)
         local sw = RL.swing
+        if okr and sw and RL.blockedBetween(p, sw.zombie:getX(), sw.zombie:getY()) then
+            RL.swing = nil
+            log("COMBAT blocked: obstacle between player and zid=" .. tostring(sw.zombie:getOnlineID()))
+            return false, "blocked"
+        end
+        if okr and sw and RL.headSign == 3 and rlBone then
+            -- downed target: a swing only reaches the head from beside it, so walk there first and swing on a later step
+            local z = sw.zombie
+            local onf = false
+            pcall(function() onf = z:isOnFloor() end)
+            local okb, hx, hy = pcall(rlBone, z, "Bip01_Head")
+            if onf and okb and hx then
+                local d = math.sqrt((p:getX() - hx) ^ 2 + (p:getY() - hy) ^ 2)
+                if d > 0.8 then
+                    local dx, dy = hx - z:getX(), hy - z:getY()
+                    local n = math.sqrt(dx * dx + dy * dy); if n < 0.05 then n = 1 end
+                    local tx, ty = hx + 0.45 * dx / n, hy + 0.45 * dy / n
+                    RL.swing = nil
+                    commands.goto(p, { a = string.format("%.2f", tx), b = string.format("%.2f", ty) })
+                    log(string.format("COMBAT step to head d=%.2f", d))
+                    return true, "stepping"
+                end
+                sw.dhead = d
+            end
+        end
         if okr and sw and RL.stuck then
             local rec = RL.stuck[sw.zombie:getOnlineID()]
             if rec and rec.until_ and rec.until_ > getTimestampMs() then RL.swing = nil; return false, "unreachable" end
@@ -98,14 +141,14 @@ RL.tick = function(p)
     local onfloor = false
     pcall(function() onfloor = z:isOnFloor() end)
     local ax, ay = z:getX(), z:getY()
-    if onfloor and RL.headSign == 2 and rlBone then
+    if onfloor and (RL.headSign == 2 or RL.headSign == 3) and rlBone then
         -- aim at the head bone itself (rlBone is provided by the client agent)
         local okb, hx, hy = pcall(rlBone, z, "Bip01_Head")
         if okb and hx then ax, ay = hx, hy end
     end
     if onfloor and RL.headSign ~= 0 then
         local okd, fd = pcall(function() return z:getForwardDirection() end)
-        if okd and fd and RL.headSign ~= 2 then
+        if okd and fd and RL.headSign ~= 2 and RL.headSign ~= 3 then
             local fx, fy = fd:getX(), fd:getY()
             local n = math.sqrt(fx * fx + fy * fy)
             if n > 0.01 then ax, ay = z:getX() + RL.headSign * 0.6 * fx / n, z:getY() + RL.headSign * 0.6 * fy / n end
@@ -134,7 +177,7 @@ RL.tick = function(p)
     if p:isAttackStarted() then
         if not sw.began then sw.began = true; sw.zhp0 = z:getHealth(); sw.s0 = snap(p, z); sw.d0 = math.sqrt((z:getX()-p:getX())^2 + (z:getY()-p:getY())^2) end
     elseif sw.began then
-        log(string.format("COMBAT swing %s dmg=%.3f dist=%.2f frames=%d floor=%d head=%d proj=%.2f front=%d", sw.s0, sw.zhp0 - z:getHealth(), sw.d0, sw.frames, sw.onfloor and 1 or 0, RL.headSign, sw.proj or 0, sw.front or 0))
+        log(string.format("COMBAT swing %s dmg=%.3f dist=%.2f frames=%d floor=%d head=%d proj=%.2f front=%d dhead=%.2f", sw.s0, sw.zhp0 - z:getHealth(), sw.d0, sw.frames, sw.onfloor and 1 or 0, RL.headSign, sw.proj or 0, sw.front or 0, sw.dhead or -1))
         -- misses are common (about half the swings), so only a long run of zero-damage swings means the zombie is out of reach (caught in a fence or equipment): stop wasting swings on it
         RL.stuck = RL.stuck or {}
         local zid = z:getOnlineID()
