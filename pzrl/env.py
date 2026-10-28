@@ -449,6 +449,12 @@ class PZParallelEnv:
                 ang = self.rng.uniform(0, 2 * math.pi)
                 self.channel.command(f"zspawn|{sx + ring * math.cos(ang):.0f}|{sy + ring * math.sin(ang):.0f}|1")
         self._read(self._game_seconds(4))          # let chunks and ownership settle
+        if self.rendered:
+            from . import invariants               # state checks with repairs; failures are kept so a benchmark can refuse the run
+            fails = invariants.run_all(self, list(self.rendered), "reset")
+            self.invariant_failures = getattr(self, "invariant_failures", []) + fails
+            for f in fails:
+                print("INVARIANT FAILED:", *f, flush=True)
         for name in self.rendered:
             if name in self.control:
                 self._god(name, False)
