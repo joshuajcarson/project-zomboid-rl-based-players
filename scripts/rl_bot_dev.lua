@@ -167,9 +167,9 @@ RL.tick = function(p)
         local okb, hx, hy = pcall(rlBone, z, "Bip01_Head")
         if okb and hx then ax, ay = hx, hy end
     end
-    if onfloor and RL.headSign ~= 0 then
+    if onfloor then       -- a downed zombie is only hit by a swing aimed at the floor; headSign 0 used to skip this and missed ~97% of floor swings (3 of 121)
         local okd, fd = pcall(function() return z:getForwardDirection() end)
-        if okd and fd and RL.headSign ~= 2 and RL.headSign ~= 3 then
+        if okd and fd and RL.headSign ~= 0 and RL.headSign ~= 2 and RL.headSign ~= 3 then
             local fx, fy = fd:getX(), fd:getY()
             local n = math.sqrt(fx * fx + fy * fy)
             if n > 0.01 then ax, ay = z:getX() + RL.headSign * 0.6 * fx / n, z:getY() + RL.headSign * 0.6 * fy / n end
