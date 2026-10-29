@@ -108,7 +108,15 @@ Order matters; each item ends in a committed result in this journal.
 3. Matched 30-episode references (idle, charge:1.8:0) on the clean setup; update docs/results.md.
 4. Scripted fighter: engagement/spacing ideas that survive 30 episodes (min_dist step-back failed at 21 episodes), pace by panic.
 5. DAgger / behaviour-cloning round on the real client against the scripted fighter, benchmarked in the ledger.
-6. Observation: obstacles (fences, walls) and visibility; day/time control; wound types.
+6. Observation upgrade (user 2026-10-29: add the ones with a good chance of impact, implement as the need shows). Ranked; each ships as a new protocol version (fight-v5+) with fresh references, one signal group at a time, never mid-run. Implement a group when the swing/episode data point at its failure mode:
+   a. Per-zombie state for the nearest 1-2 zombies: health, on floor / crawling, attacking or grabbing, facing relative to the player, stuck flag (give-up). Need: the ~30% of swings at <=0.5 tiles (12% hit) and the stalled/grabbed episodes. Client-side Lua publishes it; the server channel and `_obs` carry it.
+   b. Own combat state: endurance, panic, pain, bleeding, swing cooldown / swinging flag. Need: pacing and retreat decisions; already logged per swing, not yet observed.
+   c. Local obstacle grid (7x7 or 9x9 around the player; per square blocked / fence / building / bush-corn / door / window) from the `openness` flags, plus the `blockedBetween` result for the nearest zombie. Need: stuck zombies in playground equipment, fences, corn. Keep the per-step scan small; do larger scans rarely.
+   d. Wound types (bitten / scratched / lacerated / infected) in observation and reward; bite = effectively dead. Needed before any survival claim.
+   e. Inventory summary (food, water, weapon condition, bandages) + eat / drink / bandage actions. Only when episodes get long.
+   f. Time of day, light level, weather; noise made/heard. Only with long episodes or scavenging tasks.
+   g. Teammate state (health, activity, carrying) for 2+ agents.
+   Rules: add signals to the fake backend only if it can produce them honestly (terrain and zombie state exist only on the real client); validate each addition on the real client; keep the observation small (30 min per 30 real episodes means no room for hundreds of inputs); measure whether a signal helps (ablation: policy with / without) before keeping it. Start order: a, b, then c, after the swing-distance study (v4 running) ends.
 7. Human demo recorder; cohesion band; 2+ agents.
 Hutch found and removed (2026-10-28 ~12:50): the server scan with a client in range listed 6 hutch squares at x 10713-10714, y 9391-9392 (the dog house); `hutches|10730|9411|45|1` removed them (re-scan: 0). Verify with a 30-episode run that no client drops out.
 
