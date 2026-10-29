@@ -158,3 +158,11 @@ The retreat gain seen in the cornfield (2.0 / 14.3) did NOT replicate on the cle
 
 ## Cleanup script (2026-10-29)
 `scripts/cleanup.py` is the one way to free resources: kills our java (server, rendered/fake clients), start-server/client PowerShell launchers, `scripts/_*.sh` wrappers and repo python runs by command line, then verifies no process, no listening port (16261/16262/17600/17700-17720) and clears a stale env lock. Found one lingering server + launcher after the v4 benchmark; benchmark wrappers should call it at the end (TODO: add to `_*.sh` templates and benchmark.py).
+
+## Milestone 1 review loop (2026-10-29)
+How I decide whether things are going well, need a tweak, or need a new approach:
+- Noise first: 30 episodes give SE ~0.12 kills and ~4 damage, so a variant counts only if it beats the same-day reference by >0.25 kills or >8 damage AND repeats in a second run. Single wins (cornfield retreat 2.0/14.3) are hypotheses.
+- Health of each run: client dropouts / relaunches, aborted 1-step resets, logs/invariants.jsonl failures, stalled episodes (2 zombies alive, ~0 damage at step 45).
+- Diagnosis from the swing log (analyze_combat): v4 plain charge, 446 swings: hit rate 12% at ~0.5 tiles, 69% at ~1.0, 44% at ~1.5, ~30% of swings land at <=0.5 tiles; plus ~5 of 30 episodes stall with both zombies alive at ~0 damage after 41+ attack actions. 75 zombies seen of 116 spawned: many never get engaged.
+- Round 1 (running): swing start distance charge:1.3:0 and charge:2.2:0 vs the 1.8 reference (1.33 kills / 30.1 dmg).
+- Change-of-approach trigger: if two rounds of scripted tweaks (swing timing, spacing, stall handling) leave plain charge below 1.6 kills / above 25 dmg, or the hit-rate data show the cap is a game mechanic (grab/bite interrupting swings, stalls from zombies not engaging), stop tuning the script: take 1.33/30 as the bar to beat and go to milestone 2 (learned policy with richer observations: zombie facing/attack state, swing cooldown) instead of finishing milestone 1 by hand.
