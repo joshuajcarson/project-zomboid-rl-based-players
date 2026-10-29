@@ -155,3 +155,6 @@ Rendered, 5377,10114, 2 zombies, setup field5377-v4:
 - charge:1.8:0: 30 eps, 1.33 kills, 30.1 dmg, 2 low-hp.
 - charge:1.8:35 (retreat): 28 eps, 1.36 kills, 31.6 dmg, 4 low-hp.
 The retreat gain seen in the cornfield (2.0 / 14.3) did NOT replicate on the clean field: retreat is not better than plain charge. Treat that cornfield row as noise or field-specific. Plain charge baseline on a clean field is ~1.3 kills / 30 dmg, so milestone 1 (>=1.6 kills, <=25 dmg) is not met by the scripted fighter yet; next: look at why kills stall (swing hit rate, grabs) rather than tuning flee.
+
+## Cleanup script (2026-10-29)
+`scripts/cleanup.py` is the one way to free resources: kills our java (server, rendered/fake clients), start-server/client PowerShell launchers, `scripts/_*.sh` wrappers and repo python runs by command line, then verifies no process, no listening port (16261/16262/17600/17700-17720) and clears a stale env lock. Found one lingering server + launcher after the v4 benchmark; benchmark wrappers should call it at the end (TODO: add to `_*.sh` templates and benchmark.py).
