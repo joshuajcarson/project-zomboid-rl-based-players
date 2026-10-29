@@ -26,9 +26,11 @@ open(_cfg, "w").write("headSign=" + os.environ.get("PZ_HEAD_SIGN", "0") + " give
 PROTOCOL = os.environ.get("PZ_PROTOCOL", "fight-v1")
 # fight-v1/v2: the old arena in Muldraugh (shed, dog house, fences, playground); fight-v3: an open field (the user's map coordinate 4010,11767;
 # the in-game scan found 0 blocked / building / fence / hutch squares within 30 tiles, scripts/find_open_field.py)
-SPAWN_BOX = (3995, 11752, 4025, 11782) if PROTOCOL == "fight-v3" else (10730, 9380, 10810, 9440)
+# fight-v4: the dirt field at 5377,10114 (user tip): scan r=30 gives blocked 0, building 0, hutch 0 and bush 0, i.e. no corn; fight-v3 was the cornfield,
+# where `hasBush()` is true on about 2440 of 3721 squares (the `openness` scan detects corn through bush=, not veg/cut/sight/spear, which stay 0)
+SPAWN_BOX = {"fight-v3": (3995, 11752, 4025, 11782), "fight-v4": (5362, 10099, 5392, 10129)}.get(PROTOCOL, (10730, 9380, 10810, 9440))
 env = PZParallelEnv(n_agents=1, task="fight", backend=backend, max_steps=steps, seed=int(os.environ.get("PZ_SEED", "7")), zombie_ring=(5, 8), time_scale=1.0 if backend != "fake" else 4.0,
-                    spawn_box=SPAWN_BOX, keep_alive=True, end_when_clear=PROTOCOL in ("fight-v2", "fight-v3"))
+                    spawn_box=SPAWN_BOX, keep_alive=True, end_when_clear=PROTOCOL in ("fight-v2", "fight-v3", "fight-v4"))
 env.status_text = os.environ.get("PZ_STATUS") or ("fight lab: " + policy)   # shown above the character in the game window
 try:
     for ep in range(episodes):
