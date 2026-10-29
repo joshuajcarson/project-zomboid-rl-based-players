@@ -26,6 +26,7 @@ commands.openness = function(p, a)
     local r = tonumber(a and a.a) or 25
     local cell, px, py = getCell(), math.floor(p:getX()), math.floor(p:getY())
     local loaded, blocked, building, fence, hutch = 0, 0, 0, 0, 0
+    local veg, cut, sight, bush, spear = 0, 0, 0, 0, 0     -- tall plants (corn): vegetation flag, can be cut, blocks sight, bush objects, spear-only attack through
     local function f(fn) local ok, v = pcall(fn); return ok and v end
     for sx = px - r, px + r do
         for sy = py - r, py + r do
@@ -35,6 +36,11 @@ commands.openness = function(p, a)
                 if f(function() return sq:isSolid() or sq:isSolidTrans() or sq:HasTree() end) then blocked = blocked + 1 end
                 if f(function() return sq:getBuilding() ~= nil end) then building = building + 1 end
                 if f(function() return sq:Is(IsoFlagType.collideW) or sq:Is(IsoFlagType.collideN) or sq:Is(IsoFlagType.HoppableW) or sq:Is(IsoFlagType.HoppableN) end) then fence = fence + 1 end
+                if f(function() return sq:Is(IsoFlagType.vegitation) end) then veg = veg + 1 end
+                if f(function() return sq:Is(IsoFlagType.canBeCut) end) then cut = cut + 1 end
+                if f(function() return sq:Is(IsoFlagType.blocksight) end) then sight = sight + 1 end
+                if f(function() return sq:hasBush() end) then bush = bush + 1 end
+                if f(function() return sq:Is(IsoFlagType.SpearOnlyAttackThrough) end) then spear = spear + 1 end
                 local objs = sq:getObjects()
                 for i = 0, objs:size() - 1 do
                     if f(function() return instanceof(objs:get(i), "IsoHutch") end) then hutch = hutch + 1 end
@@ -42,7 +48,7 @@ commands.openness = function(p, a)
             end
         end
     end
-    log(string.format("OPENNESS at=%d,%d r=%d loaded=%d blocked=%d building=%d fence=%d hutch=%d", px, py, r, loaded, blocked, building, fence, hutch))
+    log(string.format("OPENNESS at=%d,%d r=%d loaded=%d blocked=%d building=%d fence=%d hutch=%d veg=%d cut=%d sight=%d bush=%d spear=%d", px, py, r, loaded, blocked, building, fence, hutch, veg, cut, sight, bush, spear))
     return true, "openness"
 end
 -- invcount|Base.Item: how many of an item the CLIENT's own inventory holds (the server's `inv` can differ: server-side AddItem never reaches a
