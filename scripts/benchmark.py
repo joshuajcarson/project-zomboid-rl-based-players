@@ -44,6 +44,11 @@ def run_policy(policy, backend, episodes, steps):
 
 
 def row(policy, backend, eps, protocol, note):
+    # a death makes the env relaunch the client and the next "episode" ends after 1 step with nothing measured: those are not episodes
+    aborted = sum(1 for e in eps if e["steps"] < 5)
+    eps = [e for e in eps if e["steps"] >= 5] or eps
+    if aborted:
+        note = (note + " ").lstrip() + "[%d aborted 1-step resets after deaths excluded]" % aborted
     n = len(eps)
     kills = [e["zombies_start"] - e["zombies_end"] for e in eps]
     ck = pathlib.Path(policy)
