@@ -147,3 +147,11 @@ USER (2026-10-28): the cornfield at 4010,11767 still has tall corn stalks to wal
 
 ### 2026-10-28 night: the corn detector and the next field (fight-v4)
 Tour with the extended scan (r=30, 3721 squares): the cornfield sites (4010,11767 and the ring around it) show `bush` = 2440-2501 squares (hasBush() is the corn detector; veg/cut/sight/spear stay 0 everywhere), 3910,11747 has blocked 33. The user's tip 5377,10114 (dirt field, short grass): blocked 0, building 0, fence 0, hutch 0, bush 0: the clean field. New protocol fight-v4 = the fight on a 30x30 box around 5377,10114 (spawn box 5362,10099 .. 5392,10129; lab: PZ_PROTOCOL=fight-v4), episode rules as v2/v3. NEXT (after the user is done with the PC): fresh references there: idle (5+ real episodes), charge:1.8:0 (30), charge:1.8:35 (30), twice if time allows, to confirm the retreat result (v3 cornfield: 2.0 kills / 14.3 dmg vs 1.6 / 28.0 for plain charge) and complete milestone 1. Also: while the user watched, the character was about to bleed out; `heal|user` (server) fixes a real client's wounds, add it to the reset checks (invariant: no bleeding / hp restored before each episode).
+
+## fight-v4 references on the dirt field (2026-10-28)
+
+Rendered, 5377,10114, 2 zombies, setup field5377-v4:
+- idle: 6 real episodes, 0 kills, 65.5 dmg, 4 low-hp (4 deaths -> aborted resets dropped).
+- charge:1.8:0: 30 eps, 1.33 kills, 30.1 dmg, 2 low-hp.
+- charge:1.8:35 (retreat): 28 eps, 1.36 kills, 31.6 dmg, 4 low-hp.
+The retreat gain seen in the cornfield (2.0 / 14.3) did NOT replicate on the clean field: retreat is not better than plain charge. Treat that cornfield row as noise or field-specific. Plain charge baseline on a clean field is ~1.3 kills / 30 dmg, so milestone 1 (>=1.6 kills, <=25 dmg) is not met by the scripted fighter yet; next: look at why kills stall (swing hit rate, grabs) rather than tuning flee.
