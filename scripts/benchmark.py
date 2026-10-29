@@ -81,7 +81,7 @@ def have_reference(policy, backend, protocol, min_eps, setup):
     if not LEDGER.exists():
         return False
     today = datetime.date.today().isoformat()
-    need = IDLE_EPISODES if policy == "idle" else min_eps
+    need = 5 if policy == "idle" else min_eps          # idle rows keep only the real episodes (aborted resets after deaths are dropped)
     for l in LEDGER.read_text().splitlines():
         if l.strip():
             r = json.loads(l)
