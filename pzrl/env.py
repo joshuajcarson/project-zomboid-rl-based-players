@@ -34,6 +34,8 @@ ARM_FIXED = os.environ.get("PZ_ARM_FIXED", "")             # "A": every episode 
 ARM_PILE = int(os.environ.get("PZ_ARM_PILE", "0"))           # arm B lays this many bodies after clearing (corpse test); arm A only clears
 ARM_B_HOUR = os.environ.get("PZ_ARM_B_HOUR", "")        # set: arm B also clears the bodies but sets this hour (darkness test); arm A = ARM_HOUR
 FAKE_ARMS = [tuple(float(v) for v in x.split(":")) for x in os.environ.get("PZ_FAKE_ARMS", "").split(",") if x.strip()]   # "bite:hit,bite:hit,...": episodes alternate between (bite damage, swing hit-chance scale) pairs (fake calibration sweep)
+CALIBRATED_FIGHT = (2.25, 0.6)          # (bite damage, swing hit scale): fake fight profile v1, confirmed in Batch 9 (kills 1.59 / damage 39.5 vs real 1.36 / 39.2)
+RAW_FAKE = os.environ.get("PZ_FAKE_RAW", "") == "1"   # 1: use the uncalibrated fake (task bite 1.5, hit scale 1.0)
 BITE_ARMS = [float(x) for x in os.environ.get("PZ_BITE_ARMS", "").split(",") if x.strip()]   # calibration sweep: episodes alternate between these bite-damage values (fake backend)
 FAKE_FORCE_KILL = os.environ.get("PZ_FAKE_FORCE_KILL", "1") != "0"   # default ON since Batch 4 validated it (PZ_FAKE_FORCE_KILL=0 turns it off). fake backend: a zombie that is still alive after its 2nd lethal hit is removed server-side (the server ignores some lethal hits, Batch 3)
 SETTLE = float(os.environ.get("PZ_SETTLE", "1"))      # multiplier on the reset settle waits (game time): chunk loading takes REAL time, so a scaled clock needs more (2x clock -> 2)
@@ -450,6 +452,10 @@ class PZParallelEnv:
         self.fake_arm = ""
         if FAKE_ARMS and not self.rendered:
             self.bite_arm, self.hit_scale = FAKE_ARMS[(self._episode_no - 1) % len(FAKE_ARMS)]
+            self.fake_arm = "%g/%g" % (self.bite_arm, self.hit_scale)
+        elif not self.rendered and not BITE_ARMS and self.task.name == "fight" and not RAW_FAKE:
+            # calibrated fight profile v1 (Batch 9, M2): bite 2.25 and swing hit scale 0.6 make the fake match the real baseline on means
+            self.bite_arm, self.hit_scale = CALIBRATED_FIGHT
             self.fake_arm = "%g/%g" % (self.bite_arm, self.hit_scale)
         self.channel.command(f"cfg|biteDamage|{self.bite_arm if self.bite_arm is not None else self.task.bite_damage}")   # the task may have changed since startup
         for name in self.possible_agents:

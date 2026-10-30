@@ -246,3 +246,6 @@ Milestone M2; experiment: one fake session, 120 episodes, six arms (bite 3.0/4.5
 
 ## Batch 8 end (2026-10-30 17:40): a candidate calibration point (bite 2.25 / hit 0.6)
 Milestone M2; experiment: one fake session, 120 episodes, six arms (bite 1.5/2.25 x hit 0.6/0.7/0.8). Verdict SUCCESS (candidate nomination): 2.25/0.6 is the only arm inside both bands (kills 1.65, damage 41.0, D 0.97). Learnings: kills fall via stuck episodes (hit 0.6: 7-9 of 20 stuck), not deaths (0 deaths in every arm: the real client's 16% deaths are not reproduced); damage surface is noisy at n=20; kills sit at the band edge again. Card: docs/experiments/2026-10-30-b8-m2-low-bite-sweep.md. Next: Batch 9 confirmation.
+
+## Batch 9 end (2026-10-30 18:02): M2 done on means
+Milestone M2; experiment: fake at bite 2.25 / hit 0.6, two fresh sessions x 40 episodes. Verdict SUCCESS (pre-registered M2 acceptance): pooled kills 1.59 (1.47-1.71), damage 39.5 (33.8-45.2) vs real 1.36 / 39.2; neither session outside the failure bands. Residuals: deaths 6% vs 16%, stuck 34% vs ~12%, median damage 36 vs 22-30 (fake narrower, real bimodal). The calibrated profile is now the default for the fake fight task (PZ_FAKE_RAW=1 for the old behaviour). M3 (learned fighter) is next. Card: docs/experiments/2026-10-30-b9-m2-confirm-low-bite.md.
