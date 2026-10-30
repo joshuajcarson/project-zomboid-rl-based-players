@@ -11,7 +11,22 @@ not processes of ours: stop those with TaskStop (they only poll log files and ho
 import os, subprocess, sys, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SELF = {os.getpid(), os.getppid()}
+def _ancestors():
+    """This process and every ancestor (the wrapper script, the shell that launched it): cleanup must never kill the thing that called it."""
+    out = subprocess.run(["powershell", "-NoProfile", "-Command",
+        "Get-CimInstance Win32_Process | ForEach-Object { \"$($_.ProcessId)`t$($_.ParentProcessId)\" }"], capture_output=True, text=True).stdout
+    parent = {}
+    for line in out.splitlines():
+        a = line.split("	")
+        if len(a) == 2 and a[0].strip().isdigit() and a[1].strip().isdigit():
+            parent[int(a[0])] = int(a[1])
+    seen, pid = set(), os.getpid()
+    while pid and pid not in seen:
+        seen.add(pid); pid = parent.get(pid, 0)
+    return seen
+
+
+SELF = _ancestors() | {os.getpid(), os.getppid()}
 PORTS = [16261, 16262, 17600] + list(range(17700, 17721))     # game server, udp/tcp, channel, per-client control sockets
 LOCK = os.path.join(ROOT, "logs", ".env.lock")
 
@@ -40,7 +55,7 @@ def kind(name, cmd):
     mine = "project-zomboid-rl-based-players" in c or "pzrl" in c
     if name.startswith("powershell") and any(k in c for k in ("start-server.ps1", "run-fake-client.ps1", "start-client.ps1", "build-agent.ps1")) and mine:
         return "launcher"
-    if name.startswith("bash") and "scripts/_" in c and ".sh" in c:
+    if name.startswith("bash") and "scripts/_" in c and ".sh" in c and " -c " not in c:    # a script wrapper, not a tool shell whose -c command line merely mentions it
         return "wrapper"
     if name.startswith("python") and mine and any(k in c for k in (
             "benchmark.py", "rendered_fight_lab", "_demo", "compare_", "_test", "pz_ctl", "show_client", "find_open_field", "probe_zspawn",
