@@ -33,7 +33,7 @@ ARM_HOUR = float(os.environ.get("PZ_ARM_HOUR", "12"))
 ARM_FIXED = os.environ.get("PZ_ARM_FIXED", "")             # "A": every episode is arm A (noon, corpses cleared): the clean-field protocol for absolute measurements
 ARM_PILE = int(os.environ.get("PZ_ARM_PILE", "0"))           # arm B lays this many bodies after clearing (corpse test); arm A only clears
 ARM_B_HOUR = os.environ.get("PZ_ARM_B_HOUR", "")        # set: arm B also clears the bodies but sets this hour (darkness test); arm A = ARM_HOUR
-FAKE_FORCE_KILL = os.environ.get("PZ_FAKE_FORCE_KILL", "") == "1"   # fake backend: a zombie that is still alive after its 2nd lethal hit is removed server-side (the server ignores some lethal hits, Batch 3)
+FAKE_FORCE_KILL = os.environ.get("PZ_FAKE_FORCE_KILL", "1") != "0"   # default ON since Batch 4 validated it (PZ_FAKE_FORCE_KILL=0 turns it off). fake backend: a zombie that is still alive after its 2nd lethal hit is removed server-side (the server ignores some lethal hits, Batch 3)
 SETTLE = float(os.environ.get("PZ_SETTLE", "1"))      # multiplier on the reset settle waits (game time): chunk loading takes REAL time, so a scaled clock needs more (2x clock -> 2)
 OBS_EVERY_TICKS = 5      # must match cfg.obsEvery in mods/RLBridge
 ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
