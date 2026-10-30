@@ -243,3 +243,6 @@ Milestone M2; experiment: fake at bite 6.0, two fresh sessions x 40 episodes. Ve
 
 ## Batch 7 end (2026-10-30 17:15): two-knob sweep failed to reach the target; near miss at bite 3.0 / hit 0.7
 Milestone M2; experiment: one fake session, 120 episodes, six arms (bite 3.0/4.5 x hit scale 0.7/0.5/0.35). Verdict FAILURE per the pre-registered rule (no arm in both bands, best D = 2.87). Best arm 3.0/0.7: kills 1.35 (on target), damage 56.1 (17 too high). Hit scale <= 0.5 gives 70-80% deaths. Learnings: hit scale is steep; unexplored region is bite 1.5-2.5 x hit 0.6-0.8; uniform per-second bite damage does not reproduce the real client's burst damage and bounded fights. Card: docs/experiments/2026-10-30-b7-m2-two-knob-sweep.md. Next: Batch 8.
+
+## Batch 8 end (2026-10-30 17:40): a candidate calibration point (bite 2.25 / hit 0.6)
+Milestone M2; experiment: one fake session, 120 episodes, six arms (bite 1.5/2.25 x hit 0.6/0.7/0.8). Verdict SUCCESS (candidate nomination): 2.25/0.6 is the only arm inside both bands (kills 1.65, damage 41.0, D 0.97). Learnings: kills fall via stuck episodes (hit 0.6: 7-9 of 20 stuck), not deaths (0 deaths in every arm: the real client's 16% deaths are not reproduced); damage surface is noisy at n=20; kills sit at the band edge again. Card: docs/experiments/2026-10-30-b8-m2-low-bite-sweep.md. Next: Batch 9 confirmation.

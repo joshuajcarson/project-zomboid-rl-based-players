@@ -14,11 +14,22 @@
 - Stopping rule: run all 120 episodes; stop early only for an invalid run. No stopping on apparent effects.
 - Also report death share, stuck share, median damage per arm vs the real.
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-10-30/b8_m2_low_bite.jsonl`
-- Numbers: (pending)
-- Verdict: (pending)
-- Unexpected learnings: (pending)
-- Validity notes: (pending)
-- MILESTONE IMPACT: (pending)
-- Follow-ups / next experiment: (pending)
+## Result (filled at batch end, 2026-10-30 17:40 CT)
+- Data: `results/experiments-2026-10-30/b8_m2_low_bite.jsonl` (120 episodes, 20 per arm, all real).
+- Numbers (fake, force-kill on, charge:1.8:0; real target kills 1.36 / damage 39.2):
+  | bite/hit | kills (se) | damage (se) | median dmg | deaths >= 80 | stuck | kills band | damage band | D |
+  |---|---|---|---|---|---|---|---|---|
+  | 1.5/0.6 | 1.55 (0.11) | 23.6 (3.8) | 26.9 | 0 | 9 | yes | no | 2.85 |
+  | 1.5/0.7 | 1.70 (0.11) | 21.7 (3.1) | 22.5 | 0 | 6 | no | no | 4.34 |
+  | 1.5/0.8 | 2.00 (0.00) | 12.9 (2.0) | 11.0 | 0 | 0 | no | no | 11.45 |
+  | 2.25/0.6 | 1.65 (0.11) | 41.0 (5.3) | 48.3 | 0 | 7 | yes (edge) | yes | 0.97 |
+  | 2.25/0.7 | 1.95 (0.05) | 26.8 (4.5) | 23.4 | 0 | 1 | no | no | 5.41 |
+  | 2.25/0.8 | 2.00 (0.00) | 22.8 (3.1) | 20.8 | 0 | 0 | no | no | 7.23 |
+- Verdict: **SUCCESS** against the pre-registered rule: the candidate arm 2.25/0.6 has both means inside the M2 bands (kills 1.65, damage 41.0; D = 0.97). It only nominates a candidate; M2 is accepted after the confirmation batch.
+- Unexpected learnings:
+  1. Kills fall with the hit scale mainly through STUCK episodes (low hit chance means the 45 steps run out before the second zombie dies: 9, 6 and 7 stuck of 20 in the 0.6 arms), not through deaths: deaths are 0 in all six arms. The real client loses kills to both deaths (16%) and stalls (21% in S2); the candidate reproduces stalls but never deaths. So the match is on means only; the shape differs (no deaths, no bimodal very-bad fights).
+  2. Damage depends strongly on bite at hit 0.6 (23.6 at bite 1.5, 41.0 at 2.25) but is weak or non-monotone at hit 0.7-0.8 (21.7 vs 26.8; 12.9 vs 22.8): the surface is noisy at n=20 per arm.
+  3. Selection caveat repeats: kills 1.65 sits at the band edge (1.66) with se 0.11, as with Batch 5's pass that did not survive confirmation.
+- Validity notes: single session (seed 17), 20 per arm, no early stops, force-kill fix active (stuck arises from low hit chance, not the artifact: 0-1 stuck in the 0.8 arms).
+- MILESTONE IMPACT: none to acceptance; M2 next step: confirm 2.25/0.6 on fresh sessions (Batch 9), noting the shape difference (no deaths) in the milestone as a known residual.
+- Follow-ups / next experiment: Batch 9 = M2 confirmation at bite 2.25 / hit 0.6, two sessions.
