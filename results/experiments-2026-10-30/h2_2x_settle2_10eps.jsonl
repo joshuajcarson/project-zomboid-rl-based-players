@@ -1,0 +1,10 @@
+{"ep": 0, "steps": 1, "attack_actions": 1, "zombies_start": 25, "zombies_min": 25, "zombies_end": 25, "damage_end": 0.0, "min_hp": 100.0, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 1, "steps": 45, "attack_actions": 36, "zombies_start": 2, "zombies_min": 1, "zombies_end": 1, "damage_end": 17.4, "min_hp": 77.3, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 2, "steps": 22, "attack_actions": 19, "zombies_start": 2, "zombies_min": 0, "zombies_end": 0, "damage_end": 26.1, "min_hp": 73.4, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 3, "steps": 26, "attack_actions": 18, "zombies_start": 2, "zombies_min": 0, "zombies_end": 0, "damage_end": 11.4, "min_hp": 88.4, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 4, "steps": 45, "attack_actions": 41, "zombies_start": 2, "zombies_min": 0, "zombies_end": 0, "damage_end": 35.3, "min_hp": 59.5, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 5, "steps": 22, "attack_actions": 16, "zombies_start": 2, "zombies_min": 0, "zombies_end": 0, "damage_end": 25.8, "min_hp": 74.0, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 6, "steps": 14, "attack_actions": 14, "zombies_start": 2, "zombies_min": 2, "zombies_end": 2, "damage_end": 76.5, "min_hp": 8.1, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 7, "steps": 1, "attack_actions": 0, "zombies_start": 2, "zombies_min": 2, "zombies_end": 2, "damage_end": 0.0, "min_hp": 100.0, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 8, "steps": 45, "attack_actions": 39, "zombies_start": 2, "zombies_min": 0, "zombies_end": 0, "damage_end": 15.2, "min_hp": 81.8, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 9, "steps": 39, "attack_actions": 34, "zombies_start": 2, "zombies_min": 2, "zombies_end": 2, "damage_end": 78.0, "min_hp": 8.2, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}

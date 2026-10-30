@@ -1,0 +1,15 @@
+{"ep": 0, "steps": 1, "attack_actions": 0, "zombies_start": 2, "zombies_min": 2, "zombies_end": 2, "damage_end": 0.0, "min_hp": 0.0, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 1, "steps": 45, "attack_actions": 26, "zombies_start": 2, "zombies_min": 1, "zombies_end": 1, "damage_end": 42.6, "min_hp": 57.4, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 2, "steps": 14, "attack_actions": 12, "zombies_start": 2, "zombies_min": 1, "zombies_end": 1, "damage_end": 94.2, "min_hp": 5.8, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 3, "steps": 1, "attack_actions": 0, "zombies_start": 2, "zombies_min": 2, "zombies_end": 2, "damage_end": 0.0, "min_hp": 100.0, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 4, "steps": 28, "attack_actions": 18, "zombies_start": 2, "zombies_min": 0, "zombies_end": 0, "damage_end": 18.0, "min_hp": 82.0, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 5, "steps": 24, "attack_actions": 19, "zombies_start": 2, "zombies_min": 0, "zombies_end": 0, "damage_end": 27.5, "min_hp": 72.5, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 6, "steps": 23, "attack_actions": 22, "zombies_start": 2, "zombies_min": 2, "zombies_end": 2, "damage_end": 91.1, "min_hp": 8.9, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 7, "steps": 1, "attack_actions": 0, "zombies_start": 2, "zombies_min": 2, "zombies_end": 2, "damage_end": 0.0, "min_hp": 100.0, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 8, "steps": 27, "attack_actions": 15, "zombies_start": 2, "zombies_min": 0, "zombies_end": 0, "damage_end": 15.0, "min_hp": 84.9, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 9, "steps": 45, "attack_actions": 34, "zombies_start": 2, "zombies_min": 1, "zombies_end": 1, "damage_end": 53.8, "min_hp": 46.2, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 10, "steps": 16, "attack_actions": 13, "zombies_start": 2, "zombies_min": 0, "zombies_end": 0, "damage_end": 7.7, "min_hp": 91.6, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 11, "steps": 17, "attack_actions": 16, "zombies_start": 2, "zombies_min": 2, "zombies_end": 2, "damage_end": 90.1, "min_hp": 9.9, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 12, "steps": 1, "attack_actions": 0, "zombies_start": 2, "zombies_min": 2, "zombies_end": 2, "damage_end": 0.0, "min_hp": 100.0, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 13, "steps": 31, "attack_actions": 21, "zombies_start": 2, "zombies_min": 0, "zombies_end": 0, "damage_end": 18.2, "min_hp": 78.5, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}
+{"ep": 14, "steps": 41, "attack_actions": 29, "zombies_start": 2, "zombies_min": 0, "zombies_end": 0, "damage_end": 22.4, "min_hp": 73.3, "combat": {"swings": 0, "hits": 0, "damage": 0.0, "dist_sum": 0.0}}

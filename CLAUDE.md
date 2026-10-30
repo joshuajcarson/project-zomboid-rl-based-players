@@ -36,6 +36,8 @@ l-agent-client.jar scriptsuild-agent.ps1` (the server's jar is locked while it 
 
 - **Cleanup:** run `python scripts/cleanup.py` at the end of every run/batch and whenever RAM or ports must be freed (stops clients, server, runs, wrappers; verifies processes, ports and the env lock; `--check` only reports, `--keep-server` keeps the server). Exit 0 = clean. Session monitors are not processes: stop those with TaskStop.
 
+- **Latest (2026-10-30):** read the end of `docs/journal.md` (index + strategic read) and `docs/headless-client.md`. Headless/render-skip investigation: not a resource win (client ~1 core of frame-limiter spin and ~4.2 GB either way). Comparisons between runs are dominated by noise (per-episode damage sd ~27): use interleaved arms in one session (`rendered_fight_lab.py` accepts comma-separated policies; `scripts/compare_arms.py`), 30+ episodes per arm, report z. Keep the fight field's corpses cleared (client `arm|hour|r`), per-episode world snapshot is in the lab output. Strategy: fast fake backend for learning, real client for interleaved validation; next is the fake-vs-real fidelity check, then a PPO fighter.
+
 ## Next steps
 
 1. Train a first policy (PPO with a shared policy across agents) on survive, then rendezvous, then fight, using the scripted baselines as reference scores.
