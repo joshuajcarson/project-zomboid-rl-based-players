@@ -78,6 +78,24 @@ commands.arm = function(p, a)
     log(string.format("ARM hour=%.1f removed=%d tod_now=%.2f", hour, removed, tonumber(f(function() return getGameTime():getTimeOfDay() end)) or -1))
     return true, "arm"
 end
+-- pile|n|r: lay n random dead bodies on random squares within r tiles of the player (client side, via the game's own createRandomDeadBody).
+-- Drift hunt: blocks fought with ~230 bodies around had far more deaths than blocks with the bodies cleared. Logged as PILE.
+commands.pile = function(p, a)
+    local n = tonumber(a and a.a) or 250
+    local r = tonumber(a and a.b) or 30
+    local cell, px, py = getCell(), math.floor(p:getX()), math.floor(p:getY())
+    local made, tries = 0, 0
+    while made < n and tries < n * 6 do
+        tries = tries + 1
+        local sq = cell:getGridSquare(px + ZombRand(-r, r + 1), py + ZombRand(-r, r + 1), 0)
+        if sq and sq:isFree(false) then
+            local ok = pcall(function() createRandomDeadBody(sq, 5) end)
+            if ok then made = made + 1 end
+        end
+    end
+    log(string.format("PILE made=%d tries=%d", made, tries))
+    return true, "pile"
+end
 -- world|r: snapshot of the world factors that could make fights harder or easier (drift hunt 2026-10-30): time of day, light, weather,
 -- corpses within r tiles, zombies loaded. Logged as WORLD k=v ...
 commands.world = function(p, a)

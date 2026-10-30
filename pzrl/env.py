@@ -30,6 +30,7 @@ TICKS_PER_GAME_SECOND = 10
 CMD_DELAY_MS = float(os.environ.get("PZ_CMD_DELAY_MS", "0"))
 ARM_ALTERNATE = os.environ.get("PZ_ARM_ALTERNATE", "") == "1"   # drift hunt: even episodes fight at noon with the corpses cleared (arm A), odd episodes as the world is (arm B)
 ARM_HOUR = float(os.environ.get("PZ_ARM_HOUR", "12"))
+ARM_PILE = int(os.environ.get("PZ_ARM_PILE", "0"))           # arm B lays this many bodies after clearing (corpse test); arm A only clears
 ARM_B_HOUR = os.environ.get("PZ_ARM_B_HOUR", "")        # set: arm B also clears the bodies but sets this hour (darkness test); arm A = ARM_HOUR
 SETTLE = float(os.environ.get("PZ_SETTLE", "1"))      # multiplier on the reset settle waits (game time): chunk loading takes REAL time, so a scaled clock needs more (2x clock -> 2)
 OBS_EVERY_TICKS = 5      # must match cfg.obsEvery in mods/RLBridge
@@ -456,6 +457,13 @@ class PZParallelEnv:
                 for name in self.rendered:
                     if name in self.control:
                         self.control[name]._bot("arm", float(ARM_B_HOUR), 35)
+            if ARM_PILE and self.arm == "B":
+                self.channel.command(f"settime|{ARM_HOUR}")             # same hour as arm A (the server clock is authoritative)
+                for name in self.rendered:
+                    if name in self.control:
+                        self.control[name]._bot("arm", ARM_HOUR, 35)       # clear first, so the pile is the same every time
+                        self.control[name]._bot("pile", ARM_PILE, 30)
+                        time.sleep(3)
             if self.arm == "A":
                 cx, cy = (self.spawn_box[0] + self.spawn_box[2]) / 2, (self.spawn_box[1] + self.spawn_box[3]) / 2
                 self.channel.command(f"settime|{ARM_HOUR}")
