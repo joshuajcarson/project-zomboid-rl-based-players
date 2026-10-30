@@ -89,7 +89,7 @@ def report():
                   "|---|---|---|---|---|---|---|---|---|"]
         for r in sorted((r for r in rows if r["protocol"] == proto), key=lambda r: (r["backend"], r["date"], r["policy"])):
             lines.append("| %s | %s | %s | %d | %.2f of %d | %.1f | %d | %s | %s |" % (
-                r["date"], r["backend"], r["policy"], r["episodes"], r["kills"], r["of"], r["damage"], r["low_hp_episodes"], r["commit"], r["note"]))
+                r["date"], r["backend"], r["policy"], r["episodes"], r["kills"], r["of"], r["damage"], r["low_hp_episodes"], r["commit"], r["note"] + ("" if r.get("interleaved") else " [unpaired]")))
         lines.append("")
     pathlib.Path("docs/results.md").write_text("\n".join(lines))
     print("wrote docs/results.md,", len(rows), "rows")
@@ -110,6 +110,35 @@ def have_reference(policy, backend, protocol, min_eps, setup):
     return False
 
 
+def run_interleaved(a):
+    """One lab session whose episodes alternate between the given policies; one ledger row per arm, plus the z score of the first two arms.
+    Drift between blocks (time, corpses, session age) hits every arm equally, so differences are comparable."""
+    import math, statistics
+    arms = a.policies
+    if len(arms) < 2:
+        sys.exit("--interleave needs at least two policies (the arms)")
+    eps = run_policy(",".join(arms), a.backend, a.episodes * len(arms), a.steps)
+    sid = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    stats = {}
+    for arm in arms:
+        mine = [e for e in eps if e.get("policy") == arm]
+        if not mine:
+            print("WARNING: no episodes for arm %s" % arm, flush=True); continue
+        r = row(arm, a.backend, mine, a.protocol, (a.note + " [interleaved session %s]" % sid).strip())
+        r["setup"] = a.setup; r["interleaved"] = True; r["session"] = sid
+        with LEDGER.open("a") as f: f.write(json.dumps(r) + "\n")
+        print(json.dumps(r), flush=True)
+        real = [e for e in mine if e["steps"] >= 5] or mine
+        stats[arm] = ([e["zombies_start"] - e["zombies_end"] for e in real], [e["damage_end"] for e in real])
+    names = [x for x in arms if x in stats]
+    if len(names) >= 2:
+        for label, i in (("kills", 0), ("damage", 1)):
+            x, y = stats[names[0]][i], stats[names[1]][i]
+            if len(x) > 1 and len(y) > 1:
+                se = math.sqrt(statistics.variance(x) / len(x) + statistics.variance(y) / len(y))
+                print("%s: %s - %s = %.2f (se %.2f, z %.2f)" % (label, names[1], names[0], statistics.mean(y) - statistics.mean(x), se, (statistics.mean(y) - statistics.mean(x)) / se if se else 0), flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("policies", nargs="*")
@@ -120,14 +149,20 @@ def main():
     ap.add_argument("--note", default="")
     ap.add_argument("--setup", default="", help="tag naming the world/bot setup (e.g. lowpop-hutchfree-floor-aim); a reference row with the same tag measured today is reused instead of rerun")
     ap.add_argument("--clip", default=None, help="policy to record a GIF of into clips/ after the runs")
+    ap.add_argument("--interleave", action="store_true", help="the policies are ARMS of one comparison: one lab session alternates them by episode (controls block-to-block drift); --episodes is per arm; no references are added; rows are tagged interleaved=True and share a session id")
+    ap.add_argument("--reuse-references", action="store_true", help="old behaviour: reuse a same-day reference row with the same --setup tag. Such a comparison is across blocks and NOT evidence (same policy scored 25.7 to 56.8 damage across blocks); rows get an [unpaired] note")
     ap.add_argument("--report", action="store_true")
     a = ap.parse_args()
     if not a.report:
         LEDGER.parent.mkdir(exist_ok=True)
         global PROTOCOL
         PROTOCOL = a.protocol
+        if a.interleave:
+            run_interleaved(a)
+            report()
+            return
         for policy in a.policies + [p for p in REFERENCE if p not in a.policies]:
-            if policy in REFERENCE and policy not in a.policies and have_reference(policy, a.backend, a.protocol, min(a.episodes, 20), a.setup):
+            if a.reuse_references and policy in REFERENCE and policy not in a.policies and have_reference(policy, a.backend, a.protocol, min(a.episodes, 20), a.setup):
                 print("reference %s already measured today for %s/%s: skipped" % (policy, a.backend, a.protocol), flush=True)
                 continue
             n = IDLE_EPISODES if policy == "idle" else a.episodes
