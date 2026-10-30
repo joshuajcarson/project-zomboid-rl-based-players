@@ -51,6 +51,33 @@ commands.openness = function(p, a)
     log(string.format("OPENNESS at=%d,%d r=%d loaded=%d blocked=%d building=%d fence=%d hutch=%d veg=%d cut=%d sight=%d bush=%d spear=%d", px, py, r, loaded, blocked, building, fence, hutch, veg, cut, sight, bush, spear))
     return true, "openness"
 end
+-- arm|hour|r: drift hunt arm A on the CLIENT: set the client's world clock to `hour` and remove the dead bodies within r squares of the player.
+-- (A server-side removal never reached the client: the client still counted 229 of 232 corpses.) Logged as ARM.
+commands.arm = function(p, a)
+    local hour = tonumber(a and a.a) or 12
+    local r = tonumber(a and a.b) or 35
+    local function f(fn) local ok, v = pcall(fn); return ok and v end
+    f(function() getGameTime():setTimeOfDay(hour) end)
+    local cell, px, py = getCell(), math.floor(p:getX()), math.floor(p:getY())
+    local removed = 0
+    for sx = px - r, px + r do
+        for sy = py - r, py + r do
+            local sq = cell:getGridSquare(sx, sy, 0)
+            if sq then
+                for _ = 1, 20 do
+                    local body = f(function() return sq:getDeadBody() end)
+                    if not body then break end
+                    local ok = pcall(function() sq:removeCorpse(body, false) end)
+                    if not ok then ok = pcall(function() body:removeFromWorld(); body:removeFromSquare() end) end
+                    if not ok then break end
+                    removed = removed + 1
+                end
+            end
+        end
+    end
+    log(string.format("ARM hour=%.1f removed=%d tod_now=%.2f", hour, removed, tonumber(f(function() return getGameTime():getTimeOfDay() end)) or -1))
+    return true, "arm"
+end
 -- world|r: snapshot of the world factors that could make fights harder or easier (drift hunt 2026-10-30): time of day, light, weather,
 -- corpses within r tiles, zombies loaded. Logged as WORLD k=v ...
 commands.world = function(p, a)

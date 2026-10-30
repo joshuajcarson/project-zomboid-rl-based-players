@@ -453,7 +453,9 @@ class PZParallelEnv:
             if self.arm == "A":
                 cx, cy = (self.spawn_box[0] + self.spawn_box[2]) / 2, (self.spawn_box[1] + self.spawn_box[3]) / 2
                 self.channel.command(f"settime|{ARM_HOUR}")
-                self.channel.command(f"corpses|{cx:.0f}|{cy:.0f}|35|1")
+                for name in self.rendered:
+                    if name in self.control:
+                        self.control[name]._bot("arm", ARM_HOUR, 35)     # the client's own clock and bodies (server-side changes did not reach it)
         self._read(self._game_seconds(4 * SETTLE))           # arriving loads chunks, which brings the world's own zombies: let that finish
         for name, (sx, sy) in zip(self.possible_agents, spawns):
             # same start on every backend: clear everything the observation can see (zRadius 30 plus margin), then exactly N
