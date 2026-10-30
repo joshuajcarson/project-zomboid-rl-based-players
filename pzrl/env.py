@@ -27,6 +27,7 @@ from .tasks import DEATH_HP, TASKS, dist, nearest_other, sample_spawns
 MOVES = [(0, 0), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
 ATTACK = len(MOVES)            # extra action id: explicit melee at the nearest zombie within 2 tiles
 TICKS_PER_GAME_SECOND = 10
+CMD_DELAY_MS = float(os.environ.get("PZ_CMD_DELAY_MS", "0"))
 SETTLE = float(os.environ.get("PZ_SETTLE", "1"))      # multiplier on the reset settle waits (game time): chunk loading takes REAL time, so a scaled clock needs more (2x clock -> 2)
 OBS_EVERY_TICKS = 5      # must match cfg.obsEvery in mods/RLBridge
 ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
@@ -470,6 +471,8 @@ class PZParallelEnv:
         return {a: self._obs(a) for a in self.agents}, {a: self._info(a) for a in self.agents}
 
     def step(self, actions):
+        if CMD_DELAY_MS:
+            time.sleep(CMD_DELAY_MS / 1000.0)      # experiment: emulate extra control latency (wall ms) to test the 2x-clock fidelity hypothesis
         for name, a in actions.items():
             if name not in self.agents:
                 continue
