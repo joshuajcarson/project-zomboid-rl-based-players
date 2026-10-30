@@ -12,7 +12,7 @@
 - Stopping rule: each session runs all requested episodes. Stop early ONLY for an invalid run (client dropout loop, server crash, invariant failure that is not a death). No stopping on apparent effects. Also report pooled n and mean +- se over both sessions.
 - Invariants that must hold: one bat, in arena; `check_alive` failures are expected after deaths.
 
-- ADDENDUM, written 2026-10-30 14:10 CT while session 1 was still running (no session finished, no result seen): the acceptance rule in `docs/milestones.md` ("pooled over sessions") also applies as a SECOND reading. If the per-session criteria above come out INCONCLUSIVE, the pooled data of S1+S2 (>= 60 real episodes) decide: SUCCESS if pooled mean kills >= 1.6 and pooled mean damage <= 25; FAILURE if pooled mean kills < 1.4 or pooled mean damage > 32; otherwise still INCONCLUSIVE and a third session follows. The thresholds are unchanged.
+- ADDENDUM, written 2026-10-30 14:06 CT while session 1 was still running (no session finished, no result seen): the acceptance rule in `docs/milestones.md` ("pooled over sessions") also applies as a SECOND reading. If the per-session criteria above come out INCONCLUSIVE, the pooled data of S1+S2 (>= 60 real episodes) decide: SUCCESS if pooled mean kills >= 1.6 and pooled mean damage <= 25; FAILURE if pooled mean kills < 1.4 or pooled mean damage > 32; otherwise still INCONCLUSIVE and a third session follows. The thresholds are unchanged.
 
 ## Result (filled at batch end)
 - Data: `results/experiments-2026-10-30/b1_m1_s1.jsonl`, `b1_m1_s2.jsonl`; reproduce with `python scripts/compare_arms.py <file> --by arm`.
