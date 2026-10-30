@@ -90,8 +90,8 @@ class PZParallelEnv:
         if backend not in ("fake", "rendered", "mixed"):
             raise ValueError("backend must be 'fake' (headless fake clients, scalable), 'rendered' (real graphical clients, 1x) "
                              "or 'mixed' (the first agent, or `rendered_agents`, is a real client and the others are fake clients)")
-        if backend != "fake" and time_scale != 1.0:
-            raise ValueError("rendered clients run at real time only (time_scale=1)")
+        if backend != "fake" and time_scale != 1.0 and not os.environ.get("PZ_ALLOW_RENDERED_SCALE"):
+            raise ValueError("rendered clients run at real time only (time_scale=1); set PZ_ALLOW_RENDERED_SCALE=1 to experiment with a client clock patch")
         self.backend = backend
         self.calibrated_combat = calibrated_combat   # fake swings use pzrl.combat (fitted to the real client) instead of one lethal hit
         self.combat_rng = random.Random(0 if seed is None else seed + 1)

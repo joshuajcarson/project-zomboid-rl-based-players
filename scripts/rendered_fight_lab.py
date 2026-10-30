@@ -29,7 +29,7 @@ PROTOCOL = os.environ.get("PZ_PROTOCOL", "fight-v1")
 # fight-v4: the dirt field at 5377,10114 (user tip): scan r=30 gives blocked 0, building 0, hutch 0 and bush 0, i.e. no corn; fight-v3 was the cornfield,
 # where `hasBush()` is true on about 2440 of 3721 squares (the `openness` scan detects corn through bush=, not veg/cut/sight/spear, which stay 0)
 SPAWN_BOX = {"fight-v3": (3995, 11752, 4025, 11782), "fight-v4": (5362, 10099, 5392, 10129)}.get(PROTOCOL, (10730, 9380, 10810, 9440))
-env = PZParallelEnv(n_agents=1, task="fight", backend=backend, max_steps=steps, seed=int(os.environ.get("PZ_SEED", "7")), zombie_ring=(5, 8), time_scale=1.0 if backend != "fake" else 4.0,
+env = PZParallelEnv(n_agents=1, task="fight", backend=backend, max_steps=steps, seed=int(os.environ.get("PZ_SEED", "7")), zombie_ring=(5, 8), time_scale=float(os.environ.get("PZ_TIME_SCALE", "1.0")) if backend != "fake" else 4.0,
                     spawn_box=SPAWN_BOX, keep_alive=True, end_when_clear=PROTOCOL in ("fight-v2", "fight-v3", "fight-v4"))
 env.status_text = os.environ.get("PZ_STATUS") or ("fight lab: " + policy)   # shown above the character in the game window
 try:

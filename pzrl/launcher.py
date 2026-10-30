@@ -143,7 +143,7 @@ class Launcher:
         env = dict(os.environ, RL_AGENT_JAR=str(ROOT / "agent" / "rl-agent-client.jar"))
         self.clients[client_id] = _ps(
             ["-File", str(ROOT / "scripts" / "start-client.ps1"), "-Small", "-User", f"Client{client_id}",
-             "-Pass", f"Client{client_id}", "-Hash", "0"], stdout=out, stderr=subprocess.STDOUT, env=env)
+             "-Pass", f"Client{client_id}", "-Hash", "0", "-TimeScale", str(self.time_scale)], stdout=out, stderr=subprocess.STDOUT, env=env)
 
     def stop_client(self, client_id):
         p = self.clients.pop(client_id, None)

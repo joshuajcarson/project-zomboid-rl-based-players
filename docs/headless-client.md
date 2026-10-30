@@ -57,3 +57,12 @@ Goal: find where a real (Build 42) client can be split into game logic and drawi
 7. Fallback H: improve the fake backend's combat and zombie damage instead; compare cost-benefit against 2 and 3.
 8. A render-on observer: since a draw-off client is not watchable, recordings need a second normal client or the render-on mode switched by a Lua command.
 9. Side note: the fight field accumulates corpses (the HUD showed a Corpse container with 1.47/12 weight): check whether corpses pile up and add a corpse-clear invariant.
+
+
+---
+# Hour 2 (user-approved, started 2026-10-30 08:41, stop 09:41): client clock patch (faster than 1x) and memory
+## RESUME HERE (hour 2)
+- Status: wiring done (env guard opt-in `PZ_ALLOW_RENDERED_SCALE=1`, launcher passes -TimeScale to the rendered client, start-client.ps1 adds `classes=zombie/` when TimeScale != 1, lab reads `PZ_TIME_SCALE`). Next: run the lab at PZ_TIME_SCALE=2 (server and client both 2x) and compare with the 1x baseline: game-time vs wall-time rate, swing frames, hit rate by distance, kills/damage.
+- Resume rules as hour 1: read this file, `python scripts/cleanup.py`, check usage, continue at the first unchecked item. Commit at each breakpoint.
+- Experiments: [ ] H2-A client at 2x works (login, character, episodes) [ ] H2-B fidelity at 2x vs 1x (swing frames, hit rate, damage) [ ] H2-C 4x [ ] H2-D memory: -Xmx and texture options [ ] H2-E draw-off + clock patch together [ ] H2-F uncapped frame rate effect
+## Findings (hour 2)
