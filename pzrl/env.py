@@ -106,6 +106,7 @@ class PZParallelEnv:
         self._dealt = {}                             # per agent: damage its swings have dealt to zombies this episode (calibrated backend)
         self._zombie_hp = {}                         # server zombie id -> health left under the calibrated swing model
         self._target = {}                            # per agent: server id of the zombie its swings go to
+        self.ztrace = {}                             # per zombie id: swings aimed at it, lethal hits sent for it (fake backend diagnosis, Batch 3)
         self._stagger = {}                           # per agent: steps left in which a landed hit still keeps the zombies' bites weak
         self._loss = {}                              # per agent: health lost in each of the last few steps (a hurt character hits less)
         self.walk_speed = walk_speed      # target walking speed of fake clients in tiles per 100 server ticks (a real runner: about 16); None = leave as is
@@ -387,6 +388,17 @@ class PZParallelEnv:
         v[-1] = min(me["zn"], 10) / 10.0
         return v
 
+    def ztrace_end(self, name):
+        """Per zombie of this episode: swings aimed at it, lethal hits sent, closest swing distance, and whether/how far it is at the end."""
+        me = self.state.get(name) or {}
+        alive = {z[2]: math.hypot(z[0] - me.get("x", 0), z[1] - me.get("y", 0)) for z in me.get("z", []) if len(z) > 2}
+        out = {}
+        for zid, t in self.ztrace.items():
+            out[str(zid)] = dict(t, alive_end=zid in alive, enddist=round(alive[zid], 1) if zid in alive else None)
+        for zid, d in alive.items():
+            out.setdefault(str(zid), {"swings": 0, "lethal": 0, "mindist": None, "alive_end": True, "enddist": round(d, 1)})
+        return out
+
     def _info(self, name):
         p = self.state[name]
         return {"x": p["x"], "y": p["y"], "hp": p["hp"], "kills": p["kills"], "weapon": p["weapon"], "bag": p["bag"]}
@@ -404,6 +416,8 @@ class PZParallelEnv:
         if target is None or target not in {z[2] for z in zs if len(z) > 2}:
             target = zs[0][2] if len(zs[0]) > 2 else None        # keep hitting one zombie until it is gone, like a player facing it
         self._target[name] = target
+        zt = self.ztrace.setdefault(target, {"swings": 0, "lethal": 0, "mindist": 99.0})
+        zt["swings"] += 1; zt["mindist"] = round(min(zt["mindist"], dists[0]), 2)
         hurt = sum(self._loss.get(name, ())) >= 10.0        # lost 10+ health in the last 10 steps: pain and panic
         d = sample_swing(dists[0], hurt, self.combat_rng)
         cs = self.combat_stats
@@ -449,7 +463,7 @@ class PZParallelEnv:
             if all(math.hypot(self.state[n]["x"] - sx, self.state[n]["y"] - sy) < 4.0
                    for n, (sx, sy) in zip(self.possible_agents, spawns) if n in self.state):
                 break
-        self._zombie_hp.clear(); self._target.clear(); self._dealt.clear()
+        self._zombie_hp.clear(); self._target.clear(); self._dealt.clear(); self.ztrace = {}
         self.arm = ""
         if (ARM_ALTERNATE or ARM_FIXED) and self.rendered:
             self.arm = ARM_FIXED or ("A" if self._episode_no % 2 == 0 else "B")
@@ -520,6 +534,7 @@ class PZParallelEnv:
                         if left <= 0:
                             self._zombie_hp.pop(zid, None)
                             self.control[name].attack(1.0, zid)
+                            self.ztrace.setdefault(zid, {"swings": 0, "lethal": 0, "mindist": 99.0})["lethal"] += 1
                             self._target.pop(name, None)
                         else:
                             self._zombie_hp[zid] = left
