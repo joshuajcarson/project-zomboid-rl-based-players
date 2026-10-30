@@ -237,3 +237,6 @@ Milestone M2a; experiment: fake session (20 eps, seed 11) with server-side remov
 
 ## Batch 5 end (2026-10-30 16:40): bite-damage sweep finds a calibration point (marginal)
 Milestone M2; experiment: one fake session, 80 episodes, four interleaved arms of bite damage (1.5, 3.0, 4.5, 6.0). Verdict SUCCESS (marginal): only bite 6.0 has both kills (1.65) and damage (40.8) in the M2 bands vs the real baseline 1.36 / 39.2. Damage saturates near 40 (deaths rise 0 -> 4 of 20); kills fall only when deaths appear; the fake's damage distribution is narrower than the real client's bimodal one. Card: docs/experiments/2026-10-30-b5-m2-bite-sweep.md. Next: Batch 6 confirms bite 6.0 over two fresh sessions.
+
+## Batch 6 end (2026-10-30 16:57): bite 6.0 does not confirm
+Milestone M2; experiment: fake at bite 6.0, two fresh sessions x 40 episodes. Verdict INCONCLUSIVE (grey zone): pooled kills 1.75 (1.64-1.86), damage 48.0 (41.2-54.7), deaths 26%, vs real 1.36 / 39.2 / 16%. Batch 5's pass was selection on noise; kills stay too high because the fake lacks the real client's stalls and floor-hit misses. Next: Batch 7 adds a swing hit-scale knob and sweeps (bite x hit). Card: docs/experiments/2026-10-30-b6-m2-confirm.md.

@@ -33,6 +33,7 @@ ARM_HOUR = float(os.environ.get("PZ_ARM_HOUR", "12"))
 ARM_FIXED = os.environ.get("PZ_ARM_FIXED", "")             # "A": every episode is arm A (noon, corpses cleared): the clean-field protocol for absolute measurements
 ARM_PILE = int(os.environ.get("PZ_ARM_PILE", "0"))           # arm B lays this many bodies after clearing (corpse test); arm A only clears
 ARM_B_HOUR = os.environ.get("PZ_ARM_B_HOUR", "")        # set: arm B also clears the bodies but sets this hour (darkness test); arm A = ARM_HOUR
+FAKE_ARMS = [tuple(float(v) for v in x.split(":")) for x in os.environ.get("PZ_FAKE_ARMS", "").split(",") if x.strip()]   # "bite:hit,bite:hit,...": episodes alternate between (bite damage, swing hit-chance scale) pairs (fake calibration sweep)
 BITE_ARMS = [float(x) for x in os.environ.get("PZ_BITE_ARMS", "").split(",") if x.strip()]   # calibration sweep: episodes alternate between these bite-damage values (fake backend)
 FAKE_FORCE_KILL = os.environ.get("PZ_FAKE_FORCE_KILL", "1") != "0"   # default ON since Batch 4 validated it (PZ_FAKE_FORCE_KILL=0 turns it off). fake backend: a zombie that is still alive after its 2nd lethal hit is removed server-side (the server ignores some lethal hits, Batch 3)
 SETTLE = float(os.environ.get("PZ_SETTLE", "1"))      # multiplier on the reset settle waits (game time): chunk loading takes REAL time, so a scaled clock needs more (2x clock -> 2)
@@ -421,7 +422,7 @@ class PZParallelEnv:
         zt = self.ztrace.setdefault(target, {"swings": 0, "lethal": 0, "mindist": 99.0})
         zt["swings"] += 1; zt["mindist"] = round(min(zt["mindist"], dists[0]), 2)
         hurt = sum(self._loss.get(name, ())) >= 10.0        # lost 10+ health in the last 10 steps: pain and panic
-        d = sample_swing(dists[0], hurt, self.combat_rng)
+        d = sample_swing(dists[0], hurt, self.combat_rng, getattr(self, "hit_scale", 1.0))
         cs = self.combat_stats
         cs["swings"] += 1; cs["hits"] += 1 if d > 0 else 0; cs["damage"] += d; cs["dist_sum"] += min(dists)
         return d, target
@@ -445,6 +446,11 @@ class PZParallelEnv:
             self.say(f"{self.status_text} | episode {self._episode_no} | resetting")
         spawns = sample_spawns(self.n_agents, self.task, self.rng, self.spawn_box)
         self.bite_arm = BITE_ARMS[(self._episode_no - 1) % len(BITE_ARMS)] if BITE_ARMS and not self.rendered else None
+        self.hit_scale = 1.0
+        self.fake_arm = ""
+        if FAKE_ARMS and not self.rendered:
+            self.bite_arm, self.hit_scale = FAKE_ARMS[(self._episode_no - 1) % len(FAKE_ARMS)]
+            self.fake_arm = "%g/%g" % (self.bite_arm, self.hit_scale)
         self.channel.command(f"cfg|biteDamage|{self.bite_arm if self.bite_arm is not None else self.task.bite_damage}")   # the task may have changed since startup
         for name in self.possible_agents:
             if self.state.get(name, {}).get("dead"):

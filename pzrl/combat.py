@@ -34,8 +34,8 @@ def hit_chance(distance, hurt):
     return 0.0
 
 
-def sample_swing(distance, hurt, rng):
+def sample_swing(distance, hurt, rng, hit_scale=1.0):
     """Damage this swing does to the zombie (0.0 for a swing that does nothing)."""
-    if rng.random() >= hit_chance(distance, hurt):
+    if rng.random() >= hit_chance(distance, hurt) * hit_scale:
         return 0.0
     return min(MAX_DAMAGE, DAMAGE_MEDIAN * math.exp(DAMAGE_SIGMA * rng.gauss(0.0, 1.0)))
