@@ -77,3 +77,11 @@ Goal: find where a real (Build 42) client can be split into game logic and drawi
 - Works: client clock patch (game time exactly 2.00x wall), 2x episodes per wall-minute (episode status gap ~13 s vs ~27 s), login and character creation unaffected. Env changes kept: PZ_ALLOW_RENDERED_SCALE, PZ_SETTLE (reset waits in real terms), launcher passes -TimeScale to rendered clients.
 - Does not work yet: fidelity at 2x (more damage), 4x. Memory work (H2-D) and uncapped frames (H2-F) not reached.
 - Open for hour 3: the latency tests above; memory options (-Xmx, texture memory) so two clients fit; ZombieBuddy trial; 30-episode 1x vs 2x paired comparison with the same seed for a clean verdict.
+
+
+---
+# Hour 3 (user-approved, started 2026-10-30 10:01, stop 11:01): why 2x fights differ (latency), then memory and ZombieBuddy
+## RESUME HERE (hour 3)
+- Plan: [ ] H3-A measure command-to-effect latency and obs cadence at 1x and 2x (script .scratch/hl/latency.py, local only) [ ] H3-B decide: reduce pipeline latency / client-side swing / step_seconds 0.5 at 2x [ ] H3-C 1.5x paired run [ ] H3-D memory (-Xmx, textures) [ ] H3-E ZombieBuddy trial
+- Resume rules: read this file, `python scripts/cleanup.py`, check usage, continue at the first unchecked item; commit at each breakpoint.
+## Findings (hour 3)
