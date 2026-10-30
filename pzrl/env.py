@@ -30,6 +30,7 @@ TICKS_PER_GAME_SECOND = 10
 CMD_DELAY_MS = float(os.environ.get("PZ_CMD_DELAY_MS", "0"))
 ARM_ALTERNATE = os.environ.get("PZ_ARM_ALTERNATE", "") == "1"   # drift hunt: even episodes fight at noon with the corpses cleared (arm A), odd episodes as the world is (arm B)
 ARM_HOUR = float(os.environ.get("PZ_ARM_HOUR", "12"))
+ARM_FIXED = os.environ.get("PZ_ARM_FIXED", "")             # "A": every episode is arm A (noon, corpses cleared): the clean-field protocol for absolute measurements
 ARM_PILE = int(os.environ.get("PZ_ARM_PILE", "0"))           # arm B lays this many bodies after clearing (corpse test); arm A only clears
 ARM_B_HOUR = os.environ.get("PZ_ARM_B_HOUR", "")        # set: arm B also clears the bodies but sets this hour (darkness test); arm A = ARM_HOUR
 SETTLE = float(os.environ.get("PZ_SETTLE", "1"))      # multiplier on the reset settle waits (game time): chunk loading takes REAL time, so a scaled clock needs more (2x clock -> 2)
@@ -450,8 +451,8 @@ class PZParallelEnv:
                 break
         self._zombie_hp.clear(); self._target.clear(); self._dealt.clear()
         self.arm = ""
-        if ARM_ALTERNATE and self.rendered:
-            self.arm = "A" if self._episode_no % 2 == 0 else "B"
+        if (ARM_ALTERNATE or ARM_FIXED) and self.rendered:
+            self.arm = ARM_FIXED or ("A" if self._episode_no % 2 == 0 else "B")
             if ARM_B_HOUR and self.arm == "B":
                 self.channel.command(f"settime|{ARM_B_HOUR}")         # the SERVER clock is authoritative: a client-only clock change is pulled back to the server's time
                 for name in self.rendered:

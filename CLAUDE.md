@@ -59,6 +59,8 @@ The long-term milestone list is `docs/milestones.md`. Work in BATCHES: one batch
 
 **5. Milestone list upkeep:** update `docs/milestones.md` at least once per calendar day (first thing in a session on a new day, and whenever a batch changes a status). Keep the "Last updated" date and the daily log line current.
 
+**6. Experiment cards and the daily review:** every batch gets a card in `docs/experiments/` (template and rules in `docs/experiments/README.md`): the pre-registered top half is written and committed BEFORE launching, the result half at batch end, including a MILESTONE IMPACT line (none / add / remove / modify). A scheduled job (`pz-daily-milestone-review`, 8:00 AM Central daily, docs only) audits that every experiment since the last review has a complete card, applies the milestone changes the cards justify, logs it in `docs/milestones.md`, and pushes. Missing notes it cannot reconstruct go to the "Review gaps" list in `docs/milestones.md`: fix those first in the next session.
+
 **Instruction conflicts:** if a new instruction conflicts with one of these rules or an older one, tell the user which two conflict and which one you followed, then apply the newer instruction.
 
 ## Next steps
