@@ -30,6 +30,7 @@ TICKS_PER_GAME_SECOND = 10
 CMD_DELAY_MS = float(os.environ.get("PZ_CMD_DELAY_MS", "0"))
 ARM_ALTERNATE = os.environ.get("PZ_ARM_ALTERNATE", "") == "1"   # drift hunt: even episodes fight at noon with the corpses cleared (arm A), odd episodes as the world is (arm B)
 ARM_HOUR = float(os.environ.get("PZ_ARM_HOUR", "12"))
+ARM_B_HOUR = os.environ.get("PZ_ARM_B_HOUR", "")        # set: arm B also clears the bodies but sets this hour (darkness test); arm A = ARM_HOUR
 SETTLE = float(os.environ.get("PZ_SETTLE", "1"))      # multiplier on the reset settle waits (game time): chunk loading takes REAL time, so a scaled clock needs more (2x clock -> 2)
 OBS_EVERY_TICKS = 5      # must match cfg.obsEvery in mods/RLBridge
 ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
@@ -450,6 +451,11 @@ class PZParallelEnv:
         self.arm = ""
         if ARM_ALTERNATE and self.rendered:
             self.arm = "A" if self._episode_no % 2 == 0 else "B"
+            if ARM_B_HOUR and self.arm == "B":
+                self.channel.command(f"settime|{ARM_B_HOUR}")         # the SERVER clock is authoritative: a client-only clock change is pulled back to the server's time
+                for name in self.rendered:
+                    if name in self.control:
+                        self.control[name]._bot("arm", float(ARM_B_HOUR), 35)
             if self.arm == "A":
                 cx, cy = (self.spawn_box[0] + self.spawn_box[2]) / 2, (self.spawn_box[1] + self.spawn_box[3]) / 2
                 self.channel.command(f"settime|{ARM_HOUR}")
