@@ -38,8 +38,29 @@ l-agent-client.jar scriptsuild-agent.ps1` (the server's jar is locked while it 
 
 - **Latest (2026-10-30):** read the end of `docs/journal.md` (index + strategic read) and `docs/headless-client.md`. Headless/render-skip investigation: not a resource win (client ~1 core of frame-limiter spin and ~4.2 GB either way). Comparisons between runs are dominated by noise (per-episode damage sd ~27): use interleaved arms in one session (`rendered_fight_lab.py` accepts comma-separated policies; `scripts/compare_arms.py`), 30+ episodes per arm, report z. Keep the fight field's corpses cleared (client `arm|hour|r`), per-episode world snapshot is in the lab output. Strategy: fast fake backend for learning, real client for interleaved validation; next is the fake-vs-real fidelity check, then a PPO fighter.
 
+## Experiment protocol (user rules, 2026-10-30; these override older habits)
+
+The long-term milestone list is `docs/milestones.md`. Work in BATCHES: one batch = one experiment, from pre-registration to verdict (typically 30-90 minutes; an explicit user time box such as "spend an hour" overrides this).
+
+**1. Batch start (say it to the user AND write it to the journal before launching anything):**
+- Milestone: its ID and title from `docs/milestones.md` that this batch works toward.
+- Experiment: the one specific thing being tested right now (arms, episodes per arm, field, protocol, seed).
+- Validation decided ahead of time: what result counts as SUCCESS, FAILURE and INCONCLUSIVE (thresholds on kills, damage, deaths, z score), the stopping rule, and which invariants must hold. Fixed before the run; never adjusted after seeing results.
+
+**2. During the batch:**
+- Compare variants only INSIDE one interleaved session (arms alternate by episode in one server session; the lab takes comma-separated policies, `scripts/compare_arms.py` analyses them). Block-to-block comparisons are not evidence: the same policy scored 25.7 to 56.8 damage across blocks (per-episode damage sd ~27, heavy tail).
+- 30+ real episodes per arm for any claim; report standard errors and z. A difference under ~2 z is noise.
+- Stop early ONLY for an invalid run (crash, failed invariant, stalled client, broken design). Never stop or extend a run because the effect looks good or bad: no peeking.
+- Keep the field clean (client `arm|hour|r` clears corpses; per-episode `world` snapshot is in the lab output) and save raw per-episode data under `results/` so the claim is reproducible.
+
+**3. Batch end (say it to the user AND write it to the journal):** relist the milestone, the experiment, the verdict (success / failure / inconclusive against the pre-registered criteria, with the numbers), and any unexpected learnings. Update `docs/milestones.md` (status, evidence, next experiment). Commit and push, run `python scripts/cleanup.py`.
+
+**4. Then continue:** if there is headroom and the user does not need the PC, start the next batch right away with a new batch-start statement. Headroom = weekly usage below 90% (check with `mcp__ccd_session_mgmt__get_usage`) and the 5-hour window below 85%. The PC counts as free unless the user has said they need it; when they say so, stop at a safe point, run cleanup, and stay stopped until they say it is free again. At 90% weekly, follow the global rule (finish, push, stop, wait for the reset).
+
+**5. Milestone list upkeep:** update `docs/milestones.md` at least once per calendar day (first thing in a session on a new day, and whenever a batch changes a status). Keep the "Last updated" date and the daily log line current.
+
+**Instruction conflicts:** if a new instruction conflicts with one of these rules or an older one, tell the user which two conflict and which one you followed, then apply the newer instruction.
+
 ## Next steps
 
-1. Train a first policy (PPO with a shared policy across agents) on survive, then rendezvous, then fight, using the scripted baselines as reference scores.
-2. Equivalence check against a rendered client for combat and zombie approach behaviour, then replace the synthetic bite rule if a better source of zombie damage is found.
-3. Longer-run stability (hours), crash recovery in the launcher, and parallel servers for more throughput.
+See `docs/milestones.md` (the maintained milestone list with acceptance tests). Order as of 2026-10-30: confirm M1, then M2 (fake-vs-real fidelity), then M3 (learned fighter), with M6 (client memory) as the enabler for two real clients.
