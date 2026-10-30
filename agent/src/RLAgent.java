@@ -31,7 +31,7 @@ public class RLAgent {
             ta.setDaemon(true);
             ta.start();
         }
-        if (a.containsKey("norender")) inst.addTransformer(new RLNoRenderTransformer());   // headless-client spike: no state drawing
+        if (a.containsKey("norender")) inst.addTransformer(new RLNoRenderTransformer("world".equals(a.get("norender"))));   // headless-client spike: no state drawing
         if (a.containsKey("autostart")) startAutoClick();
         if (a.containsKey("client")) { // fake-client JVM: optional control socket, no server Lua hooks
             if (a.containsKey("control")) RLClientControl.start(Integer.parseInt(a.get("control")));
