@@ -27,6 +27,7 @@ from .tasks import DEATH_HP, TASKS, dist, nearest_other, sample_spawns
 MOVES = [(0, 0), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
 ATTACK = len(MOVES)            # extra action id: explicit melee at the nearest zombie within 2 tiles
 TICKS_PER_GAME_SECOND = 10
+SETTLE = float(os.environ.get("PZ_SETTLE", "1"))      # multiplier on the reset settle waits (game time): chunk loading takes REAL time, so a scaled clock needs more (2x clock -> 2)
 OBS_EVERY_TICKS = 5      # must match cfg.obsEvery in mods/RLBridge
 ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
 OBS_DIM = 6 + 3 * ZOMBIE_SLOTS + 3 * MATE_SLOTS + 1
@@ -443,7 +444,7 @@ class PZParallelEnv:
                    for n, (sx, sy) in zip(self.possible_agents, spawns) if n in self.state):
                 break
         self._zombie_hp.clear(); self._target.clear(); self._dealt.clear()
-        self._read(self._game_seconds(4))           # arriving loads chunks, which brings the world's own zombies: let that finish
+        self._read(self._game_seconds(4 * SETTLE))           # arriving loads chunks, which brings the world's own zombies: let that finish
         for name, (sx, sy) in zip(self.possible_agents, spawns):
             # same start on every backend: clear everything the observation can see (zRadius 30 plus margin), then exactly N
             # zombies, each at its own random angle on the ring
@@ -452,7 +453,7 @@ class PZParallelEnv:
                 ring = self.rng.uniform(*self.zombie_ring)
                 ang = self.rng.uniform(0, 2 * math.pi)
                 self.channel.command(f"zspawn|{sx + ring * math.cos(ang):.0f}|{sy + ring * math.sin(ang):.0f}|1")
-        self._read(self._game_seconds(4))          # let chunks and ownership settle
+        self._read(self._game_seconds(4 * SETTLE))          # let chunks and ownership settle
         if self.rendered:
             from . import invariants               # state checks with repairs; failures are kept so a benchmark can refuse the run
             fails = invariants.run_all(self, list(self.rendered), "reset")
