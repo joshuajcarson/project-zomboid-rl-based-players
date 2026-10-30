@@ -3,19 +3,19 @@
 Goal: find where a real (Build 42) client can be split into game logic and drawing, and what only exists in the full client (hit resolution, animations, zombie damage, aiming). Output: an easy / hard / unknown map backed by measurements, and a recommendation.
 
 ## RESUME HERE (update at every breakpoint)
-- Status (08:32): phases 0, A, B done; C (combat fidelity) and the render-on/off A/B check running; D (ZombieBuddy) compared on paper (compiled, not loaded). Next: confirm draw is really off (window + stacks vs a normal client), then write the map.
+- Status (08:37): hour-1 spike COMPLETE (stopped at 08:37 of 08:50). Experiments 0, A, B, C, E, F(partly), G done; D compared on paper only. Everything stopped, scripts/cleanup.py clean. See the map and the open questions; start the next hour from "Open questions".
 - Resume rules: read this file, `python scripts/cleanup.py`, check usage (90% rule), continue at the first unchecked experiment. Commit after every phase. javap output goes to `.scratch/` (never commit decompiled source or game code; notes in our own words only).
 - Time budget: 60 min per hour-session. If promising but unfinished, the next session starts from "Open questions" below.
 
 ## Experiment list (grows as we learn)
-- [ ] 0 Seam map (javap): where update and draw meet (main loop, render thread, player/zombie render, animation events)
-- [ ] A Settings only: tiny window, shadows/lighting off, frame cap off; CPU/RAM; does the game clock change with uncapped frames?
-- [ ] B Skip drawing: patch the top-level draw call to no-op while update keeps running; client stays connected, character moves and swings?
-- [ ] C Combat fidelity with drawing off: ~12 `charge:1.8:0` episodes vs normal; swing hit rate by distance, damage taken
-- [ ] D ZombieBuddy vs own transformer for the same patch (lines, build steps, break-on-update risk)
-- [ ] E Do animation events still fire without drawing (hits are probably animation-driven)?
-- [ ] F Hidden/tiny window vs no GL context at all
-- [ ] G Memory per client with drawing off; does a 2nd client fit?
+- [x] 0 Seam map (javap): where update and draw meet (main loop, render thread, player/zombie render, animation events)
+- [~] A Settings (only the -Small window/30 fps settings that we already use were measured; no further quality cuts tried) only: tiny window, shadows/lighting off, frame cap off; CPU/RAM; does the game clock change with uncapped frames?
+- [x] B Skip drawing: patch the top-level draw call to no-op while update keeps running; client stays connected, character moves and swings?
+- [x] C Combat (small sample) fidelity with drawing off: ~12 `charge:1.8:0` episodes vs normal; swing hit rate by distance, damage taken
+- [~] D ZombieBuddy vs own transformer for the same patch (lines, build steps, break-on-update risk)
+- [x] E Do animation events still fire without drawing (hits are probably animation-driven)?
+- [~] F Hidden/tiny window vs no GL context at all
+- [x] G Memory per client with drawing off; does a 2nd client fit?
 - [ ] H Fallback: improve fake-client combat / zombie damage instead
 
 ## Findings (measurements, in our own words)
@@ -30,18 +30,30 @@ Goal: find where a real (Build 42) client can be split into game logic and drawi
 - 08:28 poor-man's profile of MainThread (15 jcmd dumps, draw off): 14 of 15 samples are inside `Thread.yield()` called from `MainThread.mainLoop`: the loop SPIN-WAITS (a frame limiter or a wait-for-render-thread), so the 1.0 core is mostly idle spinning, not work. Real per-frame work is small. One sample still showed IngameState.renderInternal / AnimatedModel render on the stack (world draw not fully off? to be checked).
 - 08:30 ZombieBuddy comparison (not loaded yet): same patch is 5 lines (`@Patch(... "render") @Patch.OnEnter(skipOn = true)` returning true) vs 25 for the hand-rolled byte patch, and ZB can express CONDITIONAL skips (e.g. skip only when the state is IngameState) trivially, which our constant-pool patcher cannot. Costs: the release jar v2.3.4 uses package `me.zed_0xff.zombie_buddy.Patch` while the docs on master describe `.annotations.Patch` (docs ahead of the release); a mod folder + mod.info (javaJarFile, javaPkgName) + the ZombieBuddy mod stub; approval policy (policy=allow-all to avoid a dialog); Windows needs zbNative.dll or a plain -javaagent (ours works); a 13 MB third-party jar. For one-off byte flips our patcher is cheaper; for anything conditional ZB is far easier.
 - 08:31 EXP C (combat fidelity), same seed/field, charge:1.8:0: render on 8 eps 1.25 kills / 40.4 dmg / 0 low-hp, 48 swings, 24.5 frames per swing; world draw off 9 eps 1.00 kills / 39.6 dmg / 0 low-hp, 43 swings, 23.0 frames per swing. Hit rate by swing distance: ~0.5 tiles 0.17 vs 0.18, ~1.0 tiles 0.58 vs 0.56 (1.5 tiles 0.73/n=22 vs 0.47/n=15, within small-sample noise). Swing animations complete and are timed the same (EXP E: animation-driven hit resolution survives with the world draw off, since swings finish, hit and take damage as before). Samples are tiny; a 30-episode repeat is needed to claim equivalence.
+- 08:36 RENDER-ON A/B: normal client: 1.13 cores, 4.33 GB, 75 threads (patched: 1.11 cores, 4.17 GB). MainThread stack samples: Thread.yield0 in 19 of 20 in BOTH, and IsoWorld.render in 0 of 20 (normal) vs 1 of 20 (patched): the main thread does not spend visible time drawing in either case; the actual GL work is on the render thread / GPU and is not the CPU cost. The normal window shows the world, inventory and chat; the patched window is solid black: the patch works visually. Machine: 15.8 GB RAM, 10 cores/16 threads; server JVM 3.9 GB + client 4.3 GB already 8.2 GB, a second client would take ~12.5 GB before the OS, browsers and everything else.
 - 08:30 SIDE EFFECT: with the world draw off Windows marks the game window "Not Responding" (the user noticed). The window stops servicing its event queue; the bot does not care, but a human cannot watch or interact with that client, and a recording would need a separate render-on client.
 
 ## Easy / hard / unknown map
 | subsystem | verdict | evidence |
 |---|---|---|
-| drawing | ? | |
-| animations and hit timing | ? | |
-| zombie damage | ? | |
-| aiming | likely easy (melee follows facing, cursor irrelevant; docs/approach.md 2026-10-26) | |
-| chunk loading | ? | |
-| sound | ? | |
-| UI | ? | |
+| world drawing | EASY to remove (one patch, 25 lines hand-rolled or 5 with ZombieBuddy) | client logs in, plays, window black; BUT it saves almost nothing (CPU 1.11 vs 1.14 cores, RAM 4.2 vs 3.8 GB) |
+| menus / loading screens | HARD to skip: their state transitions run inside render() | global render skip hung the client at "SafeMode is off" for 12 min |
+| animations and hit timing | EASY (they keep running with the draw off) | swings complete in 23.0 vs 24.5 frames, hit rate by distance matches; small sample (43/48 swings, 9/8 episodes) |
+| zombie damage | not the draw's problem: same on the real client either way; the fake backend is the one that lacks it | bites and damage_end matched (39.6 vs 40.4 dmg) |
+| aiming | EASY (melee follows facing; the aim marker is cosmetic) | docs/approach.md 2026-10-26; swing hit rates unchanged with a black window |
+| per-client CPU | UNKNOWN: the real cost is a 1.0-core spin-wait (`Thread.yield`) in MainThread.mainLoop; real work is hidden under it | 14-19 of 20 stack samples in yield0 |
+| per-client RAM | HARD: 4.2-4.3 GB with or without drawing (heap -Xmx3072m + native/texture memory) | needs heap and texture-memory experiments |
+| running faster than 1x | UNKNOWN: the loop spins, so the real per-frame work may be small, but the game clock follows wall time; the server has a clock patch (RLTimeTransformer), the client has none | RLTimeTransformer on the client is the next experiment |
+| human watching / recording | LOST with the draw off: window goes "Not Responding" and shows black | a recording needs a render-on client |
+| chunk loading, sound, UI | UNKNOWN (not touched; the UI draws inside the same skipped call) | |
 
 ## Open questions for a follow-up hour
-(none yet)
+1. Why does MainThread spin in `Thread.yield`? Find the waiter (frame limiter vs wait for the render thread vs lighting thread). If it is a frame limiter, the real per-frame cost is small and a client clock patch (like the server's) might run the game faster than 1x: that is the multiplier that matters most.
+2. Memory: try -Xmx 1.5-2 GB, smaller texture/model memory options, skipping the texture-pack loading for atlases we never draw. Goal: two or three clients plus the server in ~16 GB.
+3. Does skipping the render thread entirely (not just the state draw) cut the 4 GB, or does the game need textures for animation (skinned models, hit zones)?
+4. Repeat Exp C with 30 episodes per arm (the 8-vs-9-episode comparison only rules out large differences).
+5. ZombieBuddy for real: install the ZB mod stub into `.pzclient/mods/ZombieBuddy`, allow-all policy, load the 5-line patch and make it conditional (skip only IngameState). Needed to decide use-vs-own-patcher on facts, and for per-state conditions we cannot express with constant-pool edits.
+6. Hidden window / no GL context: `-Djava.awt.headless`, LWJGL offscreen; probably needs a real GL context for the render thread (not tried).
+7. Fallback H: improve the fake backend's combat and zombie damage instead; compare cost-benefit against 2 and 3.
+8. A render-on observer: since a draw-off client is not watchable, recordings need a second normal client or the render-on mode switched by a Lua command.
+9. Side note: the fight field accumulates corpses (the HUD showed a Corpse container with 1.47/12 weight): check whether corpses pile up and add a corpse-clear invariant.
