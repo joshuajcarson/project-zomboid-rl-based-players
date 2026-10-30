@@ -19,7 +19,9 @@ Goal: find where a real (Build 42) client can be split into game logic and drawi
 - [ ] H Fallback: improve fake-client combat / zombie damage instead
 
 ## Findings (measurements, in our own words)
-(none yet)
+- 07:53 SEAM MAP (phase 0): `GameWindow.frameStep()` = `logic()` (network, Lua update, input, UI update) then `renderInternal()` (SpriteRenderer.NewFrame, lighting JNI, `GameStateMachine.render()` which draws the current state, Lua OnRender event, `Core.DoFrameReady`, `LightingThread.update`, `LuaEventManager.RunQueuedEvents`). So the draw call is one narrow method; logic is a separate method. Drawing runs via `RenderThread` on a GL context (frameStep wraps parts in `RenderThread.invokeOnRenderContext`).
+- 07:54 ZombieBuddy v2.3.4 jar (13 MB, MIT) and zbNative.dll downloaded to .scratch/zb (git-ignored). On Windows ZB needs the native proxy because the game launcher's JRE cannot load instrument.dll; our launcher calls java directly with -javaagent (works today), a ZB mod needs the ZB mod folder, mod.info with javaJarFile/javaPkgName, policy=allow-all (else a native approval dialog), and a Gradle-or-javac build against ZB.jar.
+- 07:55 Exp B patch (hand-rolled, 25 lines, agent option `norender`): flip `ifnull` to `ifnonnull` at the top of `GameStateMachine.render()` so no state draws; verifier-safe (both pop one reference). Env: `PZ_AGENT_EXTRA=norender` passed through start-client.ps1.
 
 ## Easy / hard / unknown map
 | subsystem | verdict | evidence |

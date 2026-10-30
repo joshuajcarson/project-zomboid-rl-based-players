@@ -34,6 +34,7 @@ if ($User) {
 # the bot's live logic (swing instrumentation, aim override use, tidy) is loaded by the RLBot 'reload' command from this file in the client's Lua folder
 if (Test-Path (Join-Path $PSScriptRoot 'rl_bot_dev.lua')) { Copy-Item (Join-Path $PSScriptRoot 'rl_bot_dev.lua') (Join-Path $luaDir 'rl_bot_dev.lua') -Force }
 if (-not $AgentArgs -and $User) { $AgentArgs = 'client;autostart;aim' }   # auto-login accounts also click through the loading screen
+if ($env:PZ_AGENT_EXTRA -and $AgentArgs) { $AgentArgs = "$AgentArgs;$($env:PZ_AGENT_EXTRA)" }   # e.g. norender (headless-client spike)
 $agentArg = @()
 if ($AgentArgs) {
     $jar = if ($env:RL_AGENT_JAR) { $env:RL_AGENT_JAR } else { Join-Path (Join-Path $RepoRoot 'agent') 'rl-agent.jar' }
