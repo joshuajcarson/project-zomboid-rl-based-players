@@ -21,6 +21,27 @@ def git_commit():
     return subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
 
 
+STALL_SECONDS = 600           # no finished episode for this long = the lab is stuck (seen 2026-10-29: a dead character the env never recovered, 24 min lost)
+
+
+def run_lab(cmd, env):
+    """Run the lab, streaming its output to a file; kill it (and children) when no episode line appears for STALL_SECONDS."""
+    path = pathlib.Path("logs/_lab_stream.out")
+    with path.open("w") as f:
+        proc = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT, text=True, env=env)
+        seen, last = 0, time.time()
+        while proc.poll() is None:
+            time.sleep(15)
+            n = path.read_text(errors="replace").count('{"ep"')
+            if n != seen:
+                seen, last = n, time.time()
+            elif time.time() - last > (STALL_SECONDS if seen else 3 * STALL_SECONDS):   # the first episode follows the server boot and client login
+                print("WARNING: no episode finished for %d s, killing the stuck lab" % STALL_SECONDS, flush=True)
+                subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], capture_output=True)
+                break
+    return path.read_text(errors="replace")
+
+
 def run_policy(policy, backend, episodes, steps):
     """The rendered client sometimes drops out mid-run (AgentDisconnected after 10-20 episodes): restart it and carry on until the
     requested number of episodes is done (at most 4 launches, each with its own seed)."""
@@ -28,10 +49,9 @@ def run_policy(policy, backend, episodes, steps):
     eps, log = [], ""
     for attempt in range(4):
         env = dict(os.environ, PZ_SEED=str(7 + attempt), PZ_PROTOCOL=PROTOCOL)
-        out = subprocess.run([sys.executable, "scripts/rendered_fight_lab.py", str(episodes - len(eps)), str(steps), policy, backend],
-                             capture_output=True, text=True, env=env)
-        log += out.stdout + out.stderr
-        eps += [json.loads(l) for l in out.stdout.splitlines() if l.startswith('{"ep"')]
+        out = run_lab([sys.executable, "scripts/rendered_fight_lab.py", str(episodes - len(eps)), str(steps), policy, backend], env)
+        log += out
+        eps += [json.loads(l) for l in out.splitlines() if l.startswith('{"ep"')]
         if len(eps) >= episodes or backend == "fake":
             break
         print("WARNING: %s has %d of %d episodes after launch %d, restarting the client" % (policy, len(eps), episodes, attempt + 1), flush=True)
