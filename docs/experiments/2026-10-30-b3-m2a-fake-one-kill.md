@@ -13,11 +13,18 @@
 - FAILURE if: the trace is missing or unreadable (instrumentation bug); then fix the instrumentation and rerun.
 - Stopping rule: run all 20 episodes; stop early only for an invalid run (server crash, fake client not connecting).
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-10-30/b3_m2a_fake_trace.jsonl`
-- Numbers: (pending)
-- Verdict: (pending)
-- Unexpected learnings: (pending)
-- Validity notes: (pending)
-- MILESTONE IMPACT: (pending)
-- Follow-ups / next experiment: (pending)
+## Result (filled at batch end, 2026-10-30 16:20 CT)
+- Data: `results/experiments-2026-10-30/b3_m2a_fake_trace.jsonl` (20 episodes, all with a `ztrace`).
+- Numbers: 18 of 20 episodes were stuck (>= 1 kill, a zombie alive at step 45); 1 zero-kill stall; 1 clean 2-kill episode.
+  - Hypothesis A test: the surviving zombie had >= 3 lethal hits in 14 of 18 stuck episodes (78%, criterion 70%); zombies that did die had <= 2 lethal hits in 18 of 18 (100%, criterion 80%).
+  - Alternative B test: surviving zombie with <= 2 swings and > 3 tiles away: 0 of 18. Surviving zombies took 25-41 swings, their closest swing distance was 0.3-1.8 tiles and they ended 0.3-1.8 tiles from the character.
+  - Sample trace: killed zombie {swings 4, lethal 1}; surviving zombie {swings 34, lethal 5, enddist 1.3}.
+- Verdict: **SUPPORTED (A)** against the pre-registered criteria: the env believes the surviving zombie dead (repeated lethal hits, 2-5 per episode) but the server never removes it; the zombies that die do so on the first lethal hit. Alternative B is rejected.
+- Unexpected learnings:
+  1. The artifact is not occasional: 90% of fake episodes are stuck (18 of 20), so the fake's kill count is capped near 1 and its 'kills 1.02' says nothing about combat realism.
+  2. The stuck zombie stands next to the character and gets ~35 swings: the fake character is fighting a zombie it can never kill, which also inflates fake damage exposure (the synthetic bite keeps applying), so the fake's damage numbers (22.3) are not a clean measure either.
+  3. Why the server ignores the lethal hit is NOT shown (the ownership explanation is consistent but untested: both zombies are adjacent and swung at, yet only the first dies). The fix does not need the mechanism: removing the zombie server-side is enough for the fake, whose damage model is synthetic anyway.
+  4. The 10-26 refit's 2.0 kills in the old arena suggests the problem depends on spawn geometry, sandbox or code changes since; not investigated.
+- Validity notes: instrumentation worked in all 20 episodes; single session (seed 7), 18 stuck episodes (>= 8 required); no early stops.
+- MILESTONE IMPACT: M2a stays in progress: next batch tests a fix (after the second lethal hit on a zombie that is still alive, remove it server-side); acceptance in the milestone table unchanged (>= 40% two-kill episodes and < 30% stuck over a 20-episode fake session).
+- Follow-ups / next experiment: Batch 4 = M2a fix validation.
