@@ -47,6 +47,26 @@ def client_count(env, name, item, wait=6.0):
     return None
 
 
+def world_snapshot(env, name, r=30, wait=8.0):
+    """World factors at this moment, read from the client's WORLD log line (time of day, light, weather, corpses, zombies loaded)."""
+    import glob, os
+    logs = sorted(glob.glob(str(LOG.parent / "env-rendered-*.log")), key=os.path.getmtime)
+    if not logs:
+        return {}
+    path = logs[-1]
+    start = os.path.getsize(path)
+    env.control[name]._bot("world", r)
+    deadline = time.time() + wait
+    while time.time() < deadline:
+        time.sleep(0.5)
+        with open(path, "rb") as f:
+            f.seek(start)
+            m = re.search(rb"WORLD ([^\r\n]+)", f.read())
+        if m:
+            return {k: float(v) for k, v in re.findall(r"(\w+)=(-?[0-9.]+)", m.group(1).decode("utf-8", "replace"))}
+    return {}
+
+
 def check_one_bat(env, name):
     """Exactly one bat in the client's inventory. Extra bats weigh 2 each (48 of them slowed the character and drained endurance in the
     2026-10-28 runs); none means a fresh body fights bare-handed."""

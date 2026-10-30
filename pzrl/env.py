@@ -28,6 +28,8 @@ MOVES = [(0, 0), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1
 ATTACK = len(MOVES)            # extra action id: explicit melee at the nearest zombie within 2 tiles
 TICKS_PER_GAME_SECOND = 10
 CMD_DELAY_MS = float(os.environ.get("PZ_CMD_DELAY_MS", "0"))
+ARM_ALTERNATE = os.environ.get("PZ_ARM_ALTERNATE", "") == "1"   # drift hunt: even episodes fight at noon with the corpses cleared (arm A), odd episodes as the world is (arm B)
+ARM_HOUR = float(os.environ.get("PZ_ARM_HOUR", "12"))
 SETTLE = float(os.environ.get("PZ_SETTLE", "1"))      # multiplier on the reset settle waits (game time): chunk loading takes REAL time, so a scaled clock needs more (2x clock -> 2)
 OBS_EVERY_TICKS = 5      # must match cfg.obsEvery in mods/RLBridge
 ZOMBIE_SLOTS, MATE_SLOTS = 4, 2
@@ -445,6 +447,13 @@ class PZParallelEnv:
                    for n, (sx, sy) in zip(self.possible_agents, spawns) if n in self.state):
                 break
         self._zombie_hp.clear(); self._target.clear(); self._dealt.clear()
+        self.arm = ""
+        if ARM_ALTERNATE and self.rendered:
+            self.arm = "A" if self._episode_no % 2 == 0 else "B"
+            if self.arm == "A":
+                cx, cy = (self.spawn_box[0] + self.spawn_box[2]) / 2, (self.spawn_box[1] + self.spawn_box[3]) / 2
+                self.channel.command(f"settime|{ARM_HOUR}")
+                self.channel.command(f"corpses|{cx:.0f}|{cy:.0f}|35|1")
         self._read(self._game_seconds(4 * SETTLE))           # arriving loads chunks, which brings the world's own zombies: let that finish
         for name, (sx, sy) in zip(self.possible_agents, spawns):
             # same start on every backend: clear everything the observation can see (zRadius 30 plus margin), then exactly N
@@ -457,6 +466,11 @@ class PZParallelEnv:
         self._read(self._game_seconds(4 * SETTLE))          # let chunks and ownership settle
         if self.rendered:
             from . import invariants               # state checks with repairs; failures are kept so a benchmark can refuse the run
+            try:
+                self.world = invariants.world_snapshot(self, next(iter(self.rendered)))
+                self.world["ageH"] = (self.last_message or {}).get("ageH", -1)
+            except Exception as e:
+                self.world = {"error": str(e)[:60]}
             fails = invariants.run_all(self, list(self.rendered), "reset")
             self.invariant_failures = getattr(self, "invariant_failures", []) + fails
             for f in fails:

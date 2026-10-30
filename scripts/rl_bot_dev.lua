@@ -51,6 +51,29 @@ commands.openness = function(p, a)
     log(string.format("OPENNESS at=%d,%d r=%d loaded=%d blocked=%d building=%d fence=%d hutch=%d veg=%d cut=%d sight=%d bush=%d spear=%d", px, py, r, loaded, blocked, building, fence, hutch, veg, cut, sight, bush, spear))
     return true, "openness"
 end
+-- world|r: snapshot of the world factors that could make fights harder or easier (drift hunt 2026-10-30): time of day, light, weather,
+-- corpses within r tiles, zombies loaded. Logged as WORLD k=v ...
+commands.world = function(p, a)
+    local r = tonumber(a and a.a) or 30
+    local function f(fn, d) local ok, v = pcall(fn); if ok and v ~= nil then return v end; return d end
+    local gt = getGameTime()
+    local cm = f(function() return getClimateManager() end, nil)
+    local cell, px, py = getCell(), math.floor(p:getX()), math.floor(p:getY())
+    local corpses = 0
+    for sx = px - r, px + r do
+        for sy = py - r, py + r do
+            local sq = cell:getGridSquare(sx, sy, 0)
+            if sq and f(function() return sq:getDeadBody() ~= nil end, false) then corpses = corpses + 1 end
+        end
+    end
+    local function num(fn) return tonumber(f(fn, -1)) or -1 end
+    log(string.format("WORLD tod=%.2f light=%.2f rain=%.2f fog=%.2f cloud=%.2f wind=%.2f temp=%.1f day=%d month=%d corpses=%d zloaded=%d hrs=%.2f",
+        num(function() return gt:getTimeOfDay() end), num(function() return cm:getDayLightStrength() end), num(function() return cm:getRainIntensity() end),
+        num(function() return cm:getFogIntensity() end), num(function() return cm:getCloudIntensity() end), num(function() return cm:getWindIntensity() end),
+        num(function() return cm:getTemperature() end), num(function() return gt:getDay() end), num(function() return gt:getMonth() end), corpses,
+        num(function() return cell:getZombieList():size() end), num(function() return p:getHoursSurvived() end)))
+    return true, "world"
+end
 -- invcount|Base.Item: how many of an item the CLIENT's own inventory holds (the server's `inv` can differ: server-side AddItem never reaches a
 -- real client, so only this count says what the character really carries). Logged as INVCOUNT.
 commands.invcount = function(p, a)

@@ -274,6 +274,38 @@ function handlers.zclear(x, y, r)
     return true, "removed " .. removed .. " " .. errs
 end
 
+-- settime|hour : set the world clock (hours, 0-24) so a run can fight in daylight whatever time the server has reached (drift hunt 2026-10-30)
+function handlers.settime(h)
+    h = tonumber(h) or 12
+    local ok, err = pcall(function() getGameTime():setTimeOfDay(h) end)
+    return ok, ok and ("time " .. h) or tostring(err)
+end
+
+-- corpses|x|y|r|remove : count the dead bodies within r squares of (x, y) on the ground floor; with remove=1 also take them out of the world.
+-- Fights leave two bodies each: hundreds pile up on the field (232 within 30 tiles on 2026-10-30).
+function handlers.corpses(x, y, r, remove)
+    x, y, r = tonumber(x), tonumber(y), tonumber(r) or 30
+    local cell, found, removed = getCell(), 0, 0
+    for sx = math.floor(x - r), math.ceil(x + r) do
+        for sy = math.floor(y - r), math.ceil(y + r) do
+            local sq = cell:getGridSquare(sx, sy, 0)
+            if sq then
+                local ok, body = pcall(function() return sq:getDeadBody() end)
+                while ok and body do
+                    found = found + 1
+                    if tostring(remove) == "1" then
+                        local rok = pcall(function() body:removeFromWorld(); body:removeFromSquare() end)
+                        if rok then removed = removed + 1 else break end
+                    else break end
+                    ok, body = pcall(function() return sq:getDeadBody() end)
+                    if found > 5000 then break end
+                end
+            end
+        end
+    end
+    return true, "corpses found " .. found .. " removed " .. removed
+end
+
 -- hutches|x|y|r|remove : list the IsoHutch objects (animal hutches and dog houses) within r squares of (x, y) on the ground floor; with
 -- remove=1 also take them out of the world. A client crashes (NullPointerException in IsoHutch.removeFromWorld) when it unloads the chunk
 -- of a hutch that has no animal, which ends every rendered run after a few episodes.
