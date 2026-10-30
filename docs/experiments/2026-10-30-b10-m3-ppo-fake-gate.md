@@ -14,11 +14,16 @@
 - Stopping rule: training runs its 40 iterations unless the trend stop triggers; evaluation runs all 120 episodes; stop early otherwise only for an invalid run (server crash, fake client not connecting).
 - Also report: the learning curve (kills, damage, deaths per iteration; `results/experiments-2026-10-30/b10_m3_train_curve.jsonl`), the action distribution if cheap, and the learned-vs-scripted difference with z.
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-10-30/b10_m3_train_curve.jsonl`, `b10_m3_eval.jsonl`; checkpoint `models/fight_cal1.pt`.
-- Numbers: (pending)
-- Verdict: (pending)
-- Unexpected learnings: (pending)
-- Validity notes: (pending)
-- MILESTONE IMPACT: (pending)
-- Follow-ups / next experiment: (pending)
+## Result (filled at batch end, 2026-10-30 18:35 CT)
+- Data: `results/experiments-2026-10-30/b10_m3_train_curve.jsonl` (20 iterations); no checkpoint evaluation (stopped early by the pre-registered rule; `models/fight_cal1.stopped` marker; `models/fight_cal1.pt` is the iteration-20 checkpoint, not evaluated).
+- Numbers: TREND CHECK at iteration 20: mean training kills of iterations 1-5 = 0.12, of iterations 16-20 = 0.00, gain -0.12 (required >= +0.20). Per iteration: 185-318 samples (about 210-240 typical), 63-190 s (first iteration 190 s incl. startup, then 63-98 s), return -0.1 to -6.5 (mean -5.1 first five, -4.7 last five), damage 88 first five and 88.5 last five, deaths 75-100% per iteration, episode length ~27 steps. Iterations 9-15 showed a transient rise (kills 0.5-0.75, damage 54-83) that did not persist.
+- Verdict: **FAILURE (no learning trend)** against the pre-registered rule: the run stopped at iteration 20 and was not evaluated.
+- Unexpected learnings:
+  1. The limit is SAMPLE THROUGHPUT, not the algorithm yet: about 3 samples per second (8 episodes x ~27 steps, ~70-90 s per iteration at 4x clock with one agent); 40 iterations would give ~9,000 samples, one to two orders of magnitude below what PPO normally needs with a sparse kill reward (1e5-1e6). 1e5 samples at this rate would take ~9 hours.
+  2. In training the untrained policy behaves like an idle agent: deaths 75-100% and ~88 damage per episode (the scripted fighter on the same calibrated fake: 6% deaths, ~39 damage): kills happen only by chance (0.12 per episode), so the reward is effectively sparse despite the dense 'damage dealt' term (random swings rarely land).
+  3. The +0.2 kills trend threshold is tight for a budget this small (kills move by ~0.1-0.3 from noise alone at 8 episodes per iteration); it did its job (saved ~25 minutes) but would also have killed a slow learner. Not changed retroactively.
+  4. The fake clients' per-step wall time (~0.3 s at 4x) and one agent per env are the levers: 4 agents per env (4x samples), 8x clock (server-level verified up to 8x; full env verified at 4x), and shorter resets.
+  5. Imitation is the cheaper bootstrap: the scripted fighter is a simple function of the observation, a behaviour-cloned checkpoint needs only a few thousand labelled samples. `models/fight_bc3.pt` exists from earlier days and was never benchmarked in the ledger.
+- Validity notes: valid run (no crashes, calibrated profile active, default hyperparameters as pre-registered); stopped by the pre-registered rule, so gate A was NOT evaluated.
+- MILESTONE IMPACT: modify M3: split into M3a (imitation gate: a behaviour-cloned checkpoint is non-inferior to the scripted fighter on the calibrated fake, n >= 55 real episodes per arm, then on the real client) and M3b (PPO improvement, requires sample throughput >= 20 samples/s, e.g. 4 agents x 8x clock); add the throughput requirement to M0 (training infrastructure).
+- Follow-ups / next experiment: Batch 11 = M3a gate A with the existing BC checkpoint `models/fight_bc3.pt` vs scripted on the calibrated fake (interleaved).
