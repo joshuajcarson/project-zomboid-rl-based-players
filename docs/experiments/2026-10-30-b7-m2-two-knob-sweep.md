@@ -14,11 +14,22 @@
 - Stopping rule: run all 120 episodes; stop early only for an invalid run (server crash, fake client not connecting). No stopping on apparent effects.
 - Also report: death share (damage >= 80), stuck share, median damage and kills distribution per arm vs the real (deaths 16% pooled, stalls ~21% in S2).
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-10-30/b7_m2_two_knob.jsonl`
-- Numbers: (pending)
-- Verdict: (pending)
-- Unexpected learnings: (pending)
-- Validity notes: (pending)
-- MILESTONE IMPACT: (pending)
-- Follow-ups / next experiment: (pending)
+## Result (filled at batch end, 2026-10-30 17:15 CT)
+- Data: `results/experiments-2026-10-30/b7_m2_two_knob.jsonl` (120 episodes, 20 per arm, all real); `python scripts/compare_arms.py <file> --by fake_arm`.
+- Numbers (fake, force-kill on, charge:1.8:0; real target kills 1.36 / damage 39.2 / deaths 16%):
+  | bite/hit | kills (se) | damage (se) | median dmg | deaths >= 80 | stuck | kills band | damage band | D |
+  |---|---|---|---|---|---|---|---|---|
+  | 3.0/0.7 | 1.35 (0.20) | 56.1 (6.1) | 57.6 | 6 | 2 | yes | no | 2.87 |
+  | 4.5/0.7 | 0.90 (0.23) | 64.9 (7.1) | 83.4 | 10 | 0 | no | no | 8.96 |
+  | 3.0/0.5 | 0.50 (0.17) | 77.3 (6.3) | 90.9 | 16 | 3 | no | no | 22.71 |
+  | 4.5/0.5 | 0.45 (0.17) | 78.7 (6.0) | 91.7 | 16 | 1 | no | no | 24.82 |
+  | 3.0/0.35 | 0.40 (0.17) | 81.2 (5.5) | 90.2 | 16 | 1 | no | no | 27.87 |
+  | 4.5/0.35 | 0.20 (0.09) | 77.2 (5.4) | 89.1 | 14 | 3 | no | no | 29.36 |
+- Verdict: **FAILURE** against the pre-registered rule (no arm inside both bands and the best arm's D = 2.87 >= 2.25; candidate would have been 3.0/0.7). The swept range cannot reach the target.
+- Unexpected learnings:
+  1. The swing hit scale is a very steep knob: from 0.7 to 0.5 kills fall 1.35 -> 0.50 and damage rises 56 -> 77 (death share 30% -> 80%); at 0.5 and below the fake becomes a massacre, nothing like the real client (deaths 16%). Kills are controlled by the hit rate; damage by hit rate and bite together.
+  2. Arm 3.0/0.7 is a near miss in a specific direction: kills right on target (1.35) with damage 17 too high (56.1 vs 39.2). Damage falls with bite, which my range did not cover below 3.0 at hit 0.7: the unexplored region is bite 1.5-2.5 with hit 0.6-0.8.
+  3. Death shares 80% for 4 arms mean the fake's bite damage is lethal once fights last long: real fights stay bounded (deaths 16%, median damage 22-30), i.e. real zombies contribute damage in bursts (grabs, bites) that this uniform per-second rule does not reproduce.
+- Validity notes: single session (seed 13), 20 per arm, all episodes real, no early stops, force-kill fix active (stuck 0-3 per arm).
+- MILESTONE IMPACT: none to acceptance; M2 next step restated: sweep a lower bite range around hit scale 0.6-0.8 (Batch 8), then confirm a candidate on fresh sessions.
+- Follow-ups / next experiment: Batch 8 = bite {1.5, 2.25} x hit {0.6, 0.7, 0.8}.

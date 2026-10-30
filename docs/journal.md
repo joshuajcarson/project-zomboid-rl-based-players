@@ -240,3 +240,6 @@ Milestone M2; experiment: one fake session, 80 episodes, four interleaved arms o
 
 ## Batch 6 end (2026-10-30 16:57): bite 6.0 does not confirm
 Milestone M2; experiment: fake at bite 6.0, two fresh sessions x 40 episodes. Verdict INCONCLUSIVE (grey zone): pooled kills 1.75 (1.64-1.86), damage 48.0 (41.2-54.7), deaths 26%, vs real 1.36 / 39.2 / 16%. Batch 5's pass was selection on noise; kills stay too high because the fake lacks the real client's stalls and floor-hit misses. Next: Batch 7 adds a swing hit-scale knob and sweeps (bite x hit). Card: docs/experiments/2026-10-30-b6-m2-confirm.md.
+
+## Batch 7 end (2026-10-30 17:15): two-knob sweep failed to reach the target; near miss at bite 3.0 / hit 0.7
+Milestone M2; experiment: one fake session, 120 episodes, six arms (bite 3.0/4.5 x hit scale 0.7/0.5/0.35). Verdict FAILURE per the pre-registered rule (no arm in both bands, best D = 2.87). Best arm 3.0/0.7: kills 1.35 (on target), damage 56.1 (17 too high). Hit scale <= 0.5 gives 70-80% deaths. Learnings: hit scale is steep; unexplored region is bite 1.5-2.5 x hit 0.6-0.8; uniform per-second bite damage does not reproduce the real client's burst damage and bounded fights. Card: docs/experiments/2026-10-30-b7-m2-two-knob-sweep.md. Next: Batch 8.
