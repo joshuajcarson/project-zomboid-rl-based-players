@@ -166,6 +166,9 @@ def main():
     ap.add_argument("--ring", type=float, nargs=2, default=(12, 22))
     ap.add_argument("--box", type=float, nargs=4, default=(10650, 9350, 10900, 9700), help="spawn box x0 y0 x1 y1")
     ap.add_argument("--death-hp", type=float, default=None, help="end an agent's episode at this health (default 10); 40 avoids real deaths")
+    ap.add_argument("--end-when-clear", action="store_true", help="truncate an episode once no zombie has been alive for 3 steps (the fight-v2..v4 rule of the lab)")
+    ap.add_argument("--trend-check", type=int, default=0, help="at this iteration compare mean training kills of its last 5 iterations with its first 5; stop early (marker file <out>.stopped) if the gain is below --trend-min-gain")
+    ap.add_argument("--trend-min-gain", type=float, default=0.2)
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--gamma", type=float, default=0.97)
     ap.add_argument("--out", default=None)
@@ -176,7 +179,7 @@ def main():
     if a.zombies is not None:
         TASKS[a.task].zombies_per_agent = a.zombies
     env = PZParallelEnv(n_agents=a.agents, task=a.task, time_scale=a.time_scale, max_steps=a.steps, seed=int(time.time()) % 10000,
-                        zombie_ring=tuple(a.ring), spawn_box=tuple(a.box), death_hp=a.death_hp)
+                        zombie_ring=tuple(a.ring), spawn_box=tuple(a.box), death_hp=a.death_hp, end_when_clear=a.end_when_clear)
     obs_dim = env.observation_space(env.possible_agents[0]).shape[0]
     n_act = env.action_space(env.possible_agents[0]).n
     net = ActorCritic(obs_dim, n_act)
@@ -209,6 +212,15 @@ def main():
             torch.save(net.state_dict(), str(out) + ".pt")
             if it % 5 == 0 or it == a.iters:
                 plot_curve(rows, str(out) + ".png", f"{a.task} PPO")
+            if a.trend_check and it == a.trend_check:
+                first = float(np.mean([r["kills"] for r in rows[:5]])); last = float(np.mean([r["kills"] for r in rows[-5:]]))
+                print("TREND CHECK iter %d: kills first5 %.2f last5 %.2f gain %.2f (min %.2f)" % (it, first, last, last - first, a.trend_min_gain), flush=True)
+                if last - first < a.trend_min_gain:
+                    print("EARLY STOP: no learning trend", flush=True)
+                    pathlib.Path(str(out) + ".stopped").write_text("no learning trend at iteration %d: kills %.2f -> %.2f\n" % (it, first, last))
+                    return
+        if a.eval_episodes <= 0:
+            return
         res = {"policy_greedy": evaluate(env, net, a.eval_episodes), "scripted": evaluate(env, net, a.eval_episodes, baseline=True)}
         summary = {k: {m: round(float(np.mean([e[m] for e in v if e.get(m) is not None])), 3) for m in v[0] if v[0][m] is not None}
                    for k, v in res.items()}

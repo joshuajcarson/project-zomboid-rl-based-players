@@ -14,13 +14,15 @@ saved = {"X": [], "Y": []}      # PZ_SAVE_OBS=path.npz: keep every observation w
 episodes = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 steps = int(sys.argv[2]) if len(sys.argv) > 2 else 45
 policy = sys.argv[3] if len(sys.argv) > 3 else "scripted"
-policies = policy.split(",") if not policy.endswith(".pt") else [policy]
+policies = policy.split(",")          # comma-separated policies alternate by episode (checkpoints .pt and scripted ones can be mixed)
 backend = sys.argv[4] if len(sys.argv) > 4 else "rendered"      # rendered | fake (same task settings, fake at 4x)
 TASKS["fight"].zombies_per_agent = 2
-if policy.endswith(".pt"):            # a trained checkpoint (greedy)
-    import torch
-    from pzrl.train import ActorCritic
-    net = ActorCritic(25, 10); net.load_state_dict(torch.load(policy))
+nets = {}
+for _p in policies:
+    if _p.endswith(".pt"):            # a trained checkpoint (greedy)
+        import torch
+        from pzrl.train import ActorCritic
+        nets[_p] = ActorCritic(25, 10); nets[_p].load_state_dict(torch.load(_p)); nets[_p].eval()
 _cfg = os.path.join(".pzclient", "Lua", "rl_bot_cfg.txt")        # bot settings read by rl_bot_dev.lua at reload
 os.makedirs(os.path.dirname(_cfg), exist_ok=True)
 open(_cfg, "w").write("headSign=" + os.environ.get("PZ_HEAD_SIGN", "0") + " giveup=" + os.environ.get("PZ_GIVEUP", "0") + " noblock=" + os.environ.get("PZ_NOBLOCK", "0"))
@@ -40,7 +42,7 @@ try:
         env.say(f"{env.status_text} | episode {ep + 1}/{episodes} | fighting")
         hp0 = env.state[a0]["hp"]; zn0 = env.state[a0]["zn"]; zmin = zn0; hpmin = hp0; swings = 0
         while env.agents:
-            act = {a: (net.act(obs[a], greedy=True)[0] if net else idle(obs[a]) if cur == "idle" else (parse_policy(cur) or BASELINES["fight"])(obs[a])) for a in env.agents}
+            act = {a: (nets[cur].act(obs[a], greedy=True)[0] if cur in nets else idle(obs[a]) if cur == "idle" else (parse_policy(cur) or BASELINES["fight"])(obs[a])) for a in env.agents}
             if os.environ.get("PZ_SAVE_OBS"):
                 for a in env.agents:
                     saved["X"].append(obs[a].copy()); saved["Y"].append(BASELINES["fight"](obs[a]))
