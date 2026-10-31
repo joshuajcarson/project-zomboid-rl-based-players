@@ -13,11 +13,16 @@
 - Known design wrinkle (stated in advance): the arm alternates by episode index, and a death makes the next episode an aborted 1-step reset, so the arm that dies more loses fewer real episodes than the other arm's slot and also gets the first real episode after each client relaunch; the effect is small but real. Report real-episode counts per arm and the death share per arm.
 - Also report: kills/damage/deaths/stuck per arm per session, the real baseline for context (kills 1.36 / damage 39.2, Batch 1), and any action-choice differences if cheap.
 
+## STATUS: PAUSED at the user's request (2026-10-30 20:31 CT), session 2 incomplete: NO VERDICT YET
+- Session 1 (seed 7) complete: 64 episodes, 57 real (28 scripted, 29 BC), data `results/experiments-2026-10-30/b12_m3a_real_s1.jsonl`. Interim reading (not a verdict): scripted kills 1.32 / damage 38.0 (3 deaths), BC kills 1.48 / damage 32.9 (4 deaths); differences not significant (kills z 0.83, damage z -0.69).
+- Session 2 (seed 11) was interrupted after 16 of 64 episodes because the user needed the PC; the partial lines are kept in `b12_m3a_real_s2_PARTIAL_interrupted.jsonl` and must NOT be pooled with a restarted session 2.
+- RESUME PLAN: restart session 2 from scratch (full cleanup, fresh server, same design and seed 11, 64 episodes) with `scripts/_b12_m3a.sh` edited to run only session 2 (`for S in 2`), then evaluate the pooled pre-registered criteria above. The interruption is not an "invalid run" verdict: the pre-registered criteria are unchanged. The env must NOT be edited before session 2 starts (session 1 ran the current code), so the M0 logging changes wait until this batch is finished.
+
 ## Result (filled at batch end)
-- Data: `results/experiments-2026-10-30/b12_m3a_real_s1.jsonl`, `b12_m3a_real_s2.jsonl`
+- Data: `results/experiments-2026-10-30/b12_m3a_real_s1.jsonl`, `b12_m3a_real_s2.jsonl` (session 2 pending)
 - Numbers: (pending)
 - Verdict: (pending)
-- Unexpected learnings: (pending)
+- Unexpected learnings: (pending; so far: the reset head start, see docs/milestones.md M0 addition and the journal entry of 20:30)
 - Validity notes: (pending)
 - MILESTONE IMPACT: (pending)
 - Follow-ups / next experiment: (pending)
