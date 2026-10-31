@@ -28,6 +28,8 @@ The real client is the VALIDATOR, not the trainer: ~45 s per episode at 1x, 30+ 
 | M8 | Human-like play demo / recorder | Clip per day, human demo recorder, visible behaviour comparable to a player | not started | clips are local (git-ignored) |
 | M9 | Optional speed-up: faster-than-1x real client | Real client at 2x with fight results equal to 1x within noise (interleaved, 60+ eps per arm, two sessions) | parked | 2x runs mechanically (2.00x game time, needs PZ_SETTLE=2); fidelity unproven (no clean paired test); 4x broken |
 
+**M0 additions (2026-10-30, after the spawn-geometry analysis, to apply after Batch 12):** log spawn geometry (agent spawn, per-zombie ring/angle) in every episode record; interleaved comparisons share one spawn draw per pair of episodes (common random numbers); training/eval covariate or stratify by angular separation; ensure per-episode seeds are logged.
+
 ## Closed or deprioritised tracks (kept so nobody redoes them)
 - Headless real client by removing the world draw: works (`norender=world`) but saves no CPU/RAM (client is a frame-limiter spin + ~4.2 GB either way); window goes "Not Responding"; closed.
 - More scripted-fighter tuning (swing distance 1.8-2.6, retreat <35 hp): differences are within noise; only 1.3 and 3.0 swing distance are clearly worse. Re-test only inside an interleaved session if a learned policy needs it.

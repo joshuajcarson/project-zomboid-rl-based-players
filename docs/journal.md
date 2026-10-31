@@ -255,3 +255,6 @@ Milestone M3 (gate A); experiment: repo PPO on the calibrated fake fight, 40 ite
 
 ## Batch 11 end (2026-10-30 18:57): the BC checkpoint passes gate A on the fake
 Milestone M3a; experiment: models/fight_bc3.pt vs charge:1.8:0, interleaved, 60 episodes per arm on the calibrated fake. Verdict SUCCESS (point criterion): kills 1.57 vs 1.67, damage 37.1 vs 37.1; BC is a near copy of the scripted fighter; the kills CI (-0.30 to +0.10) still includes the -0.2 margin, so gate B pools two real sessions. Card: docs/experiments/2026-10-30-b11-m3a-bc-gate.md. Next: Batch 12, gate B on the real client.
+
+### 2026-10-30 evening: spawn geometry analysis (user question), exploratory
+Zombies are placed on a ring (5-8 tiles, uniform angle) around the agent, not in a disc. Episode records did not log spawn positions, so geometry was reconstructed from the seeded RNG (script: scripts/analyze_spawn_geometry.py). Fake backend: damage rises with angular separation (29.0 / 39.2 / 43.0 for < 60 / 60-120 / > 120 deg, r = 0.25, p < 0.001); real client: same direction (34.5 / 31.9 / 39.1; deaths 7% / 11% / 15%) but not significant (r = 0.06, n=145). Card R8 in docs/experiments/2026-10-30-retro.md; M0 additions in docs/milestones.md (log geometry, shared spawn draw per pair, covariate adjustment) to apply after Batch 12.
