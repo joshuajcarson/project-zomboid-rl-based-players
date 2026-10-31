@@ -30,6 +30,8 @@ The real client is the VALIDATOR, not the trainer: ~45 s per episode at 1x, 30+ 
 
 **M0 additions (2026-10-30, after the spawn-geometry analysis, to apply after Batch 12):** log spawn geometry (agent spawn, per-zombie ring/angle) in every episode record; interleaved comparisons share one spawn draw per pair of episodes (common random numbers); training/eval covariate or stratify by angular separation; ensure per-episode seeds are logged.
 
+**M0 addition (2026-10-30 20:30, user observation: the agent was attacked before it was ready):** measured from the client logs (23 real episodes): first action median 9.8 s after the reset's teleport; zombies spawn at 5-8 tiles after the arrival wait and get a head start of roughly 6-7 s (4 s settle wait plus ~2 s of invariants/snapshot) before the agent's first action, so the effective starting distance is shorter and variable, and the fake's head start (4 game s, no invariants) differs. After Batch 12: (1) log zombie distances at the first step and the spawn-to-first-action time in each episode record; (2) test a protocol that spawns the zombies immediately before the first action (constant minimal head start) interleaved against the current one; (3) treat the result as a protocol version change (new baselines) if it matters.
+
 ## Closed or deprioritised tracks (kept so nobody redoes them)
 - Headless real client by removing the world draw: works (`norender=world`) but saves no CPU/RAM (client is a frame-limiter spin + ~4.2 GB either way); window goes "Not Responding"; closed.
 - More scripted-fighter tuning (swing distance 1.8-2.6, retreat <35 hp): differences are within noise; only 1.3 and 3.0 swing distance are clearly worse. Re-test only inside an interleaved session if a learned policy needs it.
