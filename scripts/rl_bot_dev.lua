@@ -641,3 +641,54 @@ commands.busy = function(p, a)
     log("BUSY n=" .. tostring(n))
     return true, "busy " .. tostring(n)
 end
+
+-- ===== H-B0b (2026-11-14): eat and drink through the game's own context-menu entry points =====
+-- H-B0 showed eat never entering the action queue: Build 42 packaged food needs an opening recipe (craft) before the eat action, which the
+-- game's ISInventoryPaneContextMenu.eatItem / onDrinkFluid handle (transfer to the main inventory, open, then eat/drink).
+local function openingRecipeFor(it, sealedCheck)
+    local r = try(function() return it:getOpeningRecipe() end)
+    if r == -1 or r == nil then return nil end
+    if sealedCheck and try(function() return it:isSealed() end) == false then return nil end
+    local recipe = try(function() return getScriptManager():getCraftRecipe(r) end)
+    if recipe == -1 then return nil end
+    return recipe
+end
+commands.eat = function(p, a)
+    local full = try(function() return p:getMoodles():getMoodleLevel(MoodleType.FOOD_EATEN) end)
+    if type(full) == "number" and full >= 3 then log("EAT blocked: too full (FOOD_EATEN moodle " .. full .. ")"); return false, "too full" end
+    for _, it in ipairs(allItems(p)) do
+        if isFood(it) and not (try(function() return it:isRotten() end) == true) then
+            local rec = openingRecipeFor(it, false)
+            local ok, err = pcall(function() ISInventoryPaneContextMenu.eatItem(it, 1, p:getPlayerNum(), rec, 1) end)
+            log("EAT " .. it:getType() .. " recipe=" .. tostring(rec ~= nil) .. " ok=" .. tostring(ok) .. (ok and "" or (" err=" .. tostring(err))))
+            return ok, "eat " .. it:getType()
+        end
+    end
+    log("EAT none"); return false, "no food"
+end
+commands.drink = function(p, a)
+    for _, it in ipairs(allItems(p)) do
+        if hasWater(it) then
+            local rec = openingRecipeFor(it, true)
+            local ok, err = pcall(function() ISInventoryPaneContextMenu.onDrinkFluid(it, 1, p, rec, it) end)
+            log("DRINK " .. it:getType() .. " recipe=" .. tostring(rec ~= nil) .. " ok=" .. tostring(ok) .. (ok and "" or (" err=" .. tostring(err))))
+            return ok, "drink " .. it:getType()
+        end
+    end
+    log("DRINK none"); return false, "no drink"
+end
+-- loot|i|r|any: as before; 'any' takes any items (for unit tests on containers without food), and the walk result is logged
+local baseLoot = commands.loot
+commands.loot = function(p, a)
+    if not (a and a.c == "any") then return baseLoot(p, a) end
+    local cs = nearContainers(p, tonumber(a.b) or 30)
+    local c = cs[tonumber(a.a) or 1]
+    if not c then log("LOOT no container"); return false, "no container" end
+    local walk = try(function() return luautils.walkAdj(p, c.sq, true) end)
+    local items, queued = c.cont:getItems(), 0
+    for k = items:size() - 1, math.max(0, items:size() - 2), -1 do          -- at most 2 items per test
+        ISTimedActionQueue.add(ISInventoryTransferAction:new(p, items:get(k), c.cont, p:getInventory())); queued = queued + 1
+    end
+    log(string.format("LOOT any container=%d at %d,%d kind=%s dist=%.1f walk=%s queued=%d", tonumber(a.a) or 1, c.x, c.y, tostring(c.kind), c.d, tostring(walk), queued))
+    return true, "loot any " .. queued
+end
