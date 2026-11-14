@@ -72,13 +72,14 @@ def survey(env, name, r=30):
     return {"stats": stats, "containers": conts}
 
 
-def state_text(env, name, sv, last=""):
+def state_text(env, name, sv, last="", failed=()):
     me = env.state[name]
     s = sv["stats"]
     zs = sorted(((math.hypot(z[0] - me["x"], z[1] - me["y"]), math.atan2(z[1] - me["y"], z[0] - me["x"])) for z in me["z"]), key=lambda t: t[0])
     zlines = ["%.1f tiles %s" % (d, _DIRS[int(round(a / (math.pi / 4))) % 8]) for d, a in zs[:4]] or ["none visible"]
-    cl = ["%d: %s %.1f tiles away, %d items (food %d, water %d, bandages %d)" % (int(c.get("i", 0)), c.get("kind"), c.get("dist", 0),
-          int(c.get("items", 0)), int(c.get("food", 0)), int(c.get("drink", 0)), int(c.get("bandages", 0))) for c in sv["containers"]] or ["none in range"]
+    cl = ["%d: %s %.1f tiles away, %d items (food %d, water %d, bandages %d)%s" % (int(c.get("i", 0)), c.get("kind"), c.get("dist", 0),
+          int(c.get("items", 0)), int(c.get("food", 0)), int(c.get("drink", 0)), int(c.get("bandages", 0)),
+          " [looting here failed this episode]" if (int(c.get("x", 0)), int(c.get("y", 0))) in failed else "") for c in sv["containers"]] or ["none in range"]
     return ("Health %.0f/100. Hunger %s, thirst %s, fatigue %s, endurance %s, panic %s. Bleeding wounds: %s, injuries: %s.\n"
             "Inventory: food %s, water %s, bandages %s.\nZombies (nearest first): %s.\nContainers nearby: %s.\nLast skill: %s.\nChoose the next skill."
             % (me["hp"], s.get("hunger"), s.get("thirst"), s.get("fatigue"), s.get("endurance"), s.get("panic"), s.get("bleeding"),

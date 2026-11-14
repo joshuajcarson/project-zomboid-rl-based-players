@@ -333,7 +333,10 @@ function handlers.seed(user, itype, n, r)
                 for i = 0, objs:size() - 1 do
                     local o = objs:get(i)
                     local ok, c = pcall(function() return o:getContainer() end)
-                    if ok and c then
+                    -- storage only: fireplaces, barbecues, bins and stoves held seeded items the loot could not take (HB0d)
+                    local STORAGE = { crate = true, metal_shelves = true, shelves = true, counter = true, fridge = true, wardrobe = true,
+                                      dresser = true, desk = true, sidetable = true, smallbox = true, cardboardbox = true, militarycrate = true }
+                    if ok and c and STORAGE[tostring(c:getType())] then
                         local d = (sx - pl:getX()) ^ 2 + (sy - pl:getY()) ^ 2
                         if not bd or d < bd then best, bd, bx, by = c, d, sx, sy end
                     end

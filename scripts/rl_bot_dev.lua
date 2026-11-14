@@ -699,7 +699,7 @@ commands.lootat = function(p, a)
     local x, y = tonumber(a and a.a), tonumber(a and a.b)
     for _, c in ipairs(nearContainers(p, 40)) do
         if c.x == x and c.y == y then
-            luautils.walkAdj(p, c.sq, true)
+            local walk = luautils.walkAdj(p, c.sq, true)
             local items, queued = c.cont:getItems(), 0
             for k = items:size() - 1, 0, -1 do
                 local it = items:get(k)
@@ -707,7 +707,8 @@ commands.lootat = function(p, a)
                     ISTimedActionQueue.add(ISInventoryTransferAction:new(p, it, c.cont, p:getInventory())); queued = queued + 1
                 end
             end
-            log(string.format("LOOT at %d,%d kind=%s queued=%d", x, y, tostring(c.kind), queued))
+            local qn = try(function() return #ISTimedActionQueue.getTimedActionQueue(p).queue end)
+            log(string.format("LOOT at %d,%d kind=%s walk=%s queued=%d queue_now=%s", x, y, tostring(c.kind), tostring(walk), queued, tostring(qn)))
             return true, "loot " .. queued
         end
     end

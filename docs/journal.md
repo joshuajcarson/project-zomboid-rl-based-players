@@ -298,3 +298,5 @@ Interactive debugging (see the HB0b card addendum): rotten food was the 'eat non
 
 ## 2026-11-14 14:10 HB0d FAILED on loot again (6/45); cause = unreachable/unsuitable containers, not numbering
 Eat 12/12, bandage 1/2. 34 of 45 loots were rejected instantly; one unreachable shelf (10804,9406) accumulated seeded items and was tried 17 times. Successes were reachable containers. RESUME: HB0e = seed only into reachable storage containers (allowlist) and clear old seeds; harness marks containers whose loot failed ('loot here failed') in the state; loot logs walkAdj result and queue. Same H-B0 criteria. Then H-B. Card: docs/experiments/2026-11-14-hb0d-loot-by-coordinates.md.
+
+## 2026-11-14 14:20 HB0e pre-registered and started (storage-only seeding, failed-container memory, loot logging)

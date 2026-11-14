@@ -58,11 +58,11 @@ try:
             env.channel.command(f"seed|{a0}|{itype}|{n}|30")
         env.channel.command(f"stats|{a0}|{a.hunger}|{a.thirst}")        # server-side: Build 42 reverts client-side stat changes
         env.say(f"hybrid stage A | episode {ep} | planner {a.model}")
-        current, pending, steps, dead, last = "wait", None, 0, False, ""
+        current, pending, steps, dead, last, failed = "wait", None, 0, False, "", set()
         while steps < a.episode_seconds and time.time() < t_stop:
             if pending is None:
                 sv = hybrid.survey(env, a0)
-                text = hybrid.state_text(env, a0, sv, last)
+                text = hybrid.state_text(env, a0, sv, last, failed)
                 pending = pool.submit(hybrid.ask, text, a.model)
             if pending.done():
                 dec, secs, err = pending.result()
@@ -81,6 +81,9 @@ try:
                     row["effect"] = effect(sv, hybrid.survey(env, a0))
                     row["waited"] = waited
                     last = hybrid.outcome(dec["skill"], row["effect"], waited)
+                    e = row["effect"] or {}
+                    if skill == "lootat" and (e.get("food") or 0) + (e.get("drink") or 0) + (e.get("bandages") or 0) <= 0:
+                        failed.add((arg, arg2))                                       # remembered for this episode, shown to the planner
                     current = "wait"
                 elif dec:
                     if dec["skill"] != current:
