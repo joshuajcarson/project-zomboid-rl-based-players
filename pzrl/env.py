@@ -521,6 +521,16 @@ class PZParallelEnv:
             self.invariant_failures = getattr(self, "invariant_failures", []) + fails
             for f in fails:
                 print("INVARIANT FAILED:", *f, flush=True)
+            # a character can die during the reset itself (the episode ended at death_hp, the zombie finished it before godmode):
+            # revive and reset again, otherwise the next episode is "dead" at step 1 (H-B session 1, 2026-11-14)
+            dead_now = [f[0] for f in fails if f[1] == "check_alive" and f[0] in self.state]
+            for name in dead_now:
+                self.state[name]["dead"] = True                # hp 0 without the flag counts too: the redo's revive keys on the flag
+            if dead_now and getattr(self, "_reset_retries", 0) < 3:
+                self._reset_retries = getattr(self, "_reset_retries", 0) + 1
+                self._episode_no -= 1                          # the redo is the same episode
+                return self.reset()
+        self._reset_retries = 0
         for name in self.rendered:
             if name in self.control:
                 self._god(name, False)

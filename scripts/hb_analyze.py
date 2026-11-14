@@ -23,12 +23,14 @@ def z(a, b):
     return (a[0] - b[0]) / math.sqrt(a[1] ** 2 + b[1] ** 2) if a[2] > 1 and b[2] > 1 else float("nan")
 
 
-arms = {}
+arms, spurious = {}, 0
 for path in sys.argv[1:]:
     for line in open(path, encoding="utf-8"):
         r = json.loads(line)
         if "episode_end" not in r or (not r["dead"] and r["steps"] < 120):
             continue
+        if r["dead"] and r["steps"] <= 1:
+            spurious += 1                      # invariant: must be 0 (a death carried over from the previous episode's reset)
         e, d = r["end"], arms.setdefault(r["arm"], {"died": [], "hp": [], "needs": [], "supplies": []})
         d["died"].append(1.0 if r["dead"] else 0.0)
         d["hp"].append(0.0 if r["dead"] else float(r["hp"]))
@@ -36,6 +38,7 @@ for path in sys.argv[1:]:
             d["needs"].append(e["hunger"] + (e.get("thirst") or 0.0))
             d["supplies"].append(sum(e.get(k) or 0.0 for k in ("food", "drink", "bandages")))
 
+print("step-1 deaths (invariant, must be 0):", spurious)
 S = {a: {k: mse(v) for k, v in d.items()} for a, d in arms.items()}
 for a in ("llm", "rule", "idle"):
     if a in S:
