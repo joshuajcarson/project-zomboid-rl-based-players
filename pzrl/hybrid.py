@@ -137,3 +137,26 @@ def outcome(skill, eff, waited):
         return skill
     parts = ["%s %+g" % (k, eff[k]) for k in ("food", "drink", "bandages", "hunger", "thirst", "bleeding", "hp") if eff.get(k)]
     return "%s took %d s: %s" % (skill, waited, ", ".join(parts) if parts else "no change (interrupted, nothing to take, or nothing to do)")
+
+
+def rule_decide(env, name, sv, failed=()):
+    """Hand-written priority planner over the same skills (the H-B baseline). Same output shape as ask()."""
+    me, s = env.state[name], sv["stats"]
+    zd = sorted(math.hypot(z[0] - me["x"], z[1] - me["y"]) for z in me["z"])
+    near = zd[0] if zd else 99.0
+    g = lambda k: s.get(k) if isinstance(s.get(k), float) else 0.0
+    if g("bleeding") > 0 and g("bandages") > 0 and near > 3:
+        return {"skill": "bandage", "reason": "rule: bleeding"}
+    if near <= 3:
+        return {"skill": "flee" if me["hp"] < 35 else "fight", "reason": "rule: zombie close"}
+    if g("hunger") > 0.3 and g("food") > 0:
+        return {"skill": "eat", "reason": "rule: hungry"}
+    if g("thirst") > 0.3 and g("drink") > 0:
+        return {"skill": "drink", "reason": "rule: thirsty"}
+    if near > 8 and (g("food") == 0 or g("drink") == 0 or g("bandages") == 0):
+        for c in sv["containers"]:
+            if (c.get("food", 0) + c.get("drink", 0) + c.get("bandages", 0)) > 0 and (int(c.get("x", 0)), int(c.get("y", 0))) not in failed:
+                return {"skill": "loot", "container": int(c.get("i", 1)), "reason": "rule: missing supplies"}
+    if near <= 6:
+        return {"skill": "fight", "reason": "rule: zombie approaching"}
+    return {"skill": "wait", "reason": "rule: nothing to do"}

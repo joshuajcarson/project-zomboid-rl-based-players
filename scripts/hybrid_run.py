@@ -21,6 +21,7 @@ from pzrl import hybrid
 ap = argparse.ArgumentParser()
 ap.add_argument("--minutes", type=float, default=30)
 ap.add_argument("--model", default="sonnet")
+ap.add_argument("--arms", default="llm", help="comma-separated planners alternating by episode: llm, rule, idle (H-B)")
 ap.add_argument("--episode-seconds", type=int, default=120, help="game seconds per episode")
 ap.add_argument("--zombies", type=int, default=2)
 ap.add_argument("--ring", type=float, nargs=2, default=(8, 14))
@@ -62,17 +63,23 @@ try:
             else:
                 env.channel.command(f"seed|{a0}|{itype}|{n}|30")
         env.channel.command(f"stats|{a0}|{a.hunger}|{a.thirst}")        # server-side: Build 42 reverts client-side stat changes
-        env.say(f"hybrid stage A | episode {ep} | planner {a.model}")
+        arm = a.arms.split(",")[(ep - 1) % len(a.arms.split(","))]
+        env.say(f"hybrid | episode {ep} | arm {arm}")
         current, pending, steps, dead, last, failed = "wait", None, 0, False, "", set()
         while steps < a.episode_seconds and time.time() < t_stop:
             if pending is None:
                 sv = hybrid.survey(env, a0)
                 text = hybrid.state_text(env, a0, sv, last, failed)
-                pending = pool.submit(hybrid.ask, text, a.model)
+                if arm == "llm":
+                    pending = pool.submit(hybrid.ask, text, a.model)
+                else:                                               # rule / idle decide instantly, through the same dispatch path
+                    dec0 = hybrid.rule_decide(env, a0, sv, failed) if arm == "rule" else {"skill": "wait", "reason": "idle"}
+                    pending = pool.submit(lambda d=dec0: (d, 0.0, None))
+                    time.sleep(1.0)                                 # one game second between rule decisions (the planner's skill runs meanwhile)
             if pending.done():
                 dec, secs, err = pending.result()
                 pending = None
-                row = {"t": time.strftime("%H:%M:%S"), "episode": ep, "step": steps, "model": a.model, "latency_s": round(secs, 2),
+                row = {"t": time.strftime("%H:%M:%S"), "episode": ep, "arm": arm, "step": steps, "model": a.model, "latency_s": round(secs, 2),
                        "valid": dec is not None, "error": err, "skill": dec and dec.get("skill"), "container": dec and dec.get("container"),
                        "reason": (dec or {}).get("reason", "")[:200], "stats": sv["stats"], "n_containers": len(sv["containers"]), "containers": sv["containers"],
                        "zombies": len(env.state[a0]["z"])}
@@ -105,7 +112,8 @@ try:
             if term.get(a0) or a0 not in env.agents:
                 dead = True
                 break
-        log.write(json.dumps({"episode_end": ep, "steps": steps, "dead": dead, "hp": env.state.get(a0, {}).get("hp")}) + "\n"); log.flush()
+        end_sv = hybrid.survey(env, a0) if not dead and a0 in env.state else {"stats": {}}
+        log.write(json.dumps({"episode_end": ep, "arm": arm, "steps": steps, "dead": dead, "hp": env.state.get(a0, {}).get("hp"), "end": end_sv["stats"]}) + "\n"); log.flush()
         if pending is not None:
             pending.result()                                   # do not leak a planner call into the next episode
 finally:
