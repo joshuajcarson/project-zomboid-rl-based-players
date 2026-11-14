@@ -78,10 +78,10 @@
     "semantic_hash": "99087a4a7969ec1ffc8e605e65cd827b"
   },
   "mods/RLBridge/common/media/lua/server/RLBridge.lua": {
-    "mtime": 1793376708.3088956,
-    "seen": 1794665662.5739937,
-    "ast_hash": "be29251c8e2d7bfbe4cc13af95f8f0b1",
-    "semantic_hash": "be29251c8e2d7bfbe4cc13af95f8f0b1"
+    "mtime": 1794665997.6572857,
+    "seen": 1794670177.0042653,
+    "ast_hash": "7a5c0a79acfc8fdf32fcadfe78b00e76",
+    "semantic_hash": "7a5c0a79acfc8fdf32fcadfe78b00e76"
   },
   "mods/RLClient/common/media/lua/client/RLClient.lua": {
     "mtime": 1792971554.8123713,
@@ -576,10 +576,10 @@
     "semantic_hash": "683c3bfc66b31628c8422fc49b3ed368"
   },
   "scripts/rl_bot_dev.lua": {
-    "mtime": 1794665527.4484766,
-    "seen": 1794665662.5740714,
-    "ast_hash": "a5694f25165cdd0e5cf0b10dc4ee4a6c",
-    "semantic_hash": "a5694f25165cdd0e5cf0b10dc4ee4a6c"
+    "mtime": 1794667969.811926,
+    "seen": 1794670177.0043817,
+    "ast_hash": "cca5ce8198369e44eec7236ba8d4140e",
+    "semantic_hash": "cca5ce8198369e44eec7236ba8d4140e"
   },
   "scripts/run-fake-client.ps1": {
     "mtime": 1792948989.397565,
@@ -678,10 +678,10 @@
     "semantic_hash": "afe8a3f659c26e10fd345f7c833b565b"
   },
   "docs/experiments/2026-10-30-b12-m3a-gate-b-real.md": {
-    "mtime": 1793410090.2808888,
-    "seen": 1794665662.5740871,
-    "ast_hash": "3e005a2893d084ca0301f4000191e837",
-    "semantic_hash": "3e005a2893d084ca0301f4000191e837"
+    "mtime": 1794665738.3832378,
+    "seen": 1794670177.0043962,
+    "ast_hash": "5f6df000dee624eac72c4d7e15d80ae8",
+    "semantic_hash": "5f6df000dee624eac72c4d7e15d80ae8"
   },
   "docs/experiments/2026-10-30-b2-m2-fake-vs-real.md": {
     "mtime": 1793394470.0020125,
@@ -750,16 +750,16 @@
     "semantic_hash": "76b229725e0c1d79e661b25bb787a65b"
   },
   "docs/journal.md": {
-    "mtime": 1793410090.2976248,
-    "seen": 1794665662.5740983,
-    "ast_hash": "8844c5fde739b1dc956948493a3a9a4e",
-    "semantic_hash": "8844c5fde739b1dc956948493a3a9a4e"
+    "mtime": 1794669920.819169,
+    "seen": 1794670177.0044014,
+    "ast_hash": "bb3ca424e681bee6e547afa4cca50410",
+    "semantic_hash": "bb3ca424e681bee6e547afa4cca50410"
   },
   "docs/milestones.md": {
-    "mtime": 1794664902.065116,
-    "seen": 1794665662.5740995,
-    "ast_hash": "b9414a9c1d8bece29635cd3ac1e1df6b",
-    "semantic_hash": "b9414a9c1d8bece29635cd3ac1e1df6b"
+    "mtime": 1794669920.8181672,
+    "seen": 1794670177.0044024,
+    "ast_hash": "0cee2cf38c92628ce017d9b46d2caaf5",
+    "semantic_hash": "0cee2cf38c92628ce017d9b46d2caaf5"
   },
   "docs/pz-mechanics.md": {
     "mtime": 1793035111.3127692,
@@ -778,5 +778,29 @@
     "seen": 1794665662.574102,
     "ast_hash": "a9fa09d24feb2d2dc7b13b5bea6aa238",
     "semantic_hash": "a9fa09d24feb2d2dc7b13b5bea6aa238"
+  },
+  "pzrl/hybrid.py": {
+    "mtime": 1794667992.2477875,
+    "seen": 1794670177.0042777,
+    "ast_hash": "367707750af429e504715a0d3baa74cd",
+    "semantic_hash": "367707750af429e504715a0d3baa74cd"
+  },
+  "scripts/hybrid_run.py": {
+    "mtime": 1794668016.6751401,
+    "seen": 1794670177.0043678,
+    "ast_hash": "fcc719514d2005b793f5e51220ea565f",
+    "semantic_hash": "fcc719514d2005b793f5e51220ea565f"
+  },
+  "docs/experiments/2026-11-14-ha-hybrid-plumbing.md": {
+    "mtime": 1794667938.705846,
+    "seen": 1794670177.0043983,
+    "ast_hash": "83b2d88933be7bafa404cc73cb7d57b2",
+    "semantic_hash": "83b2d88933be7bafa404cc73cb7d57b2"
+  },
+  "docs/experiments/2026-11-14-hb0-skill-reliability.md": {
+    "mtime": 1794669920.817163,
+    "seen": 1794670177.0044,
+    "ast_hash": "c5948fd001c9a6efecc3ddebc4cf6c91",
+    "semantic_hash": "c5948fd001c9a6efecc3ddebc4cf6c91"
   }
 }
