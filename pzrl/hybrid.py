@@ -60,7 +60,7 @@ def _kv(line):
     return {k: (float(v) if re.fullmatch(r"-?[0-9.]+", v) else v) for k, v in re.findall(r"(\w+)=(\S+)", line)}
 
 
-def survey(env, name, r=15):
+def survey(env, name, r=30):
     """The character's stats, wounds and key items, plus the nearest containers (client-side `survey` command)."""
     text = client_query(env, name, "survey", r, until="SURVEYEND")
     stats, conts = {}, []

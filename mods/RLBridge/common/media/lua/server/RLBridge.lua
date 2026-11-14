@@ -306,6 +306,18 @@ function handlers.corpses(x, y, r, remove)
     return true, "corpses found " .. found .. " removed " .. removed
 end
 
+-- stats|user|hunger|thirst : set a player's hunger and thirst (0-1) on the SERVER. Build 42 syncs stats from the server, so a client-side
+-- set is reverted within seconds (seen 2026-11-14: 0.600 right after the client set, back to 0.02 three seconds later).
+function handlers.stats(user, h, t)
+    local pl = findPlayer(user)
+    if not pl then return false, "no player " .. tostring(user) end
+    h, t = tonumber(h), tonumber(t)
+    local st = pl:getStats()
+    local okh = h and (pcall(function() st:set(CharacterStat.HUNGER, h) end) or pcall(function() st:setHunger(h) end))
+    local okt = t and (pcall(function() st:set(CharacterStat.THIRST, t) end) or pcall(function() st:setThirst(t) end))
+    return true, "stats " .. tostring(okh) .. "/" .. tostring(okt)
+end
+
 -- hutches|x|y|r|remove : list the IsoHutch objects (animal hutches and dog houses) within r squares of (x, y) on the ground floor; with
 -- remove=1 also take them out of the world. A client crashes (NullPointerException in IsoHutch.removeFromWorld) when it unloads the chunk
 -- of a hutch that has no animal, which ends every rendered run after a few episodes.

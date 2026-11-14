@@ -607,7 +607,7 @@ end
 -- loot|i: walk next to the i-th nearest container (survey order, default 1) and queue transfers of its food, drink and bandages
 commands.loot = function(p, a)
     local idx = tonumber(a and a.a) or 1
-    local cs = nearContainers(p, 15)
+    local cs = nearContainers(p, tonumber(a and a.b) or 30)
     local c = cs[idx]
     if not c then log("LOOT no container"); return false, "no container" end
     luautils.walkAdj(p, c.sq, true)
@@ -627,8 +627,9 @@ end
 commands.setstats = function(p, a)
     local st = p:getStats()
     local h, t = tonumber(a and a.a), tonumber(a and a.b)
-    local okh = h and (pcall(function() st:setHunger(h) end) or pcall(function() st:set(CharacterStat.HUNGER, h) end))
-    local okt = t and (pcall(function() st:setThirst(t) end) or pcall(function() st:set(CharacterStat.THIRST, t) end))
-    log(string.format("SETSTATS hunger=%s thirst=%s ok=%s/%s", tostring(h), tostring(t), tostring(okh), tostring(okt)))
+    -- Build 42 keeps stats in CharacterStat slots; try that first, then the old setters, and report what the stat reads afterwards
+    local okh = h and (pcall(function() st:set(CharacterStat.HUNGER, h) end) or pcall(function() st:setHunger(h) end))
+    local okt = t and (pcall(function() st:set(CharacterStat.THIRST, t) end) or pcall(function() st:setThirst(t) end))
+    log(string.format("SETSTATS hunger=%s thirst=%s ok=%s/%s now=%.3f/%.3f", tostring(h), tostring(t), tostring(okh), tostring(okt), stat(p, "Hunger"), stat(p, "Thirst")))
     return true, "setstats"
 end

@@ -12,6 +12,10 @@
 - Stopping rule: run the full 30 minutes; stop early only for an invalid run (crash, dead client loop, server down).
 - Invariants: one bat, in arena region; the planner must never call movement during a one-shot timed action (enforced by the harness).
 
+## Run log (not part of the pre-registration)
+- Run 1 (08:16-08:19) INVALID, stopped under the stopping rule: the real client had copied the bot file at start-up (08:10, smoke test) before the new skills were added (08:13), so every `survey` returned `unknown survey` and the planner saw no stats, inventory or containers (it chose `flee` 4 times on zombie positions alone). Its 4 lines stay in the data file and are excluded from the verdict.
+- Fixes before run 2 (design unchanged, criteria unchanged): (a) the client loads the current bot file (fresh client start); (b) hunger/thirst are set on the SERVER (new RLBridge handler `stats`): Build 42 reverts client-side stat changes within seconds (client read 0.600 right after the set, 0.02 three seconds later); (c) survey and loot radius 30 tiles (the nearest containers are 18-22 tiles from the spawn: shelves, crates, counters, a medicine cabinet).
+
 ## Result (filled at batch end)
 - Data: `results/experiments-2026-11-14/a_plumbing.jsonl`
 - Numbers: (pending)

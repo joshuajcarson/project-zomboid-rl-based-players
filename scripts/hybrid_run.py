@@ -52,7 +52,7 @@ try:
         obs, _ = env.reset()
         a0 = env.agents[0]
         ep += 1
-        env.control[a0]._bot("setstats", a.hunger, a.thirst)
+        env.channel.command(f"stats|{a0}|{a.hunger}|{a.thirst}")        # server-side: Build 42 reverts client-side stat changes
         env.say(f"hybrid stage A | episode {ep} | planner {a.model}")
         current, pending, steps, dead = "wait", None, 0, False
         while steps < a.episode_seconds and time.time() < t_stop:
