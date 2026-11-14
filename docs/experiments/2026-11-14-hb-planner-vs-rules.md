@@ -14,6 +14,7 @@
 
 ## Run log (not part of the pre-registration)
 - Session 1 run 1 (15:14-15:30) INVALID, stopped under the stopping rule: the rule arm never advanced game time (instant decisions looped back to deciding without an env.step; episode 2 sat at step 3 after 452 decisions). Fix: rule and idle arms take one game step per decision; the llm arm is unchanged. Data kept as `hb_s1_run1_INVALID.jsonl`, excluded. Design and criteria unchanged.
+- Session 1 run 2 (started 15:30): all three arms complete 120-step episodes. Deviation found in the first episodes: the server `stats` command sets hunger (0.6) but NOT thirst (it reads 0.0 at episode start in every arm). It affects all arms equally, so the run continues unchanged; the needs metric is in effect hunger only. Both sessions keep the same setup so they can be pooled; the thirst handler gets fixed after H-B.
 
 ## Result (filled at batch end)
 - Data: `results/experiments-2026-11-14/hb_s1.jsonl`, `hb_s2.jsonl`
