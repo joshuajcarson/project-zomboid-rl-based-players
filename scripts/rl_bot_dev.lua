@@ -478,8 +478,8 @@ local function allItems(p)
         for i = 0, items:size() - 1 do
             local it = items:get(i)
             out[#out + 1] = it
-            local inner = try(function() return it:getInventory() end)
-            if depth < 2 and inner ~= -1 and inner ~= nil then walk(inner, depth + 1) end
+            -- only bags have an inventory; probing other items throws (caught, but the game logs a stack trace each time)
+            if depth < 2 and instanceof(it, "InventoryContainer") then walk(it:getInventory(), depth + 1) end
         end
     end
     walk(p:getInventory(), 0)
@@ -494,7 +494,8 @@ local function countInv(p)
     local items = allItems(p)
     for _, it in ipairs(items) do
         do
-        if isFood(it) then food = food + 1 elseif hasWater(it) then drink = drink + 1 end
+        -- count only food that can be eaten now (rotten food was counted before and misled the planner, 2026-11-14)
+        if isFood(it) and not (try(function() return it:isRotten() end) == true) then food = food + 1 elseif hasWater(it) then drink = drink + 1 end
         if isBandage(it) then band = band + 1 end
         end
     end

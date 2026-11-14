@@ -318,6 +318,41 @@ function handlers.stats(user, h, t)
     return true, "stats " .. tostring(okh) .. "/" .. tostring(okt)
 end
 
+-- seed|user|type|n|r : put n items of a type into the container nearest the player (within r squares) ON THE SERVER, so the client sees
+-- server-known items when it loots (client-side given items are not accepted by eat/drink actions; seen 2026-11-14). Scenario setup.
+function handlers.seed(user, itype, n, r)
+    local pl = findPlayer(user); if not pl then return false, "no player" end
+    n, r = tonumber(n) or 1, tonumber(r) or 30
+    local cell, px, py, pz = getCell(), math.floor(pl:getX()), math.floor(pl:getY()), math.floor(pl:getZ())
+    local best, bd, bx, by
+    for sx = px - r, px + r do
+        for sy = py - r, py + r do
+            local sq = cell:getGridSquare(sx, sy, pz)
+            if sq then
+                local objs = sq:getObjects()
+                for i = 0, objs:size() - 1 do
+                    local o = objs:get(i)
+                    local ok, c = pcall(function() return o:getContainer() end)
+                    if ok and c then
+                        local d = (sx - pl:getX()) ^ 2 + (sy - pl:getY()) ^ 2
+                        if not bd or d < bd then best, bd, bx, by = c, d, sx, sy end
+                    end
+                end
+            end
+        end
+    end
+    if not best then return false, "no container within " .. r end
+    local added = 0
+    for _ = 1, n do
+        local ok, item = pcall(function() return best:AddItem(itype) end)
+        if ok and item then
+            added = added + 1
+            pcall(function() sendAddItemToContainer(best, item) end)
+        end
+    end
+    return true, string.format("seeded %d %s into %s at %d,%d", added, itype, tostring(best:getType()), bx, by)
+end
+
 -- hutches|x|y|r|remove : list the IsoHutch objects (animal hutches and dog houses) within r squares of (x, y) on the ground floor; with
 -- remove=1 also take them out of the world. A client crashes (NullPointerException in IsoHutch.removeFromWorld) when it unloads the chunk
 -- of a hutch that has no animal, which ends every rendered run after a few episodes.
