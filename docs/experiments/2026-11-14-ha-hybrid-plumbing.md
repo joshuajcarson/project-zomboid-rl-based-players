@@ -16,11 +16,17 @@
 - Run 1 (08:16-08:19) INVALID, stopped under the stopping rule: the real client had copied the bot file at start-up (08:10, smoke test) before the new skills were added (08:13), so every `survey` returned `unknown survey` and the planner saw no stats, inventory or containers (it chose `flee` 4 times on zombie positions alone). Its 4 lines stay in the data file and are excluded from the verdict.
 - Fixes before run 2 (design unchanged, criteria unchanged): (a) the client loads the current bot file (fresh client start); (b) hunger/thirst are set on the SERVER (new RLBridge handler `stats`): Build 42 reverts client-side stat changes within seconds (client read 0.600 right after the set, 0.02 three seconds later); (c) survey and loot radius 30 tiles (the nearest containers are 18-22 tiles from the spawn: shelves, crates, counters, a medicine cabinet).
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-11-14/a_plumbing.jsonl`
-- Numbers: (pending)
-- Verdict: (pending)
-- Unexpected learnings: (pending)
-- Validity notes: (pending)
-- MILESTONE IMPACT: (pending)
-- Follow-ups / next experiment: (pending)
+## Result (filled at batch end, 2026-11-14 08:55 CT)
+- Data: `results/experiments-2026-11-14/a_plumbing.jsonl` (run 2, 08:20-08:50; run 1 is in `a_plumbing_run1_INVALID.jsonl` and excluded).
+- Numbers: 134 planner decisions in 13 episodes (5 in-game deaths); 134 valid (100%), 0 errors; latency median 2.48 s, p90 3.81 s, max 7.83 s (Sonnet via `claude -p`). Skills chosen: fight 58, loot 38, eat 16, drink 14, flee 6, wait 2, bandage 0. Intended effect seen at least once: eat 7 of 16 (food -1 or hunger down), drink 3 of 14 (water -1 or thirst down), loot 10 of 38 (supplies up); bandage UNTESTED (never chosen; no bandages were ever carried).
+- Verdict: **SUCCESS** against all four pre-registered criteria (>= 95% valid: 100%; median latency <= 15 s: 2.48 s; 30 minutes without a harness/client/server crash: yes; every one-shot skill chosen >= 2 times showed its effect at least once: eat, drink, loot yes; bandage untested).
+- Unexpected learnings:
+  1. Latency is not the problem: 2.5 s median per decision (half the one-off test's 5 s), well inside one game-second-per-step control; the planner never stalled the character because the current skill keeps running while it thinks.
+  2. Skill RELIABILITY is the problem: the intended effect showed only in 44% (eat), 21% (drink) and 26% (loot) of uses. Likely causes: the fixed allowance (6-10 game s) ends before the timed action finishes (loot needs a ~20-tile walk first), zombie hits interrupt actions, and the effect is measured right after the allowance. Fix: wait for the client's timed-action queue to empty (with a cap) and report the result back to the planner.
+  3. The planner has no memory of what just happened: it chose `loot` 38 times, many on the same containers that had no food, because the state never says 'last loot took nothing'. Fix: add the last skill's outcome to the state text.
+  4. The planner's priorities were sensible on inspection: fight when a zombie is within ~2 tiles, eat / drink / loot only when none is close, and the reasons quote the state correctly.
+  5. Build 42 multiplayer: stats are server-authoritative (a client-side set reverts within seconds); the server-side set reaches the client with a delay of a few seconds, so the first survey of an episode can still show the old values.
+  6. 5 of 13 episodes ended in death: Stage A did not measure survival; the planner mostly chose to fight and never had bandages.
+- Validity notes: run 2 is valid (survey returned stats and 8 containers from the first decision); 5 deaths are game outcomes, not crashes. Skill effects measured only immediately after the allowance (under-counts slow actions).
+- MILESTONE IMPACT: add the hybrid track to docs/milestones.md: H-A (plumbing) done; H-B (survival scenario vs a rule planner over the same skills) next, with prerequisites from learnings 2 and 3 (completion detection and outcome feedback) built and checked first.
+- Follow-ups / next experiment: H-B0 skill reliability fix (wait for the action queue, outcome feedback), then H-B survival comparison: language-model planner vs rule planner vs idle, interleaved, >= 30 episodes per arm over 2 sessions.
