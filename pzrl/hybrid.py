@@ -19,7 +19,7 @@ from .baselines import charge_param, nearest_zombie_vec, _dir_to_action
 
 LOGS = Path(__file__).resolve().parent.parent / "logs"
 SKILLS = ["fight", "flee", "wait", "eat", "drink", "bandage", "loot"]
-ONE_SHOT = {"eat": 20, "drink": 15, "bandage": 15, "loot": 35}   # cap in game seconds; the skill ends earlier when the action queue empties
+ONE_SHOT = {"eat": 20, "drink": 15, "bandage": 15, "loot": 35, "lootat": 35}   # cap in game seconds; the skill ends earlier when the action queue empties
 SCHEMA = json.dumps({"type": "object", "properties": {
     "skill": {"type": "string", "enum": SKILLS},
     "container": {"type": "integer", "description": "for loot: the container number from the list (1 = nearest)"},
@@ -117,10 +117,10 @@ def busy(env, name):
     return int(m.group(1)) if m else -1
 
 
-def run_one_shot(env, name, skill, arg=""):
+def run_one_shot(env, name, skill, arg="", arg2=""):
     """Queue a timed-action skill and wait (one game second at a time, no movement commands) until the client's action queue is empty or
     the cap is reached. Returns the game seconds waited."""
-    env.control[name]._bot(skill, arg)
+    env.control[name]._bot(skill, arg, arg2)
     waited = 0
     env._read(env._game_seconds(2)); waited += 2                       # give the queue time to fill
     while waited < ONE_SHOT[skill]:

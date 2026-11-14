@@ -293,3 +293,5 @@ RESUME PLAN (interactive skill debugging on the live client, then one pre-regist
 
 ## 2026-11-14 13:10 skill debugging fixed the skills; HB0c reliability rerun started
 Interactive debugging (see the HB0b card addendum): rotten food was the 'eat none' cause; a server `seed` command puts server-known items into the nearest container and the client sees them; with those items loot (7 transfers, ~24 s), eat (hunger 0.60 -> 0.44) and drink all work. Bot relay passes 3 args. HB0c (H-B0 rerun with seeded supplies, same criteria) pre-registered: docs/experiments/2026-11-14-hb0c-reliability-rerun.md. If it passes: H-B (language-model planner vs rule planner vs idle).
+
+## 2026-11-14 13:42 HB0c FAILED on loot only (eat 23/23, bandage 4/4, loot 11/66): loot renumbering while the planner thinks; HB0d (loot by coordinates) pre-registered and started

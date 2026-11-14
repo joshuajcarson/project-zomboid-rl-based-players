@@ -72,8 +72,11 @@ try:
                        "reason": (dec or {}).get("reason", "")[:200], "stats": sv["stats"], "n_containers": len(sv["containers"]), "containers": sv["containers"],
                        "zombies": len(env.state[a0]["z"])}
                 if dec and dec["skill"] in hybrid.ONE_SHOT:
-                    arg = dec.get("container") or 1 if dec["skill"] == "loot" else ""
-                    waited = hybrid.run_one_shot(env, a0, dec["skill"], arg)        # waits for the action queue; no movement commands
+                    skill, arg, arg2 = dec["skill"], "", ""
+                    if skill == "loot":                                          # by the coordinates the planner saw (numbering moves with the player)
+                        c = next((c for c in sv["containers"] if int(c.get("i", 0)) == (dec.get("container") or 1)), None)
+                        skill, arg, arg2 = ("lootat", int(c["x"]), int(c["y"])) if c else ("loot", 1, "")
+                    waited = hybrid.run_one_shot(env, a0, skill, arg, arg2)        # waits for the action queue; no movement commands
                     steps += waited
                     row["effect"] = effect(sv, hybrid.survey(env, a0))
                     row["waited"] = waited

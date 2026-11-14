@@ -693,3 +693,23 @@ commands.loot = function(p, a)
     log(string.format("LOOT any container=%d at %d,%d kind=%s dist=%.1f walk=%s queued=%d", tonumber(a.a) or 1, c.x, c.y, tostring(c.kind), c.d, tostring(walk), queued))
     return true, "loot any " .. queued
 end
+
+-- lootat|x|y: loot the container on square x,y (the planner's choice by coordinates; numbering by distance changed while it thought, HB0c)
+commands.lootat = function(p, a)
+    local x, y = tonumber(a and a.a), tonumber(a and a.b)
+    for _, c in ipairs(nearContainers(p, 40)) do
+        if c.x == x and c.y == y then
+            luautils.walkAdj(p, c.sq, true)
+            local items, queued = c.cont:getItems(), 0
+            for k = items:size() - 1, 0, -1 do
+                local it = items:get(k)
+                if isFood(it) or hasWater(it) or isBandage(it) then
+                    ISTimedActionQueue.add(ISInventoryTransferAction:new(p, it, c.cont, p:getInventory())); queued = queued + 1
+                end
+            end
+            log(string.format("LOOT at %d,%d kind=%s queued=%d", x, y, tostring(c.kind), queued))
+            return true, "loot " .. queued
+        end
+    end
+    log(string.format("LOOT none at %s,%s", tostring(x), tostring(y))); return false, "no container there"
+end
