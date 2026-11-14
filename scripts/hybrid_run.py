@@ -28,6 +28,7 @@ ap.add_argument("--box", type=float, nargs=4, default=(10730, 9380, 10810, 9440)
 ap.add_argument("--hunger", type=float, default=0.6)
 ap.add_argument("--thirst", type=float, default=0.6)
 ap.add_argument("--seed", type=int, default=7)
+ap.add_argument("--supplies-at", default="", help="x,y of a known reachable container to seed into (default: the nearest storage container)")
 ap.add_argument("--supplies", default="", help="server-side seeding at episode start, e.g. Base.Apple:3,Base.WaterBottle:2,Base.Bandage:2 (into the container nearest the player)")
 ap.add_argument("--out", required=True)
 a = ap.parse_args()
@@ -55,7 +56,11 @@ try:
         ep += 1
         for spec in [x for x in a.supplies.split(",") if x]:
             itype, n = spec.split(":")
-            env.channel.command(f"seed|{a0}|{itype}|{n}|30")
+            if a.supplies_at:
+                sx, sy = a.supplies_at.split(",")
+                env.channel.command(f"seedat|{sx}|{sy}|{itype}|{n}")
+            else:
+                env.channel.command(f"seed|{a0}|{itype}|{n}|30")
         env.channel.command(f"stats|{a0}|{a.hunger}|{a.thirst}")        # server-side: Build 42 reverts client-side stat changes
         env.say(f"hybrid stage A | episode {ep} | planner {a.model}")
         current, pending, steps, dead, last, failed = "wait", None, 0, False, "", set()

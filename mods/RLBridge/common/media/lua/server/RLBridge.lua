@@ -356,6 +356,26 @@ function handlers.seed(user, itype, n, r)
     return true, string.format("seeded %d %s into %s at %d,%d", added, itype, tostring(best:getType()), bx, by)
 end
 
+-- seedat|x|y|type|n : put n items into the (first) container on square x,y ON THE SERVER: scenario supplies in a container known to be
+-- reachable ('nearest storage' was often behind walls, HB0e).
+function handlers.seedat(x, y, itype, n)
+    x, y, n = tonumber(x), tonumber(y), tonumber(n) or 1
+    local sq = getCell():getGridSquare(x, y, 0)
+    if not sq then return false, "square not loaded" end
+    local objs, cont = sq:getObjects(), nil
+    for i = 0, objs:size() - 1 do
+        local ok, c = pcall(function() return objs:get(i):getContainer() end)
+        if ok and c then cont = c; break end
+    end
+    if not cont then return false, "no container at " .. x .. "," .. y end
+    local added = 0
+    for _ = 1, n do
+        local ok, item = pcall(function() return cont:AddItem(itype) end)
+        if ok and item then added = added + 1; pcall(function() sendAddItemToContainer(cont, item) end) end
+    end
+    return true, string.format("seeded %d %s into %s at %d,%d", added, itype, tostring(cont:getType()), x, y)
+end
+
 -- hutches|x|y|r|remove : list the IsoHutch objects (animal hutches and dog houses) within r squares of (x, y) on the ground floor; with
 -- remove=1 also take them out of the world. A client crashes (NullPointerException in IsoHutch.removeFromWorld) when it unloads the chunk
 -- of a hutch that has no animal, which ends every rendered run after a few episodes.

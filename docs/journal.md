@@ -303,3 +303,5 @@ Eat 12/12, bandage 1/2. 34 of 45 loots were rejected instantly; one unreachable 
 
 ## 2026-11-14 14:42 HB0e FAILED on loot (11/36, 31%); eat 19/19, bandage 5/5
 Cause: seeded 'nearest storage' containers are often unreachable; a failed path drops the whole action queue (queue_now 15-36 right after queueing, empty 2 s later). RESUME: HB0f = server `seedat|x|y|type|n` into the proven-reachable metal shelves at 10753,9407 (interactive test 13:05: walked 18 tiles, 7 transfers in 24 s) with a spawn box around it (e.g. 10740,9385 .. 10770,9400), same H-B0 criteria. Then H-B (planner vs rule planner vs idle). Card: docs/experiments/2026-11-14-hb0e-loot-reachable.md.
+
+## 2026-11-14 14:50 HB0f pre-registered and started (seedat into the reachable shelf 10753,9407, box near it)
