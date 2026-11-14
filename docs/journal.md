@@ -295,3 +295,6 @@ RESUME PLAN (interactive skill debugging on the live client, then one pre-regist
 Interactive debugging (see the HB0b card addendum): rotten food was the 'eat none' cause; a server `seed` command puts server-known items into the nearest container and the client sees them; with those items loot (7 transfers, ~24 s), eat (hunger 0.60 -> 0.44) and drink all work. Bot relay passes 3 args. HB0c (H-B0 rerun with seeded supplies, same criteria) pre-registered: docs/experiments/2026-11-14-hb0c-reliability-rerun.md. If it passes: H-B (language-model planner vs rule planner vs idle).
 
 ## 2026-11-14 13:42 HB0c FAILED on loot only (eat 23/23, bandage 4/4, loot 11/66): loot renumbering while the planner thinks; HB0d (loot by coordinates) pre-registered and started
+
+## 2026-11-14 14:10 HB0d FAILED on loot again (6/45); cause = unreachable/unsuitable containers, not numbering
+Eat 12/12, bandage 1/2. 34 of 45 loots were rejected instantly; one unreachable shelf (10804,9406) accumulated seeded items and was tried 17 times. Successes were reachable containers. RESUME: HB0e = seed only into reachable storage containers (allowlist) and clear old seeds; harness marks containers whose loot failed ('loot here failed') in the state; loot logs walkAdj result and queue. Same H-B0 criteria. Then H-B. Card: docs/experiments/2026-11-14-hb0d-loot-by-coordinates.md.
