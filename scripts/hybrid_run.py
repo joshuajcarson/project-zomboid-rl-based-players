@@ -75,7 +75,6 @@ try:
                 else:                                               # rule / idle decide instantly, through the same dispatch path
                     dec0 = hybrid.rule_decide(env, a0, sv, failed) if arm == "rule" else {"skill": "wait", "reason": "idle"}
                     pending = pool.submit(lambda d=dec0: (d, 0.0, None))
-                    time.sleep(1.0)                                 # one game second between rule decisions (the planner's skill runs meanwhile)
             if pending.done():
                 dec, secs, err = pending.result()
                 pending = None
@@ -106,7 +105,8 @@ try:
                 if a0 not in env.state or env.state[a0].get("dead") or env.state[a0]["hp"] <= 0:
                     dead = True
                     break
-                continue
+                if arm == "llm":
+                    continue                                       # rule / idle fall through: one game step per decision
             obs, rew, term, trunc, info = env.step({a0: hybrid.step_action(current, obs[a0])})
             steps += 1
             if term.get(a0) or a0 not in env.agents:

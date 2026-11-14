@@ -12,6 +12,9 @@
 - INCONCLUSIVE otherwise.
 - Stopping rule: each session runs its 110 minutes; stop early only for an invalid run (crash, client loop, skills broken). A usage-window pause between sessions is allowed (resume with session 2).
 
+## Run log (not part of the pre-registration)
+- Session 1 run 1 (15:14-15:30) INVALID, stopped under the stopping rule: the rule arm never advanced game time (instant decisions looped back to deciding without an env.step; episode 2 sat at step 3 after 452 decisions). Fix: rule and idle arms take one game step per decision; the llm arm is unchanged. Data kept as `hb_s1_run1_INVALID.jsonl`, excluded. Design and criteria unchanged.
+
 ## Result (filled at batch end)
 - Data: `results/experiments-2026-11-14/hb_s1.jsonl`, `hb_s2.jsonl`
 - Numbers: (pending)
