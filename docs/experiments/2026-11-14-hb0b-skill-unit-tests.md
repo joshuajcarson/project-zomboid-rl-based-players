@@ -12,11 +12,12 @@
 - INCONCLUSIVE otherwise.
 - Stopping rule: all trials; stop early only for an invalid run (crash, client not reachable).
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-11-14/b0b_skill_tests.jsonl`
-- Numbers: (pending)
-- Verdict: (pending)
-- Unexpected learnings: (pending)
-- Validity notes: (pending)
-- MILESTONE IMPACT: (pending)
-- Follow-ups / next experiment: (pending)
+## Result (filled at batch end, 2026-11-14 10:05 CT)
+- Data: `results/experiments-2026-11-14/b0b_skill_tests.jsonl` (15 trials, 09:58-10:03).
+- Numbers: eat 0/5, drink 0/5, loot 0/5. Eat: `EAT Apple recipe=false ok=true` every trial (the game's eatItem was called without error) but the action queue was empty after 2 s and food stayed 9. Drink: `DRINK none` every trial (survey: water 0). Loot: the log shows the plain loot path (`queued=0` on containers without food), not the 'any' test mode.
+- Verdict: **FAILURE** against the pre-registered criteria (every skill <= 1 of 5).
+- Diagnosis (largely test design, one real finding): (1) loot 'any' never ran: the server relays only two bot arguments, so the third (`any`) was dropped; (2) drink never ran: the persistent character has no water left (the starter water was used up in earlier runs); (3) REAL: eating a client-side given item (`giveitem Base.Apple`) does not start the eat action even through the game's own entry point: client-only items are probably rejected by the server-checked action (H-A's successful eats used starter or looted food the server knows).
+- Unexpected learnings: characters persist across runs (inventory state is not reset), so skill tests need a known server-side inventory; bot commands carry at most two arguments through the server relay.
+- Validity notes: valid run of a flawed test design for loot and drink; the eat result is informative.
+- MILESTONE IMPACT: none to acceptance; H-B0 stays the gate. Next: interactive debugging of each skill on the live client (not a batch), then one pre-registered verification batch.
+- Follow-ups / next experiment: give items server-side or loot them from the world; relay 3 bot arguments (or encode 'any' in argument b); verify drink with a real water source.
