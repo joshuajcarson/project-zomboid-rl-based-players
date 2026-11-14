@@ -21,3 +21,10 @@
 - Validity notes: valid run of a flawed test design for loot and drink; the eat result is informative.
 - MILESTONE IMPACT: none to acceptance; H-B0 stays the gate. Next: interactive debugging of each skill on the live client (not a batch), then one pre-registered verification batch.
 - Follow-ups / next experiment: give items server-side or loot them from the world; relay 3 bot arguments (or encode 'any' in argument b); verify drink with a real water source.
+
+## Interactive debugging after the batch (12:55-13:08 CT, not pre-registered; live client, no zombies)
+- Server bot relay now passes a third argument; `loot|1|35|any` walked 18 tiles and moved items (carried items 24 -> 25).
+- Root cause of 'eat none' / no effect: the persistent character's 8 food items were all ROTTEN (eat skips rotten food, the survey counted it): the survey now counts edible food only.
+- New server command `seed|user|type|n|r` puts items into the container nearest the player ON THE SERVER: they appear on the client (shelf: food 3, water 2, bandages 2).
+- With seeded, server-known items: `loot|1|35` queued 7 transfers, done in ~24 s (food 3, water 2, bandages 2 carried); `eat` (game's eatItem) ate an Apple: food 3 -> 2, hunger 0.60 -> 0.44; `drink` (game's onDrinkFluid) emptied a WaterBottle. Bandage still untested (no bleeding).
+- Conclusion: the skills work when the items are real, edible and server-known; H-B0's low effect rates came from rotten / client-only food and loots of containers without supplies. Exception noise from probing non-bag items with getInventory removed (instanceof check).

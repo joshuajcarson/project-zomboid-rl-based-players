@@ -290,3 +290,6 @@ RESUME PLAN (interactive skill debugging on the live client, then one pre-regist
 3. Water: the persistent character has none; drink test needs a water source (sink/rain barrel `drink from world` or a looted bottle).
 4. Iterate with direct channel commands (`pzrl.channel.ServerChannel(17600).command("bot|Client40|...")`, read the newest logs/env-rendered-*.log) like the survey fix: eat, drink, loot (any), bandage; check BUSY and inventory each time.
 5. Then rerun the H-B0 reliability check (same criteria) and go to H-B (planner vs rule planner vs idle).
+
+## 2026-11-14 13:10 skill debugging fixed the skills; HB0c reliability rerun started
+Interactive debugging (see the HB0b card addendum): rotten food was the 'eat none' cause; a server `seed` command puts server-known items into the nearest container and the client sees them; with those items loot (7 transfers, ~24 s), eat (hunger 0.60 -> 0.44) and drink all work. Bot relay passes 3 args. HB0c (H-B0 rerun with seeded supplies, same criteria) pre-registered: docs/experiments/2026-11-14-hb0c-reliability-rerun.md. If it passes: H-B (language-model planner vs rule planner vs idle).
