@@ -54,27 +54,30 @@ try:
         ep += 1
         env.channel.command(f"stats|{a0}|{a.hunger}|{a.thirst}")        # server-side: Build 42 reverts client-side stat changes
         env.say(f"hybrid stage A | episode {ep} | planner {a.model}")
-        current, pending, steps, dead = "wait", None, 0, False
+        current, pending, steps, dead, last = "wait", None, 0, False, ""
         while steps < a.episode_seconds and time.time() < t_stop:
             if pending is None:
                 sv = hybrid.survey(env, a0)
-                text = hybrid.state_text(env, a0, sv)
+                text = hybrid.state_text(env, a0, sv, last)
                 pending = pool.submit(hybrid.ask, text, a.model)
             if pending.done():
                 dec, secs, err = pending.result()
                 pending = None
                 row = {"t": time.strftime("%H:%M:%S"), "episode": ep, "step": steps, "model": a.model, "latency_s": round(secs, 2),
                        "valid": dec is not None, "error": err, "skill": dec and dec.get("skill"), "container": dec and dec.get("container"),
-                       "reason": (dec or {}).get("reason", "")[:200], "stats": sv["stats"], "n_containers": len(sv["containers"]),
+                       "reason": (dec or {}).get("reason", "")[:200], "stats": sv["stats"], "n_containers": len(sv["containers"]), "containers": sv["containers"],
                        "zombies": len(env.state[a0]["z"])}
                 if dec and dec["skill"] in hybrid.ONE_SHOT:
                     arg = dec.get("container") or 1 if dec["skill"] == "loot" else ""
-                    env.control[a0]._bot(dec["skill"], arg)
-                    env._read(env._game_seconds(hybrid.ONE_SHOT[dec["skill"]]))      # let the timed action run; no movement commands
-                    steps += hybrid.ONE_SHOT[dec["skill"]]
+                    waited = hybrid.run_one_shot(env, a0, dec["skill"], arg)        # waits for the action queue; no movement commands
+                    steps += waited
                     row["effect"] = effect(sv, hybrid.survey(env, a0))
+                    row["waited"] = waited
+                    last = hybrid.outcome(dec["skill"], row["effect"], waited)
                     current = "wait"
                 elif dec:
+                    if dec["skill"] != current:
+                        last = "%s (started)" % dec["skill"]
                     current = dec["skill"]
                 log.write(json.dumps(row) + "\n"); log.flush()
                 print(json.dumps({k: row[k] for k in ("episode", "step", "latency_s", "valid", "skill")} | {"effect": row.get("effect")}), flush=True)

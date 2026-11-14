@@ -633,3 +633,11 @@ commands.setstats = function(p, a)
     log(string.format("SETSTATS hunger=%s thirst=%s ok=%s/%s now=%.3f/%.3f", tostring(h), tostring(t), tostring(okh), tostring(okt), stat(p, "Hunger"), stat(p, "Thirst")))
     return true, "setstats"
 end
+
+-- busy: whether the character still has timed actions queued or running (BUSY n=queue length, -1 if unknown), so a skill can wait for its action
+commands.busy = function(p, a)
+    local n = try(function() return #ISTimedActionQueue.getTimedActionQueue(p).queue end,
+                  function() return ISTimedActionQueue.isPlayerDoingAction(p) and 1 or 0 end)
+    log("BUSY n=" .. tostring(n))
+    return true, "busy " .. tostring(n)
+end

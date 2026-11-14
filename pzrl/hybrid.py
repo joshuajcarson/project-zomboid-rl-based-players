@@ -19,7 +19,7 @@ from .baselines import charge_param, nearest_zombie_vec, _dir_to_action
 
 LOGS = Path(__file__).resolve().parent.parent / "logs"
 SKILLS = ["fight", "flee", "wait", "eat", "drink", "bandage", "loot"]
-ONE_SHOT = {"eat": 8, "drink": 6, "bandage": 6, "loot": 10}     # game seconds the timed action is left to run
+ONE_SHOT = {"eat": 20, "drink": 15, "bandage": 15, "loot": 35}   # cap in game seconds; the skill ends earlier when the action queue empties
 SCHEMA = json.dumps({"type": "object", "properties": {
     "skill": {"type": "string", "enum": SKILLS},
     "container": {"type": "integer", "description": "for loot: the container number from the list (1 = nearest)"},
@@ -72,7 +72,7 @@ def survey(env, name, r=30):
     return {"stats": stats, "containers": conts}
 
 
-def state_text(env, name, sv):
+def state_text(env, name, sv, last=""):
     me = env.state[name]
     s = sv["stats"]
     zs = sorted(((math.hypot(z[0] - me["x"], z[1] - me["y"]), math.atan2(z[1] - me["y"], z[0] - me["x"])) for z in me["z"]), key=lambda t: t[0])
@@ -80,9 +80,9 @@ def state_text(env, name, sv):
     cl = ["%d: %s %.1f tiles away, %d items (food %d, water %d, bandages %d)" % (int(c.get("i", 0)), c.get("kind"), c.get("dist", 0),
           int(c.get("items", 0)), int(c.get("food", 0)), int(c.get("drink", 0)), int(c.get("bandages", 0))) for c in sv["containers"]] or ["none in range"]
     return ("Health %.0f/100. Hunger %s, thirst %s, fatigue %s, endurance %s, panic %s. Bleeding wounds: %s, injuries: %s.\n"
-            "Inventory: food %s, water %s, bandages %s.\nZombies (nearest first): %s.\nContainers nearby: %s.\nChoose the next skill."
+            "Inventory: food %s, water %s, bandages %s.\nZombies (nearest first): %s.\nContainers nearby: %s.\nLast skill: %s.\nChoose the next skill."
             % (me["hp"], s.get("hunger"), s.get("thirst"), s.get("fatigue"), s.get("endurance"), s.get("panic"), s.get("bleeding"),
-               s.get("wounds"), s.get("food"), s.get("drink"), s.get("bandages"), "; ".join(zlines), "; ".join(cl)))
+               s.get("wounds"), s.get("food"), s.get("drink"), s.get("bandages"), "; ".join(zlines), "; ".join(cl), last or "none yet"))
 
 
 def ask(text, model="sonnet", timeout=60):
@@ -109,3 +109,30 @@ def step_action(skill, obs):
         v = nearest_zombie_vec(obs)
         return 0 if v is None else _dir_to_action(-v[0], -v[1])
     return 0
+
+
+def busy(env, name):
+    """Length of the client's timed-action queue (0 = idle, -1 = unknown)."""
+    m = re.search(r"BUSY n=(-?\d+)", client_query(env, name, "busy", until="BUSY n=", wait=4.0))
+    return int(m.group(1)) if m else -1
+
+
+def run_one_shot(env, name, skill, arg=""):
+    """Queue a timed-action skill and wait (one game second at a time, no movement commands) until the client's action queue is empty or
+    the cap is reached. Returns the game seconds waited."""
+    env.control[name]._bot(skill, arg)
+    waited = 0
+    env._read(env._game_seconds(2)); waited += 2                       # give the queue time to fill
+    while waited < ONE_SHOT[skill]:
+        if busy(env, name) == 0:
+            break
+        env._read(env._game_seconds(1)); waited += 1
+    return waited
+
+
+def outcome(skill, eff, waited):
+    """One line for the planner about what its last skill did."""
+    if eff is None:
+        return skill
+    parts = ["%s %+g" % (k, eff[k]) for k in ("food", "drink", "bandages", "hunger", "thirst", "bleeding", "hp") if eff.get(k)]
+    return "%s took %d s: %s" % (skill, waited, ", ".join(parts) if parts else "no change (interrupted, nothing to take, or nothing to do)")
