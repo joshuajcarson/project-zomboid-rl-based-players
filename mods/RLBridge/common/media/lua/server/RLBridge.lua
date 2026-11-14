@@ -246,9 +246,9 @@ function handlers.tp(user, x, y, z)
 end
 
 -- bot|user|cmd|a|b : forward an action to that rendered client's RLBot.lua (goto x y, stop, equip Base.Item, attack, info)
-function handlers.bot(user, cmd, a, b)
+function handlers.bot(user, cmd, a, b, c)
     local p = findPlayer(user); if not p then return false, "no such player" end
-    sendServerCommand(p, "RLBot", cmd, { a = a, b = b })
+    sendServerCommand(p, "RLBot", cmd, { a = a, b = b, c = c })      -- c: third argument (e.g. loot|i|r|any), 2026-11-14
     return true, "sent"
 end
 
