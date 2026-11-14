@@ -446,3 +446,189 @@ commands.equip = function(p, a)
         tostring(p:getSecondaryHandItem() == best)))
     return true, "ok"
 end
+
+-- ===== hybrid planner skills (Stage A, 2026-11-14): survey the character and surroundings, eat, drink, bandage, loot =====
+-- Every call is wrapped in pcall: Build 42 renamed several stat and fluid APIs, so each read tries the known names and reports -1 if none work.
+local function try(...)
+    for _, fn in ipairs({...}) do
+        local ok, v = pcall(fn)
+        if ok and v ~= nil then return v end
+    end
+    return -1
+end
+local function stat(p, name)
+    local st = p:getStats()
+    return try(function() return st["get" .. name](st) end,
+               function() return st:get(CharacterStat[string.upper(name)]) end)
+end
+local function isFood(it) return try(function() return it:IsFood() end) == true end
+local function hasWater(it)
+    return try(function() local fc = it:getFluidContainer(); return fc ~= nil and not fc:isEmpty() end,
+               function() return it:isWaterSource() end) == true
+end
+local function isBandage(it)
+    local t = it:getType()
+    return t == "Bandage" or t == "AlcoholBandage" or t == "RippedSheets" or t == "AlcoholRippedSheets"
+end
+-- every item the character carries, including inside bags (the starter kit's water and chips sit in the backpack)
+local function allItems(p)
+    local out = {}
+    local function walk(cont, depth)
+        local items = cont:getItems()
+        for i = 0, items:size() - 1 do
+            local it = items:get(i)
+            out[#out + 1] = it
+            local inner = try(function() return it:getInventory() end)
+            if depth < 2 and inner ~= -1 and inner ~= nil then walk(inner, depth + 1) end
+        end
+    end
+    walk(p:getInventory(), 0)
+    return out
+end
+-- move an item from a bag to the main inventory first (the game does this before eating or drinking from a bag)
+local function toHand(p, it)
+    pcall(function() ISInventoryPaneContextMenu.transferIfNeeded(p, it) end)
+end
+local function countInv(p)
+    local food, drink, band = 0, 0, 0
+    local items = allItems(p)
+    for _, it in ipairs(items) do
+        do
+        if isFood(it) then food = food + 1 elseif hasWater(it) then drink = drink + 1 end
+        if isBandage(it) then band = band + 1 end
+        end
+    end
+    return food, drink, band
+end
+local function bodyCounts(p)
+    local bleed, wounds = 0, 0
+    pcall(function()
+        local parts = p:getBodyDamage():getBodyParts()
+        for i = 0, parts:size() - 1 do
+            local bp = parts:get(i)
+            if bp:bleeding() and not bp:bandaged() then bleed = bleed + 1 end
+            if bp:HasInjury() then wounds = wounds + 1 end
+        end
+    end)
+    return bleed, wounds
+end
+-- containers with a non-empty inventory within r squares (same floor), nearest first
+local function nearContainers(p, r)
+    local out, cell, px, py, pz = {}, getCell(), math.floor(p:getX()), math.floor(p:getY()), math.floor(p:getZ())
+    for sx = px - r, px + r do
+        for sy = py - r, py + r do
+            local sq = cell:getGridSquare(sx, sy, pz)
+            if sq then
+                local objs = sq:getObjects()
+                for i = 0, objs:size() - 1 do
+                    local o = objs:get(i)
+                    local n = try(function() return o:getContainerCount() end)
+                    if type(n) == "number" and n > 0 then
+                        for c = 0, n - 1 do
+                            local cont = o:getContainerByIndex(c)
+                            local items = cont:getItems()
+                            local food, drink, band = 0, 0, 0
+                            for k = 0, items:size() - 1 do
+                                local it = items:get(k)
+                                if isFood(it) then food = food + 1 elseif hasWater(it) then drink = drink + 1 end
+                                if isBandage(it) then band = band + 1 end
+                            end
+                            out[#out + 1] = { x = sx, y = sy, z = pz, kind = cont:getType(), n = items:size(), food = food, drink = drink, band = band,
+                                              d = math.sqrt((sx - p:getX()) ^ 2 + (sy - p:getY()) ^ 2), cont = cont, sq = sq }
+                        end
+                    end
+                end
+            end
+        end
+    end
+    table.sort(out, function(a, b) return a.d < b.d end)
+    return out
+end
+
+-- survey|r: one SURVEY line (stats, wounds, key inventory) plus up to 8 CONT lines (nearest containers within r), read by pzrl/hybrid.py
+commands.survey = function(p, a)
+    local r = tonumber(a and a.a) or 15
+    local food, drink, band = countInv(p)
+    local bleed, wounds = bodyCounts(p)
+    local tag = tostring(getTimestampMs())
+    log(string.format("SURVEY id=%s hp=%.1f hunger=%.3f thirst=%.3f fatigue=%.3f endurance=%.3f panic=%.1f bleeding=%d wounds=%d food=%d drink=%d bandages=%d x=%.1f y=%.1f z=%d indoors=%d",
+        tag, p:getHealth() * (p:getHealth() <= 1 and 100 or 1), stat(p, "Hunger"), stat(p, "Thirst"), stat(p, "Fatigue"), stat(p, "Endurance"), stat(p, "Panic"),
+        bleed, wounds, food, drink, band, p:getX(), p:getY(), math.floor(p:getZ()), (p:getCurrentSquare() and p:getCurrentSquare():isOutside()) and 0 or 1))
+    local cs = nearContainers(p, r)
+    for i = 1, math.min(8, #cs) do
+        local c = cs[i]
+        log(string.format("CONT id=%s i=%d x=%d y=%d z=%d kind=%s items=%d food=%d drink=%d bandages=%d dist=%.1f", tag, i, c.x, c.y, c.z, tostring(c.kind), c.n, c.food, c.drink, c.band, c.d))
+    end
+    log("SURVEYEND id=" .. tag)
+    return true, "survey"
+end
+
+-- eat / drink / bandage: queue the game's own timed action on the first suitable item; the action runs over the next game seconds
+commands.eat = function(p, a)
+    for _, it in ipairs(allItems(p)) do
+        if isFood(it) and not (try(function() return it:isRotten() end) == true) then
+            toHand(p, it)
+            ISTimedActionQueue.add(ISEatFoodAction:new(p, it, 1))
+            log("EAT queued " .. it:getType()); return true, "eat " .. it:getType()
+        end
+    end
+    log("EAT none"); return false, "no food"
+end
+commands.drink = function(p, a)
+    for _, it in ipairs(allItems(p)) do
+        if hasWater(it) then
+            toHand(p, it)
+            local ok = pcall(function() ISTimedActionQueue.add(ISDrinkFluidAction:new(p, it, 1)) end)
+            if not ok then ok = pcall(function() ISTimedActionQueue.add(ISDrinkFromBottle:new(p, it, 1)) end) end
+            log("DRINK queued " .. it:getType() .. " ok=" .. tostring(ok)); return ok, "drink " .. it:getType()
+        end
+    end
+    log("DRINK none"); return false, "no drink"
+end
+commands.bandage = function(p, a)
+    local inv, part = p:getInventory(), nil
+    pcall(function()
+        local parts = p:getBodyDamage():getBodyParts()
+        for i = 0, parts:size() - 1 do
+            local bp = parts:get(i)
+            if bp:bleeding() and not bp:bandaged() then part = bp; break end
+        end
+    end)
+    if not part then log("BANDAGE nothing bleeding"); return false, "nothing bleeding" end
+    for _, it in ipairs(allItems(p)) do
+        if isBandage(it) then
+            toHand(p, it)
+            ISTimedActionQueue.add(ISApplyBandage:new(p, p, it, part, true))
+            log("BANDAGE queued " .. it:getType()); return true, "bandage"
+        end
+    end
+    log("BANDAGE no bandage"); return false, "no bandage"
+end
+-- loot|i: walk next to the i-th nearest container (survey order, default 1) and queue transfers of its food, drink and bandages
+commands.loot = function(p, a)
+    local idx = tonumber(a and a.a) or 1
+    local cs = nearContainers(p, 15)
+    local c = cs[idx]
+    if not c then log("LOOT no container"); return false, "no container" end
+    luautils.walkAdj(p, c.sq, true)
+    local items, queued = c.cont:getItems(), 0
+    for k = items:size() - 1, 0, -1 do
+        local it = items:get(k)
+        if isFood(it) or hasWater(it) or isBandage(it) then
+            ISTimedActionQueue.add(ISInventoryTransferAction:new(p, it, c.cont, p:getInventory()))
+            queued = queued + 1
+        end
+    end
+    log(string.format("LOOT container=%d at %d,%d kind=%s queued=%d", idx, c.x, c.y, tostring(c.kind), queued))
+    return true, "loot " .. queued
+end
+
+-- setstats|hunger|thirst: scenario setup (0-1 each); tries the old setter names and the Build 42 CharacterStat API
+commands.setstats = function(p, a)
+    local st = p:getStats()
+    local h, t = tonumber(a and a.a), tonumber(a and a.b)
+    local okh = h and (pcall(function() st:setHunger(h) end) or pcall(function() st:set(CharacterStat.HUNGER, h) end))
+    local okt = t and (pcall(function() st:setThirst(t) end) or pcall(function() st:set(CharacterStat.THIRST, t) end))
+    log(string.format("SETSTATS hunger=%s thirst=%s ok=%s/%s", tostring(h), tostring(t), tostring(okh), tostring(okt)))
+    return true, "setstats"
+end
