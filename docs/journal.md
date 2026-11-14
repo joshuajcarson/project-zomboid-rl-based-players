@@ -282,3 +282,11 @@ Everything stopped (cleanup clean), all results, cards, milestones and the updat
 
 ## H-B0b end (2026-11-14 10:05): skill unit tests FAILED, mostly test design
 eat 0/5, drink 0/5, loot 0/5. Loot's 'any' mode never ran (server relays only 2 bot arguments); drink never ran (persistent character has no water); eat of a client-side given apple never starts even via the game's eatItem (client-only items likely rejected). Next: interactive skill debugging on the live client, then a verification batch. Card: docs/experiments/2026-11-14-hb0b-skill-unit-tests.md.
+
+## 2026-11-14 10:06 paused at 91% of the 5-hour window (temporary guard 92%); auto-resume check-in 12:53 CT
+RESUME PLAN (interactive skill debugging on the live client, then one pre-registered verification batch):
+1. `handlers.bot(user, cmd, a, b)` in RLBridge.lua (line ~249) relays only 2 args: add a third (c) so `loot|i|r|any` works (needs a server restart).
+2. Items: do NOT test with client-side `giveitem` food (client-only items do not start the eat action). Get supplies the server knows: loot real world containers (find containers with food/water nearby: survey radius 30-40, or another building), or check whether a server-side give reaches the real client in 42.22 (earlier finding on 42.21: it did not).
+3. Water: the persistent character has none; drink test needs a water source (sink/rain barrel `drink from world` or a looted bottle).
+4. Iterate with direct channel commands (`pzrl.channel.ServerChannel(17600).command("bot|Client40|...")`, read the newest logs/env-rendered-*.log) like the survey fix: eat, drink, loot (any), bandage; check BUSY and inventory each time.
+5. Then rerun the H-B0 reliability check (same criteria) and go to H-B (planner vs rule planner vs idle).
