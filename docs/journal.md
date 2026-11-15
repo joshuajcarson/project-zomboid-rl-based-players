@@ -384,3 +384,6 @@ An interrupted shelf loot in episode 1 put the shelf on the session blacklist, a
 Fix: session memory only for quick failures (<= 3 s), never for the seeded container.
 HBfix5: same criteria, seed 31.
 RESUME: rerun HBfix5 from scratch if interrupted.
+
+## 2026-11-15 01:54 HBfix5 stopped (FAILURE): planner looted 5 natural counters in the next building; HBfix6 pre-registered
+Scenario definition change: under --fixes, planners only see containers within 12 tiles of the seeded shelf. HBfix6: same criteria, seed 37.

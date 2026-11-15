@@ -104,6 +104,9 @@ try:
         while steps < a.episode_seconds and time.time() < t_stop:
             if pending is None:
                 sv = hybrid.survey(env, a0)
+                if a.fixes and a.supplies_at:          # the scenario's supplies are in this building: natural containers in the next building
+                    qx, qy = (int(v) for v in a.supplies_at.split(","))     # can be walked to but never looted (HBfix4-5), so neither planner sees them
+                    sv["containers"] = [c for c in sv["containers"] if ((c.get("x", 0) - qx) ** 2 + (c.get("y", 0) - qy) ** 2) ** 0.5 <= 12]
                 text = hybrid.state_text(env, a0, sv, last, failed)
                 if arm == "llm":
                     pending = pool.submit(hybrid.ask, text, a.model)
