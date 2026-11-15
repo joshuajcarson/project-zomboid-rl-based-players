@@ -520,7 +520,7 @@ local function nearContainers(p, r)
         for sy = py - r, py + r do
             local sq = cell:getGridSquare(sx, sy, pz)
             if sq then
-                local objs = sq:getObjects()
+                local objs, ci = sq:getObjects(), 0          -- ci: the container's index on its square (several containers share one square)
                 for i = 0, objs:size() - 1 do
                     local o = objs:get(i)
                     local n = try(function() return o:getContainerCount() end)
@@ -534,7 +534,8 @@ local function nearContainers(p, r)
                                 if isFood(it) then food = food + 1 elseif hasWater(it) then drink = drink + 1 end
                                 if isBandage(it) then band = band + 1 end
                             end
-                            out[#out + 1] = { x = sx, y = sy, z = pz, kind = cont:getType(), n = items:size(), food = food, drink = drink, band = band,
+                            ci = ci + 1
+                            out[#out + 1] = { x = sx, y = sy, z = pz, ci = ci, kind = cont:getType(), n = items:size(), food = food, drink = drink, band = band,
                                               d = math.sqrt((sx - p:getX()) ^ 2 + (sy - p:getY()) ^ 2), cont = cont, sq = sq }
                         end
                     end
@@ -562,7 +563,7 @@ commands.survey = function(p, a)
     end
     for i = 1, #shown do
         local c = shown[i]
-        log(string.format("CONT id=%s i=%d x=%d y=%d z=%d kind=%s items=%d food=%d drink=%d bandages=%d dist=%.1f", tag, i, c.x, c.y, c.z, tostring(c.kind), c.n, c.food, c.drink, c.band, c.d))
+        log(string.format("CONT id=%s i=%d x=%d y=%d z=%d ci=%d kind=%s items=%d food=%d drink=%d bandages=%d dist=%.1f", tag, i, c.x, c.y, c.z, c.ci, tostring(c.kind), c.n, c.food, c.drink, c.band, c.d))
     end
     log("SURVEYEND id=" .. tag)
     return true, "survey"
@@ -719,11 +720,12 @@ commands.loot = function(p, a)
     return true, "loot any " .. queued
 end
 
--- lootat|x|y: loot the container on square x,y (the planner's choice by coordinates; numbering by distance changed while it thought, HB0c)
+-- lootat|x|y|ci: loot container ci (default 1) on square x,y (the planner's choice by coordinates; numbering by distance changed while it
+-- thought, HB0c; several containers can share a square and the first one was taken regardless, HBfix2)
 commands.lootat = function(p, a)
-    local x, y = tonumber(a and a.a), tonumber(a and a.b)
+    local x, y, ci = tonumber(a and a.a), tonumber(a and a.b), tonumber(a and a.c) or 1
     for _, c in ipairs(nearContainers(p, 40)) do
-        if c.x == x and c.y == y then
+        if c.x == x and c.y == y and c.ci == ci then
             local walk = luautils.walkAdj(p, c.sq, true)
             local items, queued = c.cont:getItems(), 0
             for k = items:size() - 1, 0, -1 do
@@ -733,7 +735,7 @@ commands.lootat = function(p, a)
                 end
             end
             local qn = try(function() return #ISTimedActionQueue.getTimedActionQueue(p).queue end)
-            log(string.format("LOOT at %d,%d kind=%s walk=%s queued=%d queue_now=%s", x, y, tostring(c.kind), tostring(walk), queued, tostring(qn)))
+            log(string.format("LOOT at %d,%d ci=%d kind=%s walk=%s queued=%d queue_now=%s", x, y, ci, tostring(c.kind), tostring(walk), queued, tostring(qn)))
             return true, "loot " .. queued
         end
     end

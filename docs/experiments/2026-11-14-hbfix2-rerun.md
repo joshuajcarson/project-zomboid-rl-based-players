@@ -11,8 +11,20 @@
 
 ## Run log
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-11-14/hbfix2.jsonl`
-- Numbers: (pending)
-- Verdict: (pending)
-- MILESTONE IMPACT: (pending)
+## Result (filled at batch end, 2026-11-15 00:45 CT)
+- Data: `results/experiments-2026-11-14/hbfix2.jsonl` (23:52-00:38, 18 episodes: llm 9, rule 9; 0 deaths; planner 134/134 valid).
+- Numbers:
+  - Watchdog: no alert, including stray_supplies and skill_health.
+  - Skills: drink 17/17 (llm 9/9, rule 8/8), eat 38/38, bandage 6/7, loot 19/28 = 68% (llm 10/19, rule 9/9).
+- Verdict: **INCONCLUSIVE** (loot 68% is under the 70% success bar and over the 50% failure bar; every other criterion is met).
+- What the loot numbers hide:
+  - Every loot at the seeded shelf worked: llm 9/9, rule 9/9.
+  - All 9 failures are the planner gathering extra supplies (already carrying food, water and bandages) from natural world containers:
+    - 10780,9419: a counter 29 tiles away in another building; 2 items queued, the path failed. Tried in 4 different episodes, because failure memory was per episode.
+    - 10782,9418-9419 and 10783,9419: these squares hold more than one container. The survey lists each container, but `lootat` took the first container on the square, which held nothing (queued 0).
+- Unexpected learnings:
+  1. Clearing stray seeds every episode works: none seen in any episode.
+  2. The planner over-gathers: it keeps looting when already supplied, which costs time and exposes it.
+  3. Multi-container squares break loot by coordinates.
+- Fix: the survey reports `ci` (the container's index on its square), and `lootat|x|y|ci` loots that container. With `--fixes`, failed containers are remembered for the whole session (the world is fixed); the planner sees "[looting here failed earlier]".
+- MILESTONE IMPACT: none (HBfix3 reruns with the fix and the same criteria).

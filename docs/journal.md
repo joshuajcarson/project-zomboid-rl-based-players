@@ -357,3 +357,15 @@ Fixes:
 
 HBfix2: same criteria, seed 19.
 RESUME: if interrupted, rerun HBfix2 from scratch with the card's command and watchdog.
+
+## 2026-11-15 00:47 HBfix2 INCONCLUSIVE (loot 68%); HBfix3 pre-registered
+HBfix2 results:
+- Watchdog clean; drink 17/17, eat 38/38.
+- loot 19/28: 100% at the seeded shelf for both planners. All failures were planner over-gathering at natural containers: an unreachable other building, and multi-container squares where lootat took the first container.
+
+Fixes:
+- Survey `ci` and `lootat|x|y|ci`.
+- Session-wide failed-container memory under --fixes.
+
+HBfix3: same criteria, seed 23.
+RESUME: rerun HBfix3 from scratch with the card's command and watchdog if interrupted.

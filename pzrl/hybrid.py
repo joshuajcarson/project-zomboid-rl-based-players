@@ -79,7 +79,7 @@ def state_text(env, name, sv, last="", failed=()):
     zlines = ["%.1f tiles %s" % (d, _DIRS[int(round(a / (math.pi / 4))) % 8]) for d, a in zs[:4]] or ["none visible"]
     cl = ["%d: %s %.1f tiles away, %d items (food %d, water %d, bandages %d)%s" % (int(c.get("i", 0)), c.get("kind"), c.get("dist", 0),
           int(c.get("items", 0)), int(c.get("food", 0)), int(c.get("drink", 0)), int(c.get("bandages", 0)),
-          " [looting here failed this episode]" if (int(c.get("x", 0)), int(c.get("y", 0))) in failed else "") for c in sv["containers"]] or ["none in range"]
+          " [looting here failed earlier]" if (int(c.get("x", 0)), int(c.get("y", 0))) in failed else "") for c in sv["containers"]] or ["none in range"]
     return ("Health %.0f/100. Hunger %s, thirst %s, fatigue %s, endurance %s, panic %s. Bleeding wounds: %s, injuries: %s.\n"
             "Inventory: food %s, water %s, bandages %s.\nZombies (nearest first): %s.\nContainers nearby: %s.\nLast skill: %s.\nChoose the next skill."
             % (me["hp"], s.get("hunger"), s.get("thirst"), s.get("fatigue"), s.get("endurance"), s.get("panic"), s.get("bleeding"),
@@ -118,10 +118,13 @@ def busy(env, name):
     return int(m.group(1)) if m else -1
 
 
-def run_one_shot(env, name, skill, arg="", arg2=""):
+def run_one_shot(env, name, skill, arg="", arg2="", arg3=""):
     """Queue a timed-action skill and wait (one game second at a time, no movement commands) until the client's action queue is empty or
     the cap is reached. Returns the game seconds waited."""
-    env.control[name]._bot(skill, arg, arg2)
+    if arg3 != "":
+        env.channel.command(f"bot|{name}|{skill}|{arg}|{arg2}|{arg3}")      # the bot relay passes 3 arguments
+    else:
+        env.control[name]._bot(skill, arg, arg2)
     waited = 0
     env._read(env._game_seconds(2)); waited += 2                       # give the queue time to fill
     while waited < ONE_SHOT[skill]:
