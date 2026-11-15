@@ -36,6 +36,7 @@ ap.add_argument("--fixes", action="store_true", help="scenario fixes (2026-11-14
                 "from the --supplies-at container (and from every other container within 45 squares) before seeding, first decision only once the survey shows the set hunger")
 ap.add_argument("--lessons", default="", help="lessons JSON for the llmL arm (track H-L1); updated after every llmL episode unless --freeze")
 ap.add_argument("--freeze", action="store_true", help="use the lessons file read-only (frozen evaluation)")
+ap.add_argument("--reflex", type=float, default=3.0, help="llmR arm: zombie distance (tiles) at which the engagement reflex takes over (H-D1)")
 ap.add_argument("--out", required=True)
 a = ap.parse_args()
 
@@ -50,6 +51,11 @@ ep = 0
 LES = {"lessons": [], "kind": [], "version": 0}
 if a.lessons and os.path.exists(a.lessons):
     LES = json.load(open(a.lessons, encoding="utf-8"))
+
+
+def nearest(env, a0):
+    me = env.state[a0]
+    return min((math.hypot(z[0] - me["x"], z[1] - me["y"]) for z in me["z"]), default=99.0)
 
 
 def effect(before, after):
@@ -108,14 +114,27 @@ try:
             stuck = set()          # --fixes: containers whose loot ended within 3 s with nothing taken (no path / nothing queued): whole session
         failed = set(stuck)        # plus any failed loot this episode (an interrupted loot must not blacklist the shelf for good, HBfix4)
         trace = []                 # this episode's decisions, for the llmL reflection
+        reflex_steps = 0           # llmR: game steps run by the engagement reflex
         while steps < a.episode_seconds and time.time() < t_stop:
+            if arm == "llmR" and a0 in env.state and nearest(env, a0) <= a.reflex:
+                # engagement reflex (H-D1): a zombie is close, so the real-time rule fights (flees below 35 hp) and the planner waits;
+                # a planner answer that arrives meanwhile is dropped (it was decided for a state that no longer holds)
+                if pending is not None and pending.done():
+                    pending.result(); pending = None
+                current = "flee" if env.state[a0]["hp"] < 35 else "fight"
+                obs, rew, term, trunc, info = env.step({a0: hybrid.step_action(current, obs[a0])})
+                steps += 1; reflex_steps += 1
+                if term.get(a0) or a0 not in env.agents:
+                    dead = True
+                    break
+                continue
             if pending is None:
                 sv = hybrid.survey(env, a0)
                 if a.fixes and a.supplies_at:          # the scenario's supplies are in this building: natural containers in the next building
                     qx, qy = (int(v) for v in a.supplies_at.split(","))     # can be walked to but never looted (HBfix4-5), so neither planner sees them
                     sv["containers"] = [c for c in sv["containers"] if ((c.get("x", 0) - qx) ** 2 + (c.get("y", 0) - qy) ** 2) ** 0.5 <= 12]
                 text = hybrid.state_text(env, a0, sv, last, failed)
-                if arm == "llm":
+                if arm in ("llm", "llmR"):
                     pending = pool.submit(hybrid.ask, text, a.model)
                 elif arm == "llmL":                                 # same planner with the lessons appended to its system prompt
                     pending = pool.submit(hybrid.ask, text, a.model, 60, hybrid.lessons_system(LES["lessons"]))
@@ -161,7 +180,7 @@ try:
                 if a0 not in env.state or env.state[a0].get("dead") or env.state[a0]["hp"] <= 0:
                     dead = True
                     break
-                if arm in ("llm", "llmL"):
+                if arm in ("llm", "llmL", "llmR"):
                     continue                                       # rule / idle fall through: one game step per decision
             obs, rew, term, trunc, info = env.step({a0: hybrid.step_action(current, obs[a0])})
             steps += 1
@@ -169,7 +188,8 @@ try:
                 dead = True
                 break
         end_sv = hybrid.survey(env, a0) if not dead and a0 in env.state else {"stats": {}}
-        end_row = {"episode_end": ep, "arm": arm, "steps": steps, "dead": dead, "hp": env.state.get(a0, {}).get("hp"), "end": end_sv["stats"]}
+        end_row = {"episode_end": ep, "arm": arm, "steps": steps, "dead": dead, "hp": env.state.get(a0, {}).get("hp"), "end": end_sv["stats"],
+                   "reflex_steps": reflex_steps}
         log.write(json.dumps(end_row) + "\n"); log.flush()
         if arm == "llmL" and a.lessons and not a.freeze:                 # training phase: rewrite the lessons from this episode
             new, kinds, rsecs, rerr = hybrid.reflect(LES["lessons"], hybrid.episode_log(trace, end_row), a.model)

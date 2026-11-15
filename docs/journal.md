@@ -414,3 +414,6 @@ The lessons made the planner flee far more (14% vs 6% of decisions; at 3-8 tiles
 Single-episode lessons over-generalise, and one was false (weapon missing from the state text).
 Division of labour: engagement belongs in a real-time skill.
 NEXT: H-D1, a reflex layer: when a zombie is within 3 tiles the reflex fights and the planner's choice waits; the planner keeps needs and looting.
+
+## 2026-11-15 13:10 H-D1 pre-registered (llm vs llmR engagement reflex, 2 x 110 min, seeds 71/73); session 1 started
+RESUME: rerun an interrupted session from scratch with the card command and watchdog.
