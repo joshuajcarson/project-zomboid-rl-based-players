@@ -546,7 +546,7 @@ local function nearContainers(p, r)
     return out
 end
 
--- survey|r: one SURVEY line (stats, wounds, key inventory) plus up to 8 CONT lines (nearest containers within r), read by pzrl/hybrid.py
+-- survey|r: one SURVEY line (stats, wounds, key inventory) plus up to 12 CONT lines (the 8 nearest containers within r, then further ones holding supplies), read by pzrl/hybrid.py
 commands.survey = function(p, a)
     local r = tonumber(a and a.a) or 15
     local food, drink, band = countInv(p)
@@ -556,8 +556,12 @@ commands.survey = function(p, a)
         tag, p:getHealth() * (p:getHealth() <= 1 and 100 or 1), stat(p, "Hunger"), stat(p, "Thirst"), stat(p, "Fatigue"), stat(p, "Endurance"), stat(p, "Panic"),
         bleed, wounds, food, drink, band, p:getX(), p:getY(), math.floor(p:getZ()), (p:getCurrentSquare() and p:getCurrentSquare():isOutside()) and 0 or 1))
     local cs = nearContainers(p, r)
-    for i = 1, math.min(8, #cs) do
-        local c = cs[i]
+    local shown = {}                           -- the 8 nearest plus any further container holding supplies (max 12): spawns at the edge of the box
+    for i, c in ipairs(cs) do                  -- did not list the seeded shelf when 8 nearer containers existed (H-B, 2026-11-14)
+        if #shown < 12 and (i <= 8 or c.food + c.drink + c.band > 0) then shown[#shown + 1] = c end
+    end
+    for i = 1, #shown do
+        local c = shown[i]
         log(string.format("CONT id=%s i=%d x=%d y=%d z=%d kind=%s items=%d food=%d drink=%d bandages=%d dist=%.1f", tag, i, c.x, c.y, c.z, tostring(c.kind), c.n, c.food, c.drink, c.band, c.d))
     end
     log("SURVEYEND id=" .. tag)
@@ -633,6 +637,27 @@ commands.setstats = function(p, a)
     local okt = t and (pcall(function() st:set(CharacterStat.THIRST, t) end) or pcall(function() st:setThirst(t) end))
     log(string.format("SETSTATS hunger=%s thirst=%s ok=%s/%s now=%.3f/%.3f", tostring(h), tostring(t), tostring(okh), tostring(okt), stat(p, "Hunger"), stat(p, "Thirst")))
     return true, "setstats"
+end
+
+-- autodrink|0/1: the game's auto-drink (on by default) drinks from carried water as soon as thirst rises, which undid the server-set
+-- thirst in H-B (2026-11-14); scenarios turn it off so thirst and the drink skill are under the planner's control
+commands.autodrink = function(p, a)
+    local on = tostring(a and a.a) == "1"
+    pcall(function() p:setAutoDrink(on) end)
+    local now = try(function() return p:getAutoDrink() end)
+    log("AUTODRINK " .. tostring(now)); return true, "autodrink " .. tostring(now)
+end
+
+-- strip: remove carried food, water and bandages (scenario start: the persistent character accumulates supplies across episodes)
+commands.strip = function(p, a)
+    local n = 0
+    for _, it in ipairs(allItems(p)) do
+        if isFood(it) or hasWater(it) or isBandage(it) then
+            local c = it:getContainer()
+            if c then c:Remove(it); pcall(sendRemoveItemFromContainer, c, it); n = n + 1 end
+        end
+    end
+    log("STRIP removed=" .. n); return true, "strip " .. n
 end
 
 -- busy: whether the character still has timed actions queued or running (BUSY n=queue length, -1 if unknown), so a skill can wait for its action

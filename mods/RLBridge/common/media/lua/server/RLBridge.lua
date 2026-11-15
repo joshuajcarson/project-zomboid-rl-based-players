@@ -376,6 +376,30 @@ function handlers.seedat(x, y, itype, n)
     return true, string.format("seeded %d %s into %s at %d,%d", added, itype, tostring(cont:getType()), x, y)
 end
 
+-- clearat|x|y|type1,type2,... : remove the listed item types from the first container on square x,y (server side, synced to clients), so
+-- seeded supplies do not pile up across episodes in the persistent world (H-B, 2026-11-14)
+function handlers.clearat(x, y, types)
+    x, y = tonumber(x), tonumber(y)
+    local sq = getCell():getGridSquare(x, y, 0)
+    if not sq then return false, "square not loaded" end
+    local objs, cont = sq:getObjects(), nil
+    for i = 0, objs:size() - 1 do
+        local ok, c = pcall(function() return objs:get(i):getContainer() end)
+        if ok and c then cont = c; break end
+    end
+    if not cont then return false, "no container at " .. x .. "," .. y end
+    local want, removed = {}, 0
+    for t in string.gmatch(types or "", "[^,]+") do want[t] = true end
+    local items = cont:getItems()
+    for i = items:size() - 1, 0, -1 do
+        local it = items:get(i)
+        if want[it:getFullType()] then
+            cont:Remove(it); pcall(function() sendRemoveItemFromContainer(cont, it) end); removed = removed + 1
+        end
+    end
+    return true, string.format("cleared %d from %d,%d", removed, x, y)
+end
+
 -- hutches|x|y|r|remove : list the IsoHutch objects (animal hutches and dog houses) within r squares of (x, y) on the ground floor; with
 -- remove=1 also take them out of the world. A client crashes (NullPointerException in IsoHutch.removeFromWorld) when it unloads the chunk
 -- of a hutch that has no animal, which ends every rendered run after a few episodes.

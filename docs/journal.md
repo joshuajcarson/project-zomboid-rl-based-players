@@ -338,3 +338,6 @@ Three pooled sessions, llm/rule/idle n 37/34/34:
 
 All criteria met; the sample target is met. The planner is non-inferior to the rule planner and better than idle. Watchdog clean.
 Next for track H: fix the scenario limits first (server stats thirst, the 8-container survey cap, shelf accumulation), then H-B2, a harder scenario where planning matters.
+
+## 2026-11-14 23:35 Scenario fixes built and checked live; HBfix pre-registered
+Thirst: the game auto-drink (IsoPlayer.setAutoDrink, on by default) drank carried water as soon as the server set thirst; new bot command autodrink|0 keeps thirst at 0.60 (checked live). New: bot strip (empty carried supplies), server clearat|x|y|types (remove seeded types, synced), survey lists 8 nearest + further containers with supplies (max 12), hybrid_run --fixes (all of these + wait for the set hunger). Leftover seeds from HB0c-e cleared once (63 items at 4 containers 25-40 tiles away; likely loot traps behind the planner's 27% loot rate). Knowledge graph updated (906 nodes). HBfix (45 min, llm+rule, watchdog with no known deviations) next.

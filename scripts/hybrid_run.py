@@ -31,6 +31,8 @@ ap.add_argument("--thirst", type=float, default=0.6)
 ap.add_argument("--seed", type=int, default=7)
 ap.add_argument("--supplies-at", default="", help="x,y of a known reachable container to seed into (default: the nearest storage container)")
 ap.add_argument("--supplies", default="", help="server-side seeding at episode start, e.g. Base.Apple:3,Base.WaterBottle:2,Base.Bandage:2 (into the container nearest the player)")
+ap.add_argument("--fixes", action="store_true", help="scenario fixes (2026-11-14): auto-drink off, carried supplies stripped, seeded types cleared "
+                "from the --supplies-at container before seeding, first decision only once the survey shows the set hunger")
 ap.add_argument("--out", required=True)
 a = ap.parse_args()
 
@@ -55,6 +57,12 @@ try:
         obs, _ = env.reset()
         a0 = env.agents[0]
         ep += 1
+        if a.fixes:
+            env.control[a0]._bot("autodrink", 0)
+            env.control[a0]._bot("strip")
+            if a.supplies_at:
+                sx, sy = a.supplies_at.split(",")
+                env.channel.command(f"clearat|{sx}|{sy}|" + ",".join(x.split(":")[0] for x in a.supplies.split(",") if x))
         for spec in [x for x in a.supplies.split(",") if x]:
             itype, n = spec.split(":")
             if a.supplies_at:
@@ -63,6 +71,12 @@ try:
             else:
                 env.channel.command(f"seed|{a0}|{itype}|{n}|30")
         env.channel.command(f"stats|{a0}|{a.hunger}|{a.thirst}")        # server-side: Build 42 reverts client-side stat changes
+        if a.fixes:                                                    # the server's stat change reaches the client a moment later
+            for _ in range(6):
+                h = hybrid.survey(env, a0)["stats"].get("hunger")
+                if isinstance(h, float) and abs(h - a.hunger) <= 0.05:
+                    break
+                env._read(env._game_seconds(1))
         arm = a.arms.split(",")[(ep - 1) % len(a.arms.split(","))]
         env.say(f"hybrid | episode {ep} | arm {arm}")
         current, pending, steps, dead, last, failed = "wait", None, 0, False, "", set()
