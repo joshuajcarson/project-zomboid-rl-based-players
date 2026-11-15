@@ -50,7 +50,7 @@ The long-term milestone list is `docs/milestones.md`. Work in BATCHES: one batch
 **2. During the batch:**
 - Compare variants only INSIDE one interleaved session (arms alternate by episode in one server session; the lab takes comma-separated policies, `scripts/compare_arms.py` analyses them). Block-to-block comparisons are not evidence: the same policy scored 25.7 to 56.8 damage across blocks (per-episode damage sd ~27, heavy tail).
 - 30+ real episodes per arm for any claim; report standard errors and z. A difference under ~2 z is noise.
-- Stop early ONLY for an invalid run (crash, failed invariant, stalled client, broken design). Never stop or extend a run because the effect looks good or bad: no peeking.
+- Stop early ONLY for an invalid run (crash, failed invariant, stalled client, broken design). Attach the run watchdog to every long run (`scripts/watchdog.py`, Monitor streaming its ALERT lines; see `docs/watchdog.md`), and add a check there whenever a run turns out invalid in a way it did not catch (user, 2026-11-14). Never stop or extend a run because the effect looks good or bad: no peeking.
 - Keep the field clean (client `arm|hour|r` clears corpses; per-episode `world` snapshot is in the lab output) and save raw per-episode data under `results/` so the claim is reproducible.
 
 **3. Batch end (say it to the user AND write it to the journal):** relist the milestone, the experiment, the verdict (success / failure / inconclusive against the pre-registered criteria, with the numbers), and any unexpected learnings. Update `docs/milestones.md` (status, evidence, next experiment). Commit and push, run `python scripts/cleanup.py`.
