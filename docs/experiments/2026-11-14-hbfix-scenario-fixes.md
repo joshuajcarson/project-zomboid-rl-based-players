@@ -13,6 +13,7 @@
 - Not a comparison between arms: both arms only generate skill uses.
 
 ## Run log
+- Correction: the times above are off by half an hour; the card was committed and the run launched at 23:05 CT (dev checks ~22:50).
 
 ## Result (filled at batch end)
 - Data: `results/experiments-2026-11-14/hbfix.jsonl`
