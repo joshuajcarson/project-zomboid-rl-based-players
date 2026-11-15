@@ -1,0 +1,23 @@
+{
+ "lessons": [
+  "Loot nearby containers first only when no zombies are within about 3; a zombie at 1.7 range made looting container 2 deadly.",
+  "Eat when hunger passes about 0.3 and you carry food; each meal cut hunger about 0.16. Don't eat below 0.1.",
+  "Drink when thirst passes about 0.4; one drink cut thirst about 0.5. Never drink or eat when the stat is near zero.",
+  "Eat, drink and bandage only when zombies are about 6 or more away; all finished uninterrupted, even at 5-6 range.",
+  "Bandage when bleeding starts or hp drops, if zombies are not adjacent; don't keep fighting at low hp.",
+  "Flee when zombies are within about 12 and closing; if they stay within 3-4 after two or three flees, fight.",
+  "When no food or water is carried and stats are low, loot another container instead of waiting. Keep one water in reserve.",
+  "Unarmed fighting at range under 2 killed us (hp 100 to 1 in 12 s); with no weapon and zombies near, flee instead of fighting."
+ ],
+ "kind": [
+  "scenario",
+  "general",
+  "general",
+  "general",
+  "general",
+  "general",
+  "general",
+  "general"
+ ],
+ "version": 22
+}
