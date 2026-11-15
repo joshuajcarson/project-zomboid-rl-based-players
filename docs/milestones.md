@@ -21,7 +21,7 @@ The real client is the VALIDATOR, not the trainer: ~45 s per episode at 1x, 30+ 
 | H-L2 | Skill library grows (composed skills) | A composed skill kept only if a frozen-evaluation card shows a gain | not started | docs/planner-learning.md |
 | H-L3 | Instruction tuning against measured weaknesses | Each prompt version vs the previous, interleaved | not started | docs/planner-learning.md |
 | H-L4 | Distil planner decisions into a learned real-time policy | BC on planner logs, then PPO; student non-inferior to the planner at a fraction of the latency | not started | links M3a/M3b |
-| H-D1 | Division of labour: horde skill vs planner micromanagement | 6-10 zombies; dedicated horde skill switched on by the planner vs planner choosing fight/flee each decision | next | docs/planner-learning.md |
+| H-D1 | Division of labour: horde skill vs planner micromanagement | 6-10 zombies; dedicated horde skill switched on by the planner vs planner choosing fight/flee each decision | in progress (inconclusive after 2 sessions) | 2026-11-15 card docs/experiments/2026-11-15-hd1-engagement-reflex.md: reflex arm vs plain planner n 38/39: deaths 0.08 vs 0.26 (z -2.1), end hp +11.4 (z 1.44), needs equal. H-D1b: 2 confirmation sessions pooled (seeds 79/83), final |
 | H-D2 | Division of labour: planner latency sweep | 0 / 3 / 10 s added decision delay; where the planner's value survives | not started | docs/planner-learning.md |
 | H-B2 | Harder needs scenario: fast need decay, longer episodes | StatsDecrease faster (checked on dev first), ~5 min episodes, llm / rule / idle | not started | user idea 2026-11-15 (day length / stats decay) |
 | H-C | Two agents cooperate through planner chat | 2 real clients, a task needing division of labour, chat vs no-chat planners | not started | needs H-B and the memory budget (M6) |
@@ -55,6 +55,7 @@ The real client is the VALIDATOR, not the trainer: ~45 s per episode at 1x, 30+ 
 
 ## Daily update log
 - 2026-11-15 (daily review ran, docs only): audited cards HBfix to HBfix6, HB-F, H-L1: all present. HBfix5 card lacked Numbers/Unexpected/Validity/Follow-ups; added as RECONSTRUCTED (counts unknown, see Review gaps). HB-F (session 3 running) and H-L1 (not launched) result halves are legitimately pending. H-F status line refreshed; no milestone added or removed. CLAUDE.md next-steps pointer extended to track H.
+- 2026-11-15 (16:45): H-D1 INCONCLUSIVE on end hp (+11.4, z 1.44) but deaths fell 0.26 -> 0.08 (z -2.1) with needs unchanged: first evidence for the reflex + planner split. H-D1b confirmation sessions running.
 - 2026-11-15 (13:00): H-L1 INCONCLUSIVE with a negative tendency: frozen lessons made the planner flee more and die more (0.35 vs 0.18, z 1.7). Engagement timing belongs in a real-time skill: H-D1 next.
 - 2026-11-15 (08:15): HB-F INCONCLUSIVE on 3 pooled sessions (llm needs 0.17 vs rule 0.33, but deaths 0.19 vs 0.08: death condition missed by 0.01). H-L1 training phase next.
 - 2026-11-15 (07:40): planner-learning design added (docs/planner-learning.md): tracks H-L1..L4 (lessons, skill library, instructions, distillation) and H-D1/D2 (skills vs planner division of labour); H-L1 (lessons file) is next after HB-F.

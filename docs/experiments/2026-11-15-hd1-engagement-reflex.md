@@ -22,8 +22,17 @@
 
 ## Run log
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-11-15/hd1_s1.jsonl`, `hd1_s2.jsonl`
-- Numbers: (pending)
-- Verdict: (pending)
-- MILESTONE IMPACT: (pending)
+## Result (filled at batch end, 2026-11-15 16:45 CT)
+- Data: `results/experiments-2026-11-15/hd1_s1.jsonl` (seed 71, 12:53-14:43), `hd1_s2.jsonl` (seed 73, 14:44-16:35). Watchdog clean on both, 0 step-1 deaths.
+- Numbers (pooled, `hl_analyze.py --a llm --b llmR`):
+
+| Arm | n | died | end hp | needs | wasted loots / ep |
+|---|---|---|---|---|---|
+| llm | 39 | 0.26 | 59.3 (se 6.4) | 0.200 (se 0.043) | 0.28 |
+| llmR (reflex) | 38 | 0.08 | 70.7 (se 4.7) | 0.197 (se 0.034) | 0.34 |
+
+  llmR - llm: end hp +11.4 (z 1.44), deaths -0.18 (z -2.12), needs -0.003, wasted loots +0.06. Per session: s1 hp +12.5, deaths -0.16; s2 hp +10.0, deaths -0.19 (same direction in both). The reflex ran in 33 of 39 llmR episodes, about 14 game steps per episode.
+- Verdict: **INCONCLUSIVE** on the pre-registered primary (end hp z 1.44 < 2; no failure condition holds). The death rate drops from 0.26 to 0.08 (z -2.1, a secondary measure here) and needs are unchanged.
+- Exploratory (other sessions, not evidence): llmR's death rate 0.08 matches the rule planner's in HB-F (0.08), with needs 0.20 vs the rule planner's 0.33.
+- Division of labour: handing engagement to a real-time reflex removed most of the planner's excess deaths without touching its needs advantage. This is the first direct evidence for the layered design (a reflex for fighting, the planner for needs and looting).
+- MILESTONE IMPACT: modify. Under the acceptance rule an inconclusive test gets more sessions, never new thresholds: H-D1b pre-registers two confirmation sessions (seeds 79, 83), pooled with these two, same criteria, final.

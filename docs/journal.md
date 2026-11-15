@@ -417,3 +417,8 @@ NEXT: H-D1, a reflex layer: when a zombie is within 3 tiles the reflex fights an
 
 ## 2026-11-15 13:10 H-D1 pre-registered (llm vs llmR engagement reflex, 2 x 110 min, seeds 71/73); session 1 started
 RESUME: rerun an interrupted session from scratch with the card command and watchdog.
+
+## 2026-11-15 16:47 H-D1 INCONCLUSIVE (primary), deaths 0.26 -> 0.08; H-D1b confirmation started
+llmR (engagement reflex) vs llm, pooled 38/39: end hp +11.4 (z 1.44), deaths -0.18 (z -2.1), needs equal. Same direction in both sessions.
+H-D1b: 2 more sessions (seeds 79, 83), 4-session pool, same criteria, final.
+RESUME: rerun an interrupted session from scratch with the card command and watchdog.
