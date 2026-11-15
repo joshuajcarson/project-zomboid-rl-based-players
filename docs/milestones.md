@@ -2,7 +2,7 @@
 
 **Long-term goal:** several agents (up to 4) cooperating to survive in Project Zomboid on one server, validated on the real graphical client. Solo-first is fine; the route does not matter as long as each step is validated on the real client.
 
-**Last updated: 2026-11-14 23:00 (H-B done).** Update this file at least once per calendar day (first action of a day's session, and at the end of every batch when a status, evidence line or next experiment changed). Statuses: `done`, `in progress`, `not started`, `blocked`, `parked`. Every status needs an evidence pointer (journal section, results file or ledger row); a milestone is `done` only when its acceptance test passed in a session that meets the experiment rules in CLAUDE.md.
+**Last updated: 2026-11-15 02:40 (scenario fixes validated).** Update this file at least once per calendar day (first action of a day's session, and at the end of every batch when a status, evidence line or next experiment changed). Statuses: `done`, `in progress`, `not started`, `blocked`, `parked`. Every status needs an evidence pointer (journal section, results file or ledger row); a milestone is `done` only when its acceptance test passed in a session that meets the experiment rules in CLAUDE.md.
 
 ## Acceptance-test rule (decided 2026-10-30)
 Numeric acceptance tests are judged on the POOLED real episodes of at least two independent sessions (pooled mean and 95% interval): success needs the pooled mean at or better than the target; failure if the pooled mean is clearly outside the pre-registered failure bound; anything between is INCONCLUSIVE and means more sessions, never moved thresholds. Reason: per-episode damage has sd ~27, so one 30-episode session cannot decide a threshold that sits at the current estimate (se ~5). M1 in this form: target kills >= 1.6 and damage <= 25; failure bound kills < 1.4 or damage > 32; planned n >= 60 pooled (Batch 1 = 2 sessions x 30+).
@@ -44,6 +44,7 @@ The real client is the VALIDATOR, not the trainer: ~45 s per episode at 1x, 30+ 
 - 2026-10-31: none. All cards B1-B12 and R1-R8 have every template field (B10-B12 and others word the criteria as `SUCCESS (...) if`). B12 is the only open card: result half pending because session 2 was interrupted (legitimate pause, not a gap); fix first = rerun session 2, then fill the B12 result.
 
 ## Daily update log
+- 2026-11-15 (02:40): HBfix6 SUCCESS: fixed scenario (`hybrid_run --fixes`) starts as configured every episode and all one-shot skills are reliable (drink 13/13, eat 32/32, loot 14/15, bandage 8/8) after 6 iterations (HBfix to HBfix6); watchdog gained stray_supplies, skill_health, immobile. Next: H-B comparison re-run on the fixed scenario.
 - 2026-11-14 (23:00): H-B DONE: 3 pooled sessions (37/34/34): Sonnet planner non-inferior to the rule planner (died 0.22 vs 0.21, needs 0.20 vs 0.30), beats idle on end hp (z 3.13).
 - 2026-11-14 (21:12): H-B criteria MET on 2 pooled sessions (llm non-inferior to rule, beats idle z 2.68) but under-powered (25/23/23 < 30/arm); HB3 confirmation session next. Live run watchdog added (scripts/watchdog.py).
 - 2026-11-14 (15:14): HB0f SUCCESS: hybrid skills reliable (eat 97%, loot 100%, bandage 100%) with supplies in a reachable container; H-B (planner vs rule planner vs idle) next.

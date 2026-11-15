@@ -387,3 +387,12 @@ RESUME: rerun HBfix5 from scratch if interrupted.
 
 ## 2026-11-15 01:54 HBfix5 stopped (FAILURE): planner looted 5 natural counters in the next building; HBfix6 pre-registered
 Scenario definition change: under --fixes, planners only see containers within 12 tiles of the seeded shelf. HBfix6: same criteria, seed 37.
+
+## 2026-11-15 02:40 HBfix6 SUCCESS: fixed scenario validated
+Watchdog clean for 16 episodes; drink 13/13, eat 32/32, loot 14/15, bandage 8/8; planner 131/131 valid.
+The fixed scenario (`--fixes`):
+- auto-drink off; strip; clearat + clearnear each episode
+- survey of the 8 nearest + supplies containers; lootat by ci
+- mobility probe; scoped failure memory; planners see only containers within 12 tiles of the seeded shelf
+
+NEXT: H-B comparison re-run on the fixed scenario (llm/rule/idle), then a harder H-B2.
