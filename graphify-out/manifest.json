@@ -78,10 +78,10 @@
     "semantic_hash": "99087a4a7969ec1ffc8e605e65cd827b"
   },
   "mods/RLBridge/common/media/lua/server/RLBridge.lua": {
-    "mtime": 1794718771.706041,
-    "seen": 1794718909.3676164,
-    "ast_hash": "7f75d36d1174f33ce99c367ee89adec6",
-    "semantic_hash": "7f75d36d1174f33ce99c367ee89adec6"
+    "mtime": 1794721912.4353993,
+    "seen": 1794769077.011426,
+    "ast_hash": "6b33f5dfe67d0dd4be07e5068a766660",
+    "semantic_hash": "6b33f5dfe67d0dd4be07e5068a766660"
   },
   "mods/RLClient/common/media/lua/client/RLClient.lua": {
     "mtime": 1792971554.8123713,
@@ -576,10 +576,10 @@
     "semantic_hash": "683c3bfc66b31628c8422fc49b3ed368"
   },
   "scripts/rl_bot_dev.lua": {
-    "mtime": 1794718771.7050374,
-    "seen": 1794718909.3678527,
-    "ast_hash": "8d1090fcce8188bf445f9be60db29672",
-    "semantic_hash": "8d1090fcce8188bf445f9be60db29672"
+    "mtime": 1794724784.0530047,
+    "seen": 1794769077.0116284,
+    "ast_hash": "8d3b6e2598a0d768e6e0f94d58d00bef",
+    "semantic_hash": "8d3b6e2598a0d768e6e0f94d58d00bef"
   },
   "scripts/run-fake-client.ps1": {
     "mtime": 1792948989.397565,
@@ -642,10 +642,10 @@
     "semantic_hash": "e0b806ecff1f5cf856529ac7d29d6df3"
   },
   "CLAUDE.md": {
-    "mtime": 1794711918.4419458,
-    "seen": 1794718909.3678794,
-    "ast_hash": "f56cb7c2dd568297a802024d154e2714",
-    "semantic_hash": "f56cb7c2dd568297a802024d154e2714"
+    "mtime": 1794751334.4640799,
+    "seen": 1794769077.0116572,
+    "ast_hash": "2394981e4fde5792c9e3644e49944416",
+    "semantic_hash": "2394981e4fde5792c9e3644e49944416"
   },
   "README.md": {
     "mtime": 1792884873.699339,
@@ -750,16 +750,16 @@
     "semantic_hash": "76b229725e0c1d79e661b25bb787a65b"
   },
   "docs/journal.md": {
-    "mtime": 1794718604.1207244,
-    "seen": 1794718909.367934,
-    "ast_hash": "db1f565770772df91be29174a0b748ab",
-    "semantic_hash": "db1f565770772df91be29174a0b748ab"
+    "mtime": 1794768779.8239665,
+    "seen": 1794769077.0117059,
+    "ast_hash": "7ab02dd5fdafef4501f9e2411d8f32d6",
+    "semantic_hash": "7ab02dd5fdafef4501f9e2411d8f32d6"
   },
   "docs/milestones.md": {
-    "mtime": 1794718604.1202118,
-    "seen": 1794718909.3679357,
-    "ast_hash": "b47ce1520e94d5587247026e158148b7",
-    "semantic_hash": "b47ce1520e94d5587247026e158148b7"
+    "mtime": 1794768727.7089872,
+    "seen": 1794769077.0117068,
+    "ast_hash": "184d803e8a4d88fc01a953633cae0e92",
+    "semantic_hash": "184d803e8a4d88fc01a953633cae0e92"
   },
   "docs/pz-mechanics.md": {
     "mtime": 1793035111.3127692,
@@ -780,16 +780,16 @@
     "semantic_hash": "a9fa09d24feb2d2dc7b13b5bea6aa238"
   },
   "pzrl/hybrid.py": {
-    "mtime": 1794690814.2279336,
-    "seen": 1794718909.367637,
-    "ast_hash": "ed30c39b65fcd56f74149a00f48e9bb3",
-    "semantic_hash": "ed30c39b65fcd56f74149a00f48e9bb3"
+    "mtime": 1794749693.7155008,
+    "seen": 1794769077.0114455,
+    "ast_hash": "7eb462c0c075dbba9a08f30ff928db71",
+    "semantic_hash": "7eb462c0c075dbba9a08f30ff928db71"
   },
   "scripts/hybrid_run.py": {
-    "mtime": 1794718783.1174874,
-    "seen": 1794718909.3678298,
-    "ast_hash": "e7e8f62e9335ebf8eab032ef3f7e2791",
-    "semantic_hash": "e7e8f62e9335ebf8eab032ef3f7e2791"
+    "mtime": 1794768756.7464879,
+    "seen": 1794769077.0116055,
+    "ast_hash": "5ca479047156eade8b3e7ff525e884f8",
+    "semantic_hash": "5ca479047156eade8b3e7ff525e884f8"
   },
   "docs/experiments/2026-11-14-ha-hybrid-plumbing.md": {
     "mtime": 1794667938.705846,
@@ -828,10 +828,10 @@
     "semantic_hash": "eb9305a41343ed1108ee3cb4fcc9bc06"
   },
   "scripts/watchdog.py": {
-    "mtime": 1794710431.810422,
-    "seen": 1794718909.367869,
-    "ast_hash": "fe0e6243c19127eb45af5507c02dce03",
-    "semantic_hash": "fe0e6243c19127eb45af5507c02dce03"
+    "mtime": 1794726177.8454168,
+    "seen": 1794769077.0116465,
+    "ast_hash": "b603db97b0d850a0ca1ad5046042835c",
+    "semantic_hash": "b603db97b0d850a0ca1ad5046042835c"
   },
   "docs/experiments/2026-11-14-hb-planner-vs-rules.md": {
     "mtime": 1794711918.4353654,
@@ -876,9 +876,87 @@
     "semantic_hash": "459c419cd9adb2ada92a4b9b4d4f00c5"
   },
   "docs/watchdog.md": {
-    "mtime": 1794710424.4269137,
-    "seen": 1794718909.3679416,
-    "ast_hash": "1ae6f3419b20551d0fce8f3b13f8373b",
-    "semantic_hash": "1ae6f3419b20551d0fce8f3b13f8373b"
+    "mtime": 1794725715.2346056,
+    "seen": 1794769077.0117118,
+    "ast_hash": "1081862e9d68ec22c316c22ff7b6afdf",
+    "semantic_hash": "1081862e9d68ec22c316c22ff7b6afdf"
+  },
+  "results/experiments-2026-11-15/hl1_lessons.json": {
+    "mtime": 1794755326.4562008,
+    "seen": 1794769077.0114653,
+    "ast_hash": "7f37c4b26a66fb4e35735125aff08523",
+    "semantic_hash": "7f37c4b26a66fb4e35735125aff08523"
+  },
+  "results/experiments-2026-11-15/hl1_lessons_frozen.json": {
+    "mtime": 1794755369.0912797,
+    "seen": 1794769077.0114675,
+    "ast_hash": "7f37c4b26a66fb4e35735125aff08523",
+    "semantic_hash": "7f37c4b26a66fb4e35735125aff08523"
+  },
+  "scripts/hl_analyze.py": {
+    "mtime": 1794749781.0532393,
+    "seen": 1794769077.0116029,
+    "ast_hash": "5c1bc9108206ceba663ce4a280ee098d",
+    "semantic_hash": "5c1bc9108206ceba663ce4a280ee098d"
+  },
+  "docs/experiments/2026-11-14-hbfix-scenario-fixes.md": {
+    "mtime": 1794721960.5921464,
+    "seen": 1794769077.0116932,
+    "ast_hash": "89effcc3fe48941ba0b7ce0e5ed68a4b",
+    "semantic_hash": "89effcc3fe48941ba0b7ce0e5ed68a4b"
+  },
+  "docs/experiments/2026-11-14-hbfix2-rerun.md": {
+    "mtime": 1794724811.0845716,
+    "seen": 1794769077.0116947,
+    "ast_hash": "ae98bf2b9027379ddf8c1ebbb0328e1a",
+    "semantic_hash": "ae98bf2b9027379ddf8c1ebbb0328e1a"
+  },
+  "docs/experiments/2026-11-15-hbf-planner-vs-rules-fixed.md": {
+    "mtime": 1794751706.2363842,
+    "seen": 1794769077.0116956,
+    "ast_hash": "2965304c8677fda555f8a900b04b059c",
+    "semantic_hash": "2965304c8677fda555f8a900b04b059c"
+  },
+  "docs/experiments/2026-11-15-hbfix3-rerun.md": {
+    "mtime": 1794727786.0437067,
+    "seen": 1794769077.0116966,
+    "ast_hash": "d61ca005e7167fdfd0078f8900974263",
+    "semantic_hash": "d61ca005e7167fdfd0078f8900974263"
+  },
+  "docs/experiments/2026-11-15-hbfix4-rerun.md": {
+    "mtime": 1794728267.4159822,
+    "seen": 1794769077.011698,
+    "ast_hash": "b0329676f3b61db318e1612af9be39da",
+    "semantic_hash": "b0329676f3b61db318e1612af9be39da"
+  },
+  "docs/experiments/2026-11-15-hbfix5-rerun.md": {
+    "mtime": 1794751334.4640799,
+    "seen": 1794769077.0116987,
+    "ast_hash": "6b6b9b4c9ffffbc90e2391a90267eca4",
+    "semantic_hash": "6b6b9b4c9ffffbc90e2391a90267eca4"
+  },
+  "docs/experiments/2026-11-15-hbfix6-rerun.md": {
+    "mtime": 1794731671.2670772,
+    "seen": 1794769077.0116997,
+    "ast_hash": "b77c97ce5df921796afa31b91e691fd8",
+    "semantic_hash": "b77c97ce5df921796afa31b91e691fd8"
+  },
+  "docs/experiments/2026-11-15-hd1-engagement-reflex.md": {
+    "mtime": 1794768779.8229601,
+    "seen": 1794769077.0117006,
+    "ast_hash": "20f8a47a1c1d0d56bbc345a1c1b0fe17",
+    "semantic_hash": "20f8a47a1c1d0d56bbc345a1c1b0fe17"
+  },
+  "docs/experiments/2026-11-15-hl1-lessons.md": {
+    "mtime": 1794768727.702147,
+    "seen": 1794769077.0117016,
+    "ast_hash": "a3a00b42fb268d5a3f5a81923a6dd666",
+    "semantic_hash": "a3a00b42fb268d5a3f5a81923a6dd666"
+  },
+  "docs/planner-learning.md": {
+    "mtime": 1794749630.1724448,
+    "seen": 1794769077.0117083,
+    "ast_hash": "3b0c68db752605694f9162a01512fbb9",
+    "semantic_hash": "3b0c68db752605694f9162a01512fbb9"
   }
 }
