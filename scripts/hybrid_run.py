@@ -9,6 +9,7 @@ action left to run for a few game seconds); verify one-shot effects with a surve
 import argparse
 import concurrent.futures as cf
 import json
+import math
 import os
 import sys
 import time
@@ -33,6 +34,8 @@ ap.add_argument("--supplies-at", default="", help="x,y of a known reachable cont
 ap.add_argument("--supplies", default="", help="server-side seeding at episode start, e.g. Base.Apple:3,Base.WaterBottle:2,Base.Bandage:2 (into the container nearest the player)")
 ap.add_argument("--fixes", action="store_true", help="scenario fixes (2026-11-14): auto-drink off, carried supplies stripped, seeded types cleared "
                 "from the --supplies-at container (and from every other container within 45 squares) before seeding, first decision only once the survey shows the set hunger")
+ap.add_argument("--lessons", default="", help="lessons JSON for the llmL arm (track H-L1); updated after every llmL episode unless --freeze")
+ap.add_argument("--freeze", action="store_true", help="use the lessons file read-only (frozen evaluation)")
 ap.add_argument("--out", required=True)
 a = ap.parse_args()
 
@@ -44,6 +47,9 @@ log = open(a.out, "a", encoding="utf-8")
 pool = cf.ThreadPoolExecutor(1)
 t_stop = time.time() + a.minutes * 60
 ep = 0
+LES = {"lessons": [], "kind": [], "version": 0}
+if a.lessons and os.path.exists(a.lessons):
+    LES = json.load(open(a.lessons, encoding="utf-8"))
 
 
 def effect(before, after):
@@ -101,6 +107,7 @@ try:
         if ep == 1:
             stuck = set()          # --fixes: containers whose loot ended within 3 s with nothing taken (no path / nothing queued): whole session
         failed = set(stuck)        # plus any failed loot this episode (an interrupted loot must not blacklist the shelf for good, HBfix4)
+        trace = []                 # this episode's decisions, for the llmL reflection
         while steps < a.episode_seconds and time.time() < t_stop:
             if pending is None:
                 sv = hybrid.survey(env, a0)
@@ -110,6 +117,8 @@ try:
                 text = hybrid.state_text(env, a0, sv, last, failed)
                 if arm == "llm":
                     pending = pool.submit(hybrid.ask, text, a.model)
+                elif arm == "llmL":                                 # same planner with the lessons appended to its system prompt
+                    pending = pool.submit(hybrid.ask, text, a.model, 60, hybrid.lessons_system(LES["lessons"]))
                 else:                                               # rule / idle decide instantly, through the same dispatch path
                     dec0 = hybrid.rule_decide(env, a0, sv, failed) if arm == "rule" else {"skill": "wait", "reason": "idle"}
                     pending = pool.submit(lambda d=dec0: (d, 0.0, None))
@@ -119,7 +128,10 @@ try:
                 row = {"t": time.strftime("%H:%M:%S"), "episode": ep, "arm": arm, "step": steps, "model": a.model, "latency_s": round(secs, 2),
                        "valid": dec is not None, "error": err, "skill": dec and dec.get("skill"), "container": dec and dec.get("container"),
                        "reason": (dec or {}).get("reason", "")[:200], "stats": sv["stats"], "n_containers": len(sv["containers"]), "containers": sv["containers"],
-                       "zombies": len(env.state[a0]["z"])}
+                       "zombies": len(env.state[a0]["z"]),
+                       "nearest": round(min((math.hypot(z[0] - env.state[a0]["x"], z[1] - env.state[a0]["y"]) for z in env.state[a0]["z"]), default=99.0), 1)}
+                if arm == "llmL":
+                    row["lessons_v"] = LES["version"]
                 if dec and dec["skill"] in hybrid.ONE_SHOT:
                     skill, arg, arg2, arg3 = dec["skill"], "", "", ""
                     if skill == "loot":                                          # by the coordinates the planner saw (numbering moves with the player)
@@ -132,6 +144,7 @@ try:
                     row["effect"] = effect(sv, hybrid.survey(env, a0))
                     row["waited"] = waited
                     last = hybrid.outcome(dec["skill"], row["effect"], waited)
+                    row["outcome"] = last
                     e = row["effect"] or {}
                     if skill == "lootat" and (e.get("food") or 0) + (e.get("drink") or 0) + (e.get("bandages") or 0) <= 0:
                         failed.add((arg, arg2))                                       # remembered for this episode, shown to the planner
@@ -142,12 +155,13 @@ try:
                     if dec["skill"] != current:
                         last = "%s (started)" % dec["skill"]
                     current = dec["skill"]
+                trace.append(row)
                 log.write(json.dumps(row) + "\n"); log.flush()
                 print(json.dumps({k: row[k] for k in ("episode", "step", "latency_s", "valid", "skill")} | {"effect": row.get("effect")}), flush=True)
                 if a0 not in env.state or env.state[a0].get("dead") or env.state[a0]["hp"] <= 0:
                     dead = True
                     break
-                if arm == "llm":
+                if arm in ("llm", "llmL"):
                     continue                                       # rule / idle fall through: one game step per decision
             obs, rew, term, trunc, info = env.step({a0: hybrid.step_action(current, obs[a0])})
             steps += 1
@@ -155,7 +169,16 @@ try:
                 dead = True
                 break
         end_sv = hybrid.survey(env, a0) if not dead and a0 in env.state else {"stats": {}}
-        log.write(json.dumps({"episode_end": ep, "arm": arm, "steps": steps, "dead": dead, "hp": env.state.get(a0, {}).get("hp"), "end": end_sv["stats"]}) + "\n"); log.flush()
+        end_row = {"episode_end": ep, "arm": arm, "steps": steps, "dead": dead, "hp": env.state.get(a0, {}).get("hp"), "end": end_sv["stats"]}
+        log.write(json.dumps(end_row) + "\n"); log.flush()
+        if arm == "llmL" and a.lessons and not a.freeze:                 # training phase: rewrite the lessons from this episode
+            new, kinds, rsecs, rerr = hybrid.reflect(LES["lessons"], hybrid.episode_log(trace, end_row), a.model)
+            if not rerr:
+                LES = {"lessons": new, "kind": kinds, "version": LES["version"] + 1}
+                json.dump(LES, open(a.lessons, "w", encoding="utf-8"), indent=1)
+            with open(a.lessons + ".history.jsonl", "a", encoding="utf-8") as h:
+                h.write(json.dumps({"after_episode": ep, "secs": round(rsecs, 1), "error": rerr} | LES) + "\n")
+            log.write(json.dumps({"reflect": ep, "secs": round(rsecs, 1), "error": rerr, "lessons_v": LES["version"], "n": len(LES["lessons"])}) + "\n"); log.flush()
         if pending is not None:
             pending.result()                                   # do not leak a planner call into the next episode
 finally:

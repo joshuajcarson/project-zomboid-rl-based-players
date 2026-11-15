@@ -86,11 +86,11 @@ def state_text(env, name, sv, last="", failed=()):
                s.get("wounds"), s.get("food"), s.get("drink"), s.get("bandages"), "; ".join(zlines), "; ".join(cl), last or "none yet"))
 
 
-def ask(text, model="sonnet", timeout=60):
+def ask(text, model="sonnet", timeout=60, system=None):
     """One planner decision. Returns (decision dict or None, seconds, error text or None)."""
     t0 = time.time()
     cmd = ["claude", "-p", "--model", model, "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--setting-sources", "",
-           "--output-format", "json", "--json-schema", SCHEMA, "--system-prompt", SYSTEM, text]
+           "--output-format", "json", "--json-schema", SCHEMA, "--system-prompt", system or SYSTEM, text]
     try:
         out = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=timeout, cwd=tempfile.gettempdir())
         d = json.loads(out.stdout)
@@ -163,3 +163,66 @@ def rule_decide(env, name, sv, failed=()):
     if near <= 6:
         return {"skill": "fight", "reason": "rule: zombie approaching"}
     return {"skill": "wait", "reason": "rule: nothing to do"}
+
+
+# ---- lessons file (track H-L1, docs/planner-learning.md) ------------------------------------------------------------------------------
+LESSONS_MAX, LESSON_WORDS = 8, 25
+LESSONS_SCHEMA = json.dumps({"type": "object", "properties": {
+    "lessons": {"type": "array", "items": {"type": "string"}, "maxItems": LESSONS_MAX},
+    "kind": {"type": "array", "items": {"type": "string", "enum": ["general", "scenario"]}, "maxItems": LESSONS_MAX}},
+    "required": ["lessons", "kind"]})
+REFLECT_SYSTEM = ("You coach the high-level planner of a survivor in Project Zomboid. The planner picks one skill at a time (fight, flee, wait, "
+                  "eat, drink, bandage, loot a listed container). You get the current list of lessons and the log of one finished episode: "
+                  "each decision with the state it saw and what the skill achieved, and how the episode ended. Rewrite the lessons list so the "
+                  "planner does better next time on its goals: stay alive, stop bleeding, keep hunger and thirst low, gather supplies. Keep "
+                  "lessons that still hold, merge duplicates, drop ones the episode contradicts, add at most two new ones. At most %d lessons, "
+                  "each a concrete instruction under %d words. For each lesson say whether it is 'general' (true in any place) or 'scenario' "
+                  "(about this map, these containers or positions). Answer with the JSON object only." % (LESSONS_MAX, LESSON_WORDS))
+
+
+def lessons_system(lessons):
+    """The planner's system prompt with the lessons appended (empty list = the plain prompt)."""
+    if not lessons:
+        return SYSTEM
+    return SYSTEM + "\nLessons from earlier episodes (follow them unless the current state clearly says otherwise):\n" + "\n".join("- " + l for l in lessons)
+
+
+def episode_log(trace, end):
+    """Compact text log of one episode for reflect(): one line per decision plus the ending."""
+    lines = []
+    for r in trace[-60:]:
+        s = r.get("stats") or {}
+        lines.append("t=%ss hp=%s hunger=%s thirst=%s carried food/water/bandages=%s/%s/%s zombies=%s -> %s%s. Result: %s" % (
+            r.get("step"), s.get("hp"), s.get("hunger"), s.get("thirst"), s.get("food"), s.get("drink"), s.get("bandages"),
+            r.get("nearest", "?"), r.get("skill"), (" container %s" % r.get("container")) if r.get("skill") == "loot" else "",
+            r.get("outcome") or "continuing"))
+    e = end.get("end") or {}
+    lines.append("END: %s after %s s, hp %s, hunger %s, thirst %s." % ("DIED" if end.get("dead") else "survived", end.get("steps"), end.get("hp"),
+                 e.get("hunger"), e.get("thirst")))
+    return "\n".join(lines)
+
+
+def reflect(lessons, log_text, model="sonnet", timeout=90):
+    """Rewrite the lessons list from one episode's log. Returns (lessons, kinds, seconds, error); on error the old lessons are kept."""
+    t0 = time.time()
+    text = "Current lessons:\n" + ("\n".join("- " + l for l in lessons) or "(none yet)") + "\n\nEpisode log:\n" + log_text
+    cmd = ["claude", "-p", "--model", model, "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--setting-sources", "",
+           "--output-format", "json", "--json-schema", LESSONS_SCHEMA, "--system-prompt", REFLECT_SYSTEM, text]
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=timeout, cwd=tempfile.gettempdir())
+        d = json.loads(out.stdout).get("structured_output") or {}
+        new = [" ".join(str(l).split()[:LESSON_WORDS]) for l in d.get("lessons", [])][:LESSONS_MAX]
+        if not new and lessons:
+            return lessons, [], time.time() - t0, "empty reply: kept the old lessons"
+        return new, list(d.get("kind", []))[:len(new)], time.time() - t0, None
+    except Exception as e:
+        return lessons, [], time.time() - t0, repr(e)[:300]
+
+
+if __name__ == "__main__":                                   # self-check of the pure helpers (no game, no model call)
+    assert lessons_system([]) == SYSTEM
+    assert lessons_system(["eat first"]).endswith("- eat first")
+    log = episode_log([{"step": 3, "stats": {"hp": 90.0, "hunger": 0.6}, "skill": "loot", "container": 2, "outcome": "loot took 20 s: food +3"}],
+                      {"dead": False, "steps": 120, "hp": 80.0, "end": {"hunger": 0.2, "thirst": 0.1}})
+    assert "container 2" in log and log.endswith("thirst 0.1.")
+    print("hybrid lessons self-check ok")
