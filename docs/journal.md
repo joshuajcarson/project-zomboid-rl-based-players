@@ -396,3 +396,6 @@ The fixed scenario (`--fixes`):
 - mobility probe; scoped failure memory; planners see only containers within 12 tiles of the seeded shelf
 
 NEXT: H-B comparison re-run on the fixed scenario (llm/rule/idle), then a harder H-B2.
+
+## 2026-11-15 02:45 HB-F pre-registered (H-B re-run on the fixed scenario, 2 x 110 min, seeds 41/43); session 1 started
+RESUME: if a session is interrupted, rerun that session from scratch with the card command and the watchdog.
