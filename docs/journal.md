@@ -369,3 +369,12 @@ Fixes:
 
 HBfix3: same criteria, seed 23.
 RESUME: rerun HBfix3 from scratch with the card's command and watchdog if interrupted.
+
+## 2026-11-15 01:42 HBfix3 FAILURE (loot 9/31): a frozen episode; HBfix4 pre-registered
+Episode 5: the character could not move for the whole episode (fenced-in spawn pocket; HBfix episode 1 was the same). Without it, loot was 9/12, so the container-index fix works.
+Changes:
+- Mobility probe in hybrid_run --fixes: walk toward the shelf for 3 s and redraw the spawn if it moved < 1 tile.
+- Watchdog `immobile` check; skill_health now fires once per new failing use.
+
+HBfix4: same criteria, seed 29.
+RESUME: rerun HBfix4 from scratch with the card's command and watchdog if interrupted.

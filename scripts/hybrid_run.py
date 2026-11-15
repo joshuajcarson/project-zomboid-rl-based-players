@@ -57,6 +57,22 @@ try:
         obs, _ = env.reset()
         a0 = env.agents[0]
         ep += 1
+        if a.fixes and a.supplies_at:
+            # mobility probe: some spawns are fenced-in pockets where the character cannot move at all (HBfix ep 1, HBfix3 ep 5); walk
+            # toward the supplies for 3 game seconds and draw a new spawn when it did not move a tile (max 3 redraws)
+            px, py = (int(v) for v in a.supplies_at.split(","))
+            for attempt in range(4):
+                x0, y0 = env.state[a0]["x"], env.state[a0]["y"]
+                env.control[a0]._bot("goto", px, py - 1)
+                env._read(env._game_seconds(3))
+                env.control[a0]._bot("stop")
+                moved = ((env.state[a0]["x"] - x0) ** 2 + (env.state[a0]["y"] - y0) ** 2) ** 0.5
+                if moved >= 1.0 or attempt == 3:
+                    break
+                log.write(json.dumps({"probe_fail": ep, "x": x0, "y": y0, "moved": round(moved, 2)}) + "\n"); log.flush()
+                obs, _ = env.reset()
+                a0 = env.agents[0]
+            obs = {n: env._obs(n) for n in env.agents}
         if a.fixes:
             env.control[a0]._bot("autodrink", 0)
             env.control[a0]._bot("strip")

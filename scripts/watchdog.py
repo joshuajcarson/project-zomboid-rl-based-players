@@ -126,8 +126,9 @@ def skill_health(rows, cfg):
                         ("eat", lambda e: (e.get("food") or 0) < 0 or (e.get("hunger") or 0) < -0.01),
                         ("drink", lambda e: (e.get("drink") or 0) < 0 or (e.get("thirst") or 0) < -0.01)):
         uses = [r for r in rows if "step" in r and r.get("skill") == skill and r.get("effect") is not None][-10:]
-        if len(uses) == 10 and sum(1 for r in uses if gain(r["effect"])) < 3:
-            out.append(("skill:%s:%d" % (skill, len(rows) // 50), "%s effective in %d of its last 10 uses (arms %s)"
+        if len(uses) == 10 and sum(1 for r in uses if gain(r["effect"])) < 3 and not gain(uses[-1]["effect"]):
+            out.append(("skill:%s:%s:%s" % (skill, uses[-1].get("episode"), uses[-1].get("step")),       # once per new failing use
+                        "%s effective in %d of its last 10 uses (arms %s)"
                         % (skill, sum(1 for r in uses if gain(r["effect"])), sorted({r["arm"] for r in uses}))))
     return out
 
