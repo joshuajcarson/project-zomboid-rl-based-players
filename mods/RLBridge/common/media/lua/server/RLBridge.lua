@@ -400,6 +400,38 @@ function handlers.clearat(x, y, types)
     return true, string.format("cleared %d from %d,%d", removed, x, y)
 end
 
+-- clearnear|x|y|r|types : remove the listed types from EVERY container within r squares of (x, y) on the ground floor except the one on
+-- (x, y) itself. Leftover seeds from earlier runs come back on every server boot (world edits are not saved before the server stops)
+-- and lure the planner to far containers whose failed paths drop the action queue (HBfix, 2026-11-14).
+function handlers.clearnear(x, y, r, types)
+    x, y, r = tonumber(x), tonumber(y), tonumber(r) or 45
+    local want, removed, conts = {}, 0, 0
+    for t in string.gmatch(types or "", "[^,]+") do want[t] = true end
+    local cell = getCell()
+    for sx = x - r, x + r do
+        for sy = y - r, y + r do
+            local sq = cell:getGridSquare(sx, sy, 0)
+            if sq and not (sx == x and sy == y) then
+                local objs = sq:getObjects()
+                for i = 0, objs:size() - 1 do
+                    local ok, cont = pcall(function() return objs:get(i):getContainer() end)
+                    if ok and cont then
+                        local items, hit = cont:getItems(), false
+                        for k = items:size() - 1, 0, -1 do
+                            local it = items:get(k)
+                            if want[it:getFullType()] then
+                                cont:Remove(it); pcall(function() sendRemoveItemFromContainer(cont, it) end); removed = removed + 1; hit = true
+                            end
+                        end
+                        if hit then conts = conts + 1 end
+                    end
+                end
+            end
+        end
+    end
+    return true, string.format("clearnear removed %d from %d containers", removed, conts)
+end
+
 -- hutches|x|y|r|remove : list the IsoHutch objects (animal hutches and dog houses) within r squares of (x, y) on the ground floor; with
 -- remove=1 also take them out of the world. A client crashes (NullPointerException in IsoHutch.removeFromWorld) when it unloads the chunk
 -- of a hutch that has no animal, which ends every rendered run after a few episodes.

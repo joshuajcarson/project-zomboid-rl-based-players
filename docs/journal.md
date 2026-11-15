@@ -341,3 +341,19 @@ Next for track H: fix the scenario limits first (server stats thirst, the 8-cont
 
 ## 2026-11-14 23:35 Scenario fixes built and checked live; HBfix pre-registered
 Thirst: the game auto-drink (IsoPlayer.setAutoDrink, on by default) drank carried water as soon as the server set thirst; new bot command autodrink|0 keeps thirst at 0.60 (checked live). New: bot strip (empty carried supplies), server clearat|x|y|types (remove seeded types, synced), survey lists 8 nearest + further containers with supplies (max 12), hybrid_run --fixes (all of these + wait for the set hunger). Leftover seeds from HB0c-e cleared once (63 items at 4 containers 25-40 tiles away; likely loot traps behind the planner's 27% loot rate). Knowledge graph updated (906 nodes). HBfix (45 min, llm+rule, watchdog with no known deviations) next.
+
+## 2026-11-14 23:58 HBfix FAILURE on loot only; HBfix2 pre-registered
+HBfix results:
+- Watchdog clean.
+- drink 11/11: thirst now works.
+- eat 23/23.
+- loot 12/67 (llm 5/60, rule 7/7).
+
+Cause: the leftover seeds cleared at 22:50 came back on the server boot (world edits are not saved). The planner chased the big far piles (39 failed loots) and retried the shelf 14 times in episode 1.
+
+Fixes:
+- Server `clearnear|x|y|r|types`, run every episode under --fixes.
+- Watchdog checks `stray_supplies` and `skill_health`. Replayed on HBfix, they alert in episode 1.
+
+HBfix2: same criteria, seed 19.
+RESUME: if interrupted, rerun HBfix2 from scratch with the card's command and watchdog.

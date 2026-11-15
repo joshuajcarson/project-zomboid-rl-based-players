@@ -32,7 +32,7 @@ ap.add_argument("--seed", type=int, default=7)
 ap.add_argument("--supplies-at", default="", help="x,y of a known reachable container to seed into (default: the nearest storage container)")
 ap.add_argument("--supplies", default="", help="server-side seeding at episode start, e.g. Base.Apple:3,Base.WaterBottle:2,Base.Bandage:2 (into the container nearest the player)")
 ap.add_argument("--fixes", action="store_true", help="scenario fixes (2026-11-14): auto-drink off, carried supplies stripped, seeded types cleared "
-                "from the --supplies-at container before seeding, first decision only once the survey shows the set hunger")
+                "from the --supplies-at container (and from every other container within 45 squares) before seeding, first decision only once the survey shows the set hunger")
 ap.add_argument("--out", required=True)
 a = ap.parse_args()
 
@@ -62,7 +62,9 @@ try:
             env.control[a0]._bot("strip")
             if a.supplies_at:
                 sx, sy = a.supplies_at.split(",")
-                env.channel.command(f"clearat|{sx}|{sy}|" + ",".join(x.split(":")[0] for x in a.supplies.split(",") if x))
+                types = ",".join(x.split(":")[0] for x in a.supplies.split(",") if x)
+                env.channel.command(f"clearat|{sx}|{sy}|{types}")
+                env.channel.command(f"clearnear|{sx}|{sy}|45|{types}")     # stray seeds elsewhere come back on every server boot
         for spec in [x for x in a.supplies.split(",") if x]:
             itype, n = spec.split(":")
             if a.supplies_at:

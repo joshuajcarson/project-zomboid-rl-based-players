@@ -15,8 +15,19 @@
 ## Run log
 - Correction: the times above are off by half an hour; the card was committed and the run launched at 23:05 CT (dev checks ~22:50).
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-11-14/hbfix.jsonl`
-- Numbers: (pending)
-- Verdict: (pending)
-- MILESTONE IMPACT: (pending)
+## Result (filled at batch end, 2026-11-14 23:55 CT)
+- Data: `results/experiments-2026-11-14/hbfix.jsonl` (23:05-23:50, 17 episodes: llm 9, rule 8; 1 death; planner 122/122 valid).
+- Numbers:
+  - Criterion 1: the watchdog raised no alert during the run. Thirst and hunger were at 0.6, supplies were visible, no step-1 deaths, no stalls.
+  - Skills (applicable uses, both arms): drink 11/11 (llm 4/4, rule 7/7), eat 23/23, bandage 2/3, loot 12/67 = 18% (llm 5/60, rule 7/7).
+- Verdict: **FAILURE** (loot below 50% with >= 5 uses). The fixes themselves worked: thirst held (the first planner runs where drink was used, 11/11) and the start state matched.
+- Cause of the loot failures:
+  1. The leftover seeds cleared by hand at 22:50 came back on the next server boot, because world edits are not saved when the server stops. The fireplace 10779,9411 (6/4/4), the shelves 10781,9411 (12/8/8) and the sidetable 10775,9421 reappeared, and the planner chased those large piles 39 times, all failed: paths across buildings fail and drop the action queue.
+  2. In episode 1 the planner then retried the reachable shelf 14 times; every attempt ended in 2 s with nothing queued.
+
+  The rule planner loots only the first container showing supplies (the shelf), 7/7.
+- Unexpected learnings:
+  1. Server-side world edits made through the bridge do not persist across boots unless the world is saved. Scenario hygiene has to run every episode: new server `clearnear|x|y|r|types`, called by `--fixes`.
+  2. The planner prefers big piles far away over a small nearby one even after failures, a planner-quality issue for H-B2 (show distance and reachability, or remember failures across episodes).
+  3. Two watchdog checks added: `stray_supplies` and `skill_health`. Replayed on this run, they alert in episode 1.
+- MILESTONE IMPACT: none (H-B2 preparation continues; HBfix2 reruns with clearnear and the same criteria).

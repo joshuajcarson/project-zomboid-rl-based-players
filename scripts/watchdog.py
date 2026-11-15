@@ -101,7 +101,38 @@ def planner_health(rows, cfg):
     return out
 
 
-CHECKS = [step1_death, stall, short_episode, start_state, arm_rotation, planner_health]
+def stray_supplies(rows, cfg):
+    """HBfix: leftover seeds in other containers (they come back on every server boot) lured the planner to far, unreachable containers."""
+    if not cfg.supplies_at:
+        return []
+    sx, sy = (int(v) for v in cfg.supplies_at.split(","))
+    out = []
+    for ep, e in episodes(rows).items():
+        if not e["rows"]:
+            continue
+        stray = [c for c in e["rows"][0].get("containers") or [] if (int(c.get("x", 0)), int(c.get("y", 0))) != (sx, sy)
+                 and c.get("kind") in cfg.stray_kinds and (c.get("food", 0) + c.get("drink", 0) + c.get("bandages", 0)) >= cfg.stray_min]
+        if stray:
+            c = stray[0]
+            out.append(("stray:%s" % ep, "episode %s: %d other containers hold supplies, e.g. %s at %d,%d (food %d, water %d, bandages %d)"
+                        % (ep, len(stray), c.get("kind"), c.get("x"), c.get("y"), c.get("food", 0), c.get("drink", 0), c.get("bandages", 0))))
+    return out
+
+
+def skill_health(rows, cfg):
+    """HBfix: 60 planner loots with 5 effective went unnoticed until the end. Alert when the last 10 uses of a one-shot skill are < 30% effective."""
+    out = []
+    for skill, gain in (("loot", lambda e: (e.get("food") or 0) + (e.get("drink") or 0) + (e.get("bandages") or 0) > 0),
+                        ("eat", lambda e: (e.get("food") or 0) < 0 or (e.get("hunger") or 0) < -0.01),
+                        ("drink", lambda e: (e.get("drink") or 0) < 0 or (e.get("thirst") or 0) < -0.01)):
+        uses = [r for r in rows if "step" in r and r.get("skill") == skill and r.get("effect") is not None][-10:]
+        if len(uses) == 10 and sum(1 for r in uses if gain(r["effect"])) < 3:
+            out.append(("skill:%s:%d" % (skill, len(rows) // 50), "%s effective in %d of its last 10 uses (arms %s)"
+                        % (skill, sum(1 for r in uses if gain(r["effect"])), sorted({r["arm"] for r in uses}))))
+    return out
+
+
+CHECKS = [step1_death, stall, short_episode, start_state, arm_rotation, planner_health, stray_supplies, skill_health]
 
 
 def check(rows, cfg):
@@ -128,6 +159,8 @@ def parse(argv):
     ap.add_argument("--thirst", type=float, default=None)
     ap.add_argument("--tol", type=float, default=0.05)
     ap.add_argument("--supplies", action="store_true", help="a container with supplies must be in every episode's first survey")
+    ap.add_argument("--supplies-at", default="", help="x,y of the seeded container: other storage containers holding supplies are strays")
+    ap.add_argument("--stray-min", type=int, default=3, help="supplies in one other container that count as a stray seed")
     ap.add_argument("--known", default="", help="comma-separated known deviations to skip (e.g. thirst), recorded on the card")
     ap.add_argument("--stall", type=int, default=30, help="decisions at one game step that count as a stall")
     ap.add_argument("--idle-minutes", type=float, default=10, help="alert when the file stops growing this long")
@@ -136,6 +169,8 @@ def parse(argv):
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args(argv)
     a.known = set(x for x in a.known.split(",") if x)
+    a.stray_kinds = {"crate", "metal_shelves", "shelves", "counter", "fridge", "wardrobe", "dresser", "desk", "sidetable", "smallbox",
+                     "cardboardbox", "militarycrate", "fireplace"}             # where the old seed commands put items
     return a
 
 
@@ -157,6 +192,13 @@ def selftest():
     assert keys([end(1, "rule", 120, False), end(2, "rule", 120, False)]) == {"arm"}
     assert keys([end(1, "llm", 50, False), end(2, "rule", 120, False)]) == {"short"}
     assert keys([dec(1, "llm", i, valid=False) for i in range(12)]) == {"valid"}
+    cs = parse(["--supplies-at", "10753,9407"])
+    assert keys([dec(1, "llm", 3, containers=[{"x": 10753, "y": 9407, "kind": "metal_shelves", "food": 3},
+                                              {"x": 10781, "y": 9411, "kind": "shelves", "food": 12, "drink": 8}])], cs) == {"stray"}
+    assert keys([dec(1, "llm", 3, containers=[{"x": 10753, "y": 9407, "kind": "metal_shelves", "food": 3},
+                                              {"x": 10781, "y": 9414, "kind": "counter", "drink": 2}])], cs) == set()
+    bad = [dec(1, "llm", i, skill="loot", effect={"food": 0}) for i in range(10)]
+    assert keys(bad) == {"skill"}
     print("watchdog selftest ok")
 
 

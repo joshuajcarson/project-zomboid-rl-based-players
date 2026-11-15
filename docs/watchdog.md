@@ -15,6 +15,8 @@
 | start_state | first survey's hunger/thirst differ from the configured start; no container with supplies visible | H-B, 2026-11-14: the server `stats` command sets hunger but not thirst (known deviation `thirst` until fixed); supplies: the survey lists only the 8 nearest containers, so spawns at the west edge (x 10740-10745) do not see the seeded shelf (7 of 61 episodes, all arms; known deviation `supplies` for H-B). The stat check looks at the first 3 surveys: in 3 of 61 H-B episodes the first survey ran before the server's hunger change reached the client (one decision on stale stats; harness fix later: wait for the stat to show before the first decision) |
 | arm_rotation | arms not alternating in the configured order | preventive (interleaving is the validity basis) |
 | planner_health | planner valid rate < 95% or median latency > 15 s over the last 20 decisions | H-A gate bounds |
+| stray_supplies | other storage containers holding >= 3 supplies at episode start (`--supplies-at x,y`) | HBfix, 2026-11-14: leftover seeds at 10779-10781,9411 came back on every server boot (world edits are not saved) and the planner chased them 39 times, all failed |
+| skill_health | the last 10 uses of loot, eat or drink less than 30% effective | HBfix, 2026-11-14: planner loot 5 of 60 effective, noticed only at the end |
 | idle (loop) | the file stops growing for --idle-minutes | stuck runs (2026-10-29 "Still dead" hang, 2026-11-14 client hangs) |
 
 Replaying today's runs: run 1 alerts at the stall (episode 2), run 2 at the first step-1 death (episode 6, about 15 minutes in), the valid runs only on the two known deviations.
