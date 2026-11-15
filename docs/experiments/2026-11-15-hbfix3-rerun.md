@@ -10,6 +10,7 @@
 - Stopping rule: 45 minutes; stop early only on a start-state, stray, step-1, stall or idle alert, a crash, or a stall.
 
 ## Run log
+- 00:53 watchdog skill_health alert (loot 2 of last 10). Not a stopping condition under this card (judged through criterion 3). Cause: in episode 5 the character never moved (position 10769,9390 for all 12 decisions, fights included), so 10 loots ended in 2 s. HBfix episode 1 had the same freeze (19 decisions at 10755,9397); the spawn square is not the cause (similar spawns worked). Added watchdog check `immobile` (5 loots in a row at one position ending within 3 s with nothing taken). The run continues to its 45 minutes; the cause is the next thing to investigate.
 
 ## Result (filled at batch end)
 - Data: `results/experiments-2026-11-14/hbfix3.jsonl`

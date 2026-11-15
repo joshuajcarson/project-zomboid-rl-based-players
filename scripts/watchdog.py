@@ -132,7 +132,28 @@ def skill_health(rows, cfg):
     return out
 
 
-CHECKS = [step1_death, stall, short_episode, start_state, arm_rotation, planner_health, stray_supplies, skill_health]
+def immobile(rows, cfg):
+    """HBfix ep 1 and HBfix3 ep 5: the character never moved (same survey position for every decision, loot and fight included), so every
+    loot failed in 2 s. Alert when >= 5 consecutive loots at one position each end within 3 s with nothing taken."""
+    out = []
+    for ep, e in episodes(rows).items():
+        run, last = 0, None
+        for r in e["rows"]:
+            s = r.get("stats") or {}
+            pos = (s.get("x"), s.get("y"))
+            e = r.get("effect") or {}
+            dead_loot = r.get("skill") == "loot" and (r.get("waited") or 99) <= 3 and (e.get("food") or 0) + (e.get("drink") or 0) + (e.get("bandages") or 0) <= 0
+            if not dead_loot:
+                continue                       # standing still while looting with success (or fighting in place) is normal
+            run = run + 1 if pos == last else 1
+            last = pos
+            if run >= 5:
+                out.append(("immobile:%s" % ep, "episode %s (%s): immobile at %s,%s: %d loots in a row ended within 3 s with nothing taken" % (ep, r["arm"], pos[0], pos[1], run)))
+                break
+    return out
+
+
+CHECKS = [step1_death, stall, short_episode, start_state, arm_rotation, planner_health, stray_supplies, skill_health, immobile]
 
 
 def check(rows, cfg):
@@ -198,7 +219,11 @@ def selftest():
     assert keys([dec(1, "llm", 3, containers=[{"x": 10753, "y": 9407, "kind": "metal_shelves", "food": 3},
                                               {"x": 10781, "y": 9414, "kind": "counter", "drink": 2}])], cs) == set()
     bad = [dec(1, "llm", i, skill="loot", effect={"food": 0}) for i in range(10)]
-    assert keys(bad) == {"skill"}
+    assert "skill" in keys(bad)
+    stuck = [dec(1, "llm", i, skill="loot", waited=2, effect={"food": 0}, stats={"hunger": 0.6, "thirst": 0.6, "x": 1.0, "y": 2.0}) for i in range(5)]
+    assert "immobile" in keys(stuck)
+    moving = [dec(1, "llm", i, skill="loot", waited=20, effect={"food": 3}, stats={"hunger": 0.6, "thirst": 0.6, "x": 1.0, "y": 2.0}) for i in range(6)]
+    assert "immobile" not in keys(moving)
     print("watchdog selftest ok")
 
 
