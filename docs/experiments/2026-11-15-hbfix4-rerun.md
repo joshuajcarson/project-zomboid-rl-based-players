@@ -11,8 +11,14 @@
 
 ## Run log
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-11-15/hbfix4.jsonl`
-- Numbers: (pending)
-- Verdict: (pending)
-- MILESTONE IMPACT: (pending)
+## Result (filled at batch end, 2026-11-15 01:45 CT)
+- Data: `results/experiments-2026-11-15/hbfix4.jsonl` (01:30-01:37, 2 episodes, stopped early by the stopping rule on an immobile alert at 01:36).
+- Numbers: 0 probe redraws. Episode 1 (llm): a loot at the shelf ran 20 s and was interrupted by a zombie (the character died). Episode 2 (rule): the shelf showed 3/2/2 supplies, but the rule planner looted natural counters in the other building instead: 7 loots, 0 gained, mostly ending in 2 s.
+- Verdict: **FAILURE** (a scenario alert fired, as pre-registered). Not a test of the skills: the run lasted 2 episodes.
+- Cause: the HBfix3 change that remembers failed containers for the whole session blacklisted the seeded shelf after one interrupted loot. Both planners then avoided the shelf for the rest of the session and chased unreachable counters.
+- Fix:
+  - With `--fixes`, only quick failures (the loot ends within 3 s with nothing taken: no path, or nothing queued) are remembered for the session.
+  - Any other failed loot is remembered for that episode only.
+  - The seeded container is never blacklisted for the session.
+- Unexpected learnings: the counters in the other building can be walked to (the character got there), but every loot there ends in 2 s with nothing taken. Those items are probably not transferable this way; not investigated (natural world containers are out of scope for this scenario).
+- MILESTONE IMPACT: none (HBfix5 next, same criteria).

@@ -98,8 +98,9 @@ try:
         arm = a.arms.split(",")[(ep - 1) % len(a.arms.split(","))]
         env.say(f"hybrid | episode {ep} | arm {arm}")
         current, pending, steps, dead, last = "wait", None, 0, False, ""
-        if not a.fixes or ep == 1:
-            failed = set()                                             # with --fixes, failed containers are remembered for the session (fixed world)
+        if ep == 1:
+            stuck = set()          # --fixes: containers whose loot ended within 3 s with nothing taken (no path / nothing queued): whole session
+        failed = set(stuck)        # plus any failed loot this episode (an interrupted loot must not blacklist the shelf for good, HBfix4)
         while steps < a.episode_seconds and time.time() < t_stop:
             if pending is None:
                 sv = hybrid.survey(env, a0)
@@ -131,6 +132,8 @@ try:
                     e = row["effect"] or {}
                     if skill == "lootat" and (e.get("food") or 0) + (e.get("drink") or 0) + (e.get("bandages") or 0) <= 0:
                         failed.add((arg, arg2))                                       # remembered for this episode, shown to the planner
+                        if a.fixes and waited <= 3 and f"{arg},{arg2}" != a.supplies_at:
+                            stuck.add((arg, arg2))
                     current = "wait"
                 elif dec:
                     if dec["skill"] != current:

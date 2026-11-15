@@ -378,3 +378,9 @@ Changes:
 
 HBfix4: same criteria, seed 29.
 RESUME: rerun HBfix4 from scratch with the card's command and watchdog if interrupted.
+
+## 2026-11-15 01:47 HBfix4 stopped (FAILURE): session failure memory blacklisted the shelf; HBfix5 pre-registered
+An interrupted shelf loot in episode 1 put the shelf on the session blacklist, and the rule planner then chased unreachable counters (immobile alert, stopped per the stopping rule).
+Fix: session memory only for quick failures (<= 3 s), never for the seeded container.
+HBfix5: same criteria, seed 31.
+RESUME: rerun HBfix5 from scratch if interrupted.
