@@ -407,3 +407,10 @@ Pooled 37/36/35:
 
 H-L1 (lessons file) training phase: 60 min, llmL only, seed 53. Then freeze and evaluate (llm vs llmL, 2 x 110 min, seeds 59/61).
 RESUME: if the training is interrupted, restart it from the last lessons file (training is exploratory; note it in the run log).
+
+## 2026-11-15 13:00 H-L1 INCONCLUSIVE (negative tendency); H-D1 next
+Frozen lessons vs plain planner, pooled 37/39: deaths 0.35 vs 0.18 (z 1.7), end hp -6.3, needs 0.15 vs 0.20, wasted loots +0.18.
+The lessons made the planner flee far more (14% vs 6% of decisions; at 3-8 tiles, 21 flee vs 12).
+Single-episode lessons over-generalise, and one was false (weapon missing from the state text).
+Division of labour: engagement belongs in a real-time skill.
+NEXT: H-D1, a reflex layer: when a zombie is within 3 tiles the reflex fights and the planner's choice waits; the planner keeps needs and looting.
