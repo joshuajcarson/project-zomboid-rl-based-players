@@ -18,7 +18,23 @@
 - Session 1 run 2 (15:30-17:21, 48 episodes) INVALID (found at the session-1 check, before session 2 produced data): every episode that follows a real death is recorded as dead at step 1 with hp 100 (11 of 48 episodes). The previous episode ends at death_hp, the zombie finishes the character during the next reset after the revive check, and the reset carried on. Because arms rotate llm, rule, idle, the arm after idle (llm) absorbed 7 of these. Raw scoring gave FAILURE, but that is the artifact, not the planner. Data kept as `hb_s1_run2_INVALID.jsonl`. Fix in `pzrl/env.py` reset: a check_alive failure revives and redoes the reset (max 3). `hb_analyze.py` now counts step-1 deaths as an invariant (must be 0). Session 2's first launch was stopped before any episode (`hb_s2_run1_INVALID.jsonl`, empty). Both sessions rerun from scratch, seeds 7 and 11, design and criteria unchanged.
 - Session 1 run 3 (17:23-19:13) valid (0 step-1 deaths). Session 2 started 19:14; the run watchdog (`scripts/watchdog.py`) was attached at 20:40 with known deviations `thirst` and `supplies`. Replaying it over all runs found the supplies deviation: the survey lists only the 8 nearest containers, so spawns at the west edge of the box (x 10740-10745) do not see the seeded shelf (session 1: 2 episodes, session 2 so far: 5, spread over all arms). Not a validity failure (all arms equally; the planners re-survey each decision), recorded as a scenario limitation.
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-11-14/hb_s1.jsonl`, `hb_s2.jsonl`
-- Numbers: (pending)
-- Verdict: (pending)
+## Result (filled at batch end, 2026-11-14 21:10 CT)
+- Data: `results/experiments-2026-11-14/hb_s1.jsonl` (seed 7, 17:23-19:13) and `hb_s2.jsonl` (seed 11, 19:14-21:04). Analysis: `python scripts/hb_analyze.py hb_s1.jsonl hb_s2.jsonl`. Invariants: 0 step-1 deaths in both; watchdog clean on both apart from the known deviations (thirst not set; shelf outside the 8-container survey for west-edge spawns).
+- Numbers (pooled; died = death rate, hp = end hp with deaths as 0, needs = end hunger + thirst of survivors):
+
+| Arm | n | died | end hp | needs | 
+|---|---|---|---|---|
+| llm (Sonnet) | 25 | 0.16 (se 0.07) | 68.3 (se 7.4) | 0.245 (se 0.056) |
+| rule | 23 | 0.22 (se 0.09) | 60.5 (se 7.7) | 0.303 (se 0.024) |
+| idle | 23 | 0.57 (se 0.11) | 36.2 (se 9.5) | 0.645 (se 0.013) |
+
+  llm - rule: died -0.06, needs -0.058, hp +7.8 (z 0.73). llm - idle: hp +32.1 (z 2.68). Per session: s1 llm 57.4 / rule 67.8 / idle 40.9 hp; s2 llm 78.3 / rule 53.8 / idle 31.8 (the llm-rule order flips between sessions: noise).
+- Planner: 386 decisions, 100% valid, median latency 3.2-3.4 s. Skill effects (applicable uses): llm eat 56/62, bandage 8/11, loot 16/59 (27%); rule eat 46/50, bandage 16/18, loot 7/8.
+- Verdict: **SUCCESS on the pre-registered criteria** (llm death rate <= rule + 0.10: yes; llm needs <= rule + 0.10: yes; llm hp beats idle with z >= 2: yes, z 2.68). **Caveat: under-powered.** The pre-registered sample target (>= 30 per arm pooled) was missed (25/23/23) because reviving after deaths costs about 2 minutes per death. The shortfall was known at 17:53, before any pooled result. A confirmation session 3 (same scenario, seed 13, pooled with s1+s2, same criteria, result final whichever way it goes) is pre-registered in `2026-11-14-hb3-confirmation.md`.
+- Unexpected learnings:
+  1. The planner loots far more than it needs to and mostly fails (59 loots, 27% effective). It picks containers other than the seeded shelf, or loots while carrying plenty; the rule planner loots only containers that show supplies. This is wasted time while hungry or with zombies around, and the cheapest planner improvement (prompt or state text).
+  2. Deaths during the reset leaked into the next episode as step-1 deaths. The env reset now revives and redoes; the live watchdog (`scripts/watchdog.py`) checks for it.
+  3. Server `stats` does not set thirst, so drink is still untested.
+  4. The survey lists only the 8 nearest containers.
+  5. The seeded shelf accumulates items across episodes (persistent world), so supplies grow during a session. This is equal for all arms.
+- MILESTONE IMPACT: modify. H-B moves to 'provisional pass, confirmation session pending' (not done until the 3-session pool holds). Add to H-B's next steps: fix thirst, the survey cap and shelf accumulation before any further scenario; improve the planner's loot choice.

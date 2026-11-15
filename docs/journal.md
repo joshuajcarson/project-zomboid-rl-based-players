@@ -311,3 +311,21 @@ eat 35/36, loot 10/10, bandage 4/4 (drink never chosen); planner 100% valid at 2
 NEXT = H-B (track H): arms interleaved by episode in one session: `llm` (Sonnet planner), `rule` (hand-written priority planner over the same skills: bandage if bleeding and bandages; fight if a zombie within ~3 tiles (flee if hp < 35); eat if hunger > 0.3 and food; drink if thirst > 0.3 and water; loot the supplies container (not failed) if missing food/water/bandages and no zombie within ~8; else wait), `idle` (always wait). Implement as `--arms llm,rule,idle` in scripts/hybrid_run.py with a `rule_decide` in pzrl/hybrid.py. Pre-register primary metrics (deaths, end hp) and secondary (end hunger+thirst, supplies carried), >= 30 episodes per arm over 2 sessions (long: ~3.5 h per session at 120 game s per episode; consider shorter or longer episodes deliberately). Non-inferiority of llm vs rule; both better than idle.
 
 ## 2026-11-14 15:25 H-B pre-registered (llm vs rule vs idle, 2 x 110 min sessions); session 1 started
+
+## 2026-11-14 21:12 H-B result: criteria met, under-powered; HB3 confirmation pre-registered
+Session 1 runs 1-2 were invalid: the rule arm never stepped, then deaths during the reset leaked into the next episode. Fixed in hybrid_run and env.reset (revive and redo). Valid sessions: s1 (seed 7) and s2 (seed 11).
+Pooled llm/rule/idle, n 25/23/23:
+- died 0.16/0.22/0.57
+- end hp 68.3/60.5/36.2 (llm vs idle z 2.68, llm vs rule z 0.73)
+- needs 0.245/0.303/0.645
+
+All three criteria are met. Below the 30/arm target (revives cost ~2 min each), so the HB3 confirmation session (seed 13, same scenario, pooled, final) is next.
+Learnings:
+- The planner loots wastefully (59 loots, 27% effective).
+- Thirst is not set by the server `stats` command.
+- The survey caps at 8 containers.
+- The seeded shelf accumulates items.
+- The live watchdog (scripts/watchdog.py, docs/watchdog.md) now runs on every long run.
+
+The temporary 92% guard expired at the weekly reset (back to 85%).
+RESUME: if HB3 was interrupted, rerun it from scratch, same command with --seed 13 --out hb_s3.jsonl, plus the watchdog.
