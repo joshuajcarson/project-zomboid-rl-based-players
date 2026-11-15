@@ -14,6 +14,9 @@
 - Stopping rule: each session runs its 110 minutes; stop early only on a scenario watchdog alert (start state, stray, immobile, step-1, stall, idle), a crash, or a stall. Any such stop invalidates that session, which is rerun from scratch.
 
 ## Run log
+- Session 1 (seed 41, 02:35-04:25): 36 scored episodes; watchdog clean; 0 step-1 deaths.
+- Session 2 (seed 43, 04:25-06:15): 35 scored episodes; watchdog clean; 0 step-1 deaths.
+- Two-session pool: n 24/24/23, under the >= 30 per arm target, so session 3 (seed 47) runs as pre-registered.
 
 ## Result (filled at batch end)
 - Data: `results/experiments-2026-11-15/hbf_s1.jsonl`, `hbf_s2.jsonl`
