@@ -329,3 +329,12 @@ Learnings:
 
 The temporary 92% guard expired at the weekly reset (back to 85%).
 RESUME: if HB3 was interrupted, rerun it from scratch, same command with --seed 13 --out hb_s3.jsonl, plus the watchdog.
+
+## 2026-11-14 23:00 H-B DONE (HB3 confirmation pooled)
+Three pooled sessions, llm/rule/idle n 37/34/34:
+- died 0.22/0.21/0.62
+- end hp 64.7/62.9/33.3 (llm vs idle z 3.13, llm vs rule z 0.20)
+- needs 0.20/0.30/0.65
+
+All criteria met; the sample target is met. The planner is non-inferior to the rule planner and better than idle. Watchdog clean.
+Next for track H: fix the scenario limits first (server stats thirst, the 8-container survey cap, shelf accumulation), then H-B2, a harder scenario where planning matters.
