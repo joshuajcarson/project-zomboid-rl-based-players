@@ -17,3 +17,7 @@
 - Cause: the planner walked to the next building (about 30 tiles) and looted 5 different natural counters in a row, each ending in 2 s with nothing taken. Per-container memory cannot stop this when there are 7 such containers. These containers are not part of the scenario: they can be walked to, but they are never looted.
 - Fix (scenario definition): with `--fixes`, both planners see only containers within 12 tiles of the seeded container ("the supplies are in this building"). The rows log the filtered list, so the watchdog's stray check therefore only covers that radius, and the clearnear radius (45) still covers the old seeds.
 - MILESTONE IMPACT: none (HBfix6 next, same criteria).
+- Numbers: RECONSTRUCTED by the 2026-11-15 daily review, from the journal only: run stopped at episode 3 (74 rows in the data file) with an immobile alert; per-skill counts and deaths were not recorded on this card (UNKNOWN, a later session can compute them from the data file).
+- Unexpected learnings: failure memory per container cannot cope with 7 loot-proof natural counters in the next building; the scenario had to define which containers exist.
+- Validity notes: run invalid by design (scenario alert), stopped per the pre-registered rule; not evidence for any planner comparison.
+- Follow-ups / next experiment: HBfix6 (done, SUCCESS).

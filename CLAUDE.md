@@ -69,4 +69,6 @@ The long-term milestone list is `docs/milestones.md`. Work in BATCHES: one batch
 
 ## Next steps
 
+Current focus (2026-11-15) is track H (hybrid planner): finish HB-F (session 3, then pooled verdict), then H-L1 (docs/planner-learning.md). The M-order below resumes afterwards.
+
 See `docs/milestones.md` (the maintained milestone list with acceptance tests). Order as of 2026-10-31: M1 is characterised and M2 is done on means; finish M3a gate B (Batch 12 session 2 restart first), then the M0 additions (spawn geometry and head-start logging), then M3b (PPO with >= 20 samples/s), with M6 (client memory) as the enabler for two real clients.
