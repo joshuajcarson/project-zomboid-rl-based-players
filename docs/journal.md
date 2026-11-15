@@ -399,3 +399,11 @@ NEXT: H-B comparison re-run on the fixed scenario (llm/rule/idle), then a harder
 
 ## 2026-11-15 02:45 HB-F pre-registered (H-B re-run on the fixed scenario, 2 x 110 min, seeds 41/43); session 1 started
 RESUME: if a session is interrupted, rerun that session from scratch with the card command and the watchdog.
+
+## 2026-11-15 08:15 HB-F INCONCLUSIVE; H-L1 training started
+Pooled 37/36/35:
+- llm/rule/idle died 0.19/0.08/0.80, end hp 63/76/18, needs 0.17/0.33/1.22.
+- The planner wins on needs and loses on fighting and disengaging.
+
+H-L1 (lessons file) training phase: 60 min, llmL only, seed 53. Then freeze and evaluate (llm vs llmL, 2 x 110 min, seeds 59/61).
+RESUME: if the training is interrupted, restart it from the last lessons file (training is exploratory; note it in the run log).

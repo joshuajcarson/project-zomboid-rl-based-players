@@ -18,8 +18,21 @@
 - Session 2 (seed 43, 04:25-06:15): 35 scored episodes; watchdog clean; 0 step-1 deaths.
 - Two-session pool: n 24/24/23, under the >= 30 per arm target, so session 3 (seed 47) runs as pre-registered.
 
-## Result (filled at batch end)
-- Data: `results/experiments-2026-11-15/hbf_s1.jsonl`, `hbf_s2.jsonl`
-- Numbers: (pending)
-- Verdict: (pending)
-- MILESTONE IMPACT: (pending)
+## Result (filled at batch end, 2026-11-15 08:15 CT)
+- Data: `results/experiments-2026-11-15/hbf_s1.jsonl` (seed 41), `hbf_s2.jsonl` (seed 43), `hbf_s3.jsonl` (seed 47, run for the sample target). All three sessions: watchdog clean, 0 step-1 deaths.
+- Numbers (pooled over 3 sessions):
+
+| Arm | n | died | end hp | needs (hunger + thirst) | wasted loots / ep |
+|---|---|---|---|---|---|
+| llm | 37 | 0.19 (se 0.07) | 63.3 (se 6.3) | 0.166 (se 0.014) | 0.19 |
+| rule | 36 | 0.08 (se 0.05) | 75.6 (se 4.9) | 0.328 (se 0.028) | 0.06 |
+| idle | 35 | 0.80 (se 0.07) | 18.2 (se 6.5) | 1.224 | 0 |
+
+  llm - rule: died +0.11, needs -0.161, end hp -12.2 (z -1.54). llm - idle: end hp +45.2 (z 5.01).
+- Verdict: **INCONCLUSIVE**. The death-rate condition for SUCCESS (llm <= rule + 0.10) misses by 0.01; no FAILURE condition holds (deaths +0.11 < +0.25, hp -12.2 > -20, vs idle z 5.0).
+- Reading:
+  - On the fixed scenario the planner keeps needs at half the rule planner's level (0.17 vs 0.33) and is far better than doing nothing.
+  - It dies more (19% vs 8%) and ends with about 12 hp less: a fighting and disengaging weakness, not a needs weakness.
+  - Same pattern as H-B (needs 0.20 vs 0.30, deaths 0.22 vs 0.21), but with drink and thirst counting, the needs gap is larger and the death gap shows.
+- Division of labour: the needs advantage comes from planner judgement (eating and drinking at the right moments, looting once). The death gap comes from when the planner chooses fight or flee, which a dedicated engagement skill or lessons should fix (H-L1, H-D1).
+- MILESTONE IMPACT: modify. H-F is INCONCLUSIVE (no more sessions planned: the comparison moves to H-L1, which targets exactly this gap). The death and hp gap becomes H-L1's primary target and H-D1's motivation.
