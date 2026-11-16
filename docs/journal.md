@@ -423,7 +423,7 @@ llmR (engagement reflex) vs llm, pooled 38/39: end hp +11.4 (z 1.44), deaths -0.
 H-D1b: 2 more sessions (seeds 79, 83), 4-session pool, same criteria, final.
 RESUME: rerun an interrupted session from scratch with the card command and watchdog.
 
-## 2026-11-15 18:10 PAUSED: user needs the PC
+## 2026-11-15 18:21 PAUSED: user needs the PC
 H-D1b session 3 was interrupted after 37 episodes (data kept as hd1_s3_run1_INTERRUPTED.jsonl, not analysed). Cleanup done.
 RESUME when the user says the PC is free:
 1. Rerun H-D1b session 3 from scratch, using the command in docs/experiments/2026-11-15-hd1-engagement-reflex.md with --seed 79 --out results/experiments-2026-11-15/hd1_s3.jsonl, and attach the watchdog.
