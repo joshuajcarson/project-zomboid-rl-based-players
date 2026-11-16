@@ -422,3 +422,15 @@ RESUME: rerun an interrupted session from scratch with the card command and watc
 llmR (engagement reflex) vs llm, pooled 38/39: end hp +11.4 (z 1.44), deaths -0.18 (z -2.1), needs equal. Same direction in both sessions.
 H-D1b: 2 more sessions (seeds 79, 83), 4-session pool, same criteria, final.
 RESUME: rerun an interrupted session from scratch with the card command and watchdog.
+
+## 2026-11-15 18:10 PAUSED: user needs the PC
+H-D1b session 3 was interrupted after 37 episodes (data kept as hd1_s3_run1_INTERRUPTED.jsonl, not analysed). Cleanup done.
+RESUME when the user says the PC is free:
+1. Rerun H-D1b session 3 from scratch, using the command in docs/experiments/2026-11-15-hd1-engagement-reflex.md with --seed 79 --out results/experiments-2026-11-15/hd1_s3.jsonl, and attach the watchdog.
+2. Then session 4 (seed 83).
+3. Then the 4-session verdict with hl_analyze.py --a llm --b llmR hd1_s1..s4.
+
+Queued after that:
+- H-L1b: non-combat lessons, batch reflection, weapon in the state text.
+- H-B2: fast need decay; check StatsDecrease on a dev server first.
+- H-D2: latency sweep.

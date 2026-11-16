@@ -11,6 +11,7 @@
 - Stopping rule: as H-D1; a stopped session is rerun from scratch.
 
 ## Run log
+- Session 3 run 1 (seed 79, started 16:35) INTERRUPTED at about 18:10 after 37 episodes: the user needed the PC. It is not analysed. The data is kept as `hd1_s3_run1_INTERRUPTED.jsonl`. To resume: rerun session 3 from scratch (seed 79, `hd1_s3.jsonl`), then session 4 (seed 83).
 
 ## Result (filled at batch end)
 - Numbers: (pending)
