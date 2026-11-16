@@ -36,3 +36,6 @@
   - Same pattern as H-B (needs 0.20 vs 0.30, deaths 0.22 vs 0.21), but with drink and thirst counting, the needs gap is larger and the death gap shows.
 - Division of labour: the needs advantage comes from planner judgement (eating and drinking at the right moments, looting once). The death gap comes from when the planner chooses fight or flee, which a dedicated engagement skill or lessons should fix (H-L1, H-D1).
 - MILESTONE IMPACT: modify. H-F is INCONCLUSIVE (no more sessions planned: the comparison moves to H-L1, which targets exactly this gap). The death and hp gap becomes H-L1's primary target and H-D1's motivation.
+- Unexpected learnings (RECONSTRUCTED 2026-11-16 from the Reading above): with drink and thirst counting, the planner's needs advantage doubled (0.17 vs 0.33), while the death gap (0.19 vs 0.08) appeared; the gap is in engagement, not needs.
+- Validity notes (RECONSTRUCTED): watchdog clean in all 3 sessions, 0 step-1 deaths; arms interleaved per session; n 37/36/35 pooled over 3 sessions (the third was added for the sample target, pre-registered). The death condition missed by 0.01, so the INCONCLUSIVE is a close call.
+- Follow-ups: H-L1 (lessons) then H-D1 (engagement reflex); see their cards.
