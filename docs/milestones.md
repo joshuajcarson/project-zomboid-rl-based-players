@@ -2,7 +2,7 @@
 
 **Long-term goal:** several agents (up to 4) cooperating to survive in Project Zomboid on one server, validated on the real graphical client. Solo-first is fine; the route does not matter as long as each step is validated on the real client.
 
-**Last updated: 2026-11-16 (daily review).** Update this file at least once per calendar day (first action of a day's session, and at the end of every batch when a status, evidence line or next experiment changed). Statuses: `done`, `in progress`, `not started`, `blocked`, `parked`. Every status needs an evidence pointer (journal section, results file or ledger row); a milestone is `done` only when its acceptance test passed in a session that meets the experiment rules in CLAUDE.md.
+**Last updated: 2026-11-20 (daily review).** Update this file at least once per calendar day (first action of a day's session, and at the end of every batch when a status, evidence line or next experiment changed). Statuses: `done`, `in progress`, `not started`, `blocked`, `parked`. Every status needs an evidence pointer (journal section, results file or ledger row); a milestone is `done` only when its acceptance test passed in a session that meets the experiment rules in CLAUDE.md.
 
 ## Acceptance-test rule (decided 2026-10-30)
 Numeric acceptance tests are judged on the POOLED real episodes of at least two independent sessions (pooled mean and 95% interval): success needs the pooled mean at or better than the target; failure if the pooled mean is clearly outside the pre-registered failure bound; anything between is INCONCLUSIVE and means more sessions, never moved thresholds. Reason: per-episode damage has sd ~27, so one 30-episode session cannot decide a threshold that sits at the current estimate (se ~5). M1 in this form: target kills >= 1.6 and damage <= 25; failure bound kills < 1.4 or damage > 32; planned n >= 60 pooled (Batch 1 = 2 sessions x 30+).
@@ -51,10 +51,12 @@ The real client is the VALIDATOR, not the trainer: ~45 s per episode at 1x, 30+ 
 ## Review gaps
 - 2026-10-31: none. All cards B1-B12 and R1-R8 have every template field (B10-B12 and others word the criteria as `SUCCESS (...) if`). B12 is the only open card: result half pending because session 2 was interrupted (legitimate pause, not a gap); fix first = rerun session 2, then fill the B12 result.
 
+- 2026-11-20: no new gaps (no experiments since 2026-11-15 18:21). HBfix5 gap still open. The "Open results" note on the 2026-11-15 line is superseded: HB-F and H-L1 are closed; the open result is H-D1b.
 - 2026-11-16: no new gaps. HBfix5 gap below still open.
 - 2026-11-15: HBfix5 card per-skill counts and deaths are unknown (not on the card or in the journal); compute from results/experiments-2026-11-15/hbfix5.jsonl in the next session (low priority, run was invalid by design). Open results: HB-F pooled verdict after session 3, then H-L1 training.
 
 ## Daily update log
+- 2026-11-20 (daily review ran, docs only): reviewed, no milestone change. No commits or experiments since the 2026-11-16 review (HEAD 0484c05; no review commits on 11-17 to 11-19). Still paused for the user since 2026-11-15 18:21: H-D1b session 3 to rerun from scratch, then session 4, then the final 4-session verdict. Fixed stale CLAUDE.md "Next steps" (still said finish HB-F then H-L1; both are done) to point at H-D1b.
 - 2026-11-16 (daily review ran, docs only): audited all cards since 2026-11-15 (HB-F, H-L1, H-D1, H-D1b). HB-F and H-D1 lacked Unexpected learnings / Validity notes / Follow-ups: added as RECONSTRUCTED. H-D1b result half pending legitimately (paused for the user at 18:21, no analysis of interrupted data). H-D1 row notes the pause. No milestone added or removed; CLAUDE.md next-steps (track H first) still correct.
 - 2026-11-15 (daily review ran, docs only): audited cards HBfix to HBfix6, HB-F, H-L1: all present. HBfix5 card lacked Numbers/Unexpected/Validity/Follow-ups; added as RECONSTRUCTED (counts unknown, see Review gaps). HB-F (session 3 running) and H-L1 (not launched) result halves are legitimately pending. H-F status line refreshed; no milestone added or removed. CLAUDE.md next-steps pointer extended to track H.
 - 2026-11-15 (16:45): H-D1 INCONCLUSIVE on end hp (+11.4, z 1.44) but deaths fell 0.26 -> 0.08 (z -2.1) with needs unchanged: first evidence for the reflex + planner split. H-D1b confirmation sessions running.
